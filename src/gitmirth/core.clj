@@ -53,13 +53,21 @@
 
 (def channel-config
   {:element-preds [:list :channel]
+   :id-preds [:id zip/down zip/node]
    :name-preds [:name zip/down zip/node]
    :path "channels"})
 
 (def codeTemplate-config
   {:element-preds [:list :codeTemplate]
+   :id-preds [:id zip/down zip/node]
    :name-preds [:name zip/down zip/node]
    :path "codeTemplates"})
+
+(def configurationMap-config
+  {:element-preds [:map]
+   :id-preds [(fn [_] "")]
+   :name-preds [(fn [_] "configurationMap")]
+   :path "server/configurationMap"})
 
 (defn download
   "Serializes all xml found at the api path using the supplied config"
@@ -69,8 +77,8 @@
 
 (defn upload-node
   ""
-  [base-url path xmlloc]
-  (let [id (zx/xml1-> xmlloc :id zip/down zip/node)]
+  [base-url path id-preds xmlloc]
+  (let [id (apply zx/xml1-> xmlloc id-preds)]
     (client/put (str base-url "/" path "/" id)
                 {:insecure? true
                  :body (xml/indent-str (zip/node xmlloc))
@@ -80,7 +88,7 @@
   ""
   [base-url {:keys [id-preds path]}]
   (doseq [f (.listFiles (io/file (str "blarfnarg/" path "/")))]
-    (upload-node base-url path (to-zip (slurp f)))))
+    (upload-node base-url path id-preds (to-zip (slurp f)))))
 
 (defn makeitso
   "App logic"
@@ -89,8 +97,12 @@
     (fn [] (do
             (download base-url channel-config)
             (download base-url codeTemplate-config)
+            (download base-url configurationMap-config)
+
             (upload base-url channel-config)
-            (upload base-url codeTemplate-config)))))
+            (upload base-url codeTemplate-config)
+            (upload base-url configurationMap-config)
+            ))))
 
 (defn -main
   [& args]
