@@ -51,21 +51,29 @@
     (io/make-parents file-path)
     (spit file-path xml-str)))
 
-(defn run-channels [base-url]
-  (doseq [loc (fetch-all (str base-url "/channels") [:list :channel])]
-    (serialize-node "channels" loc [:name zip/down zip/node])))
+(def channel-config
+  {:element-preds [:list :channel]
+   :name-preds [:name zip/down zip/node]
+   :path "channels"})
 
-(defn run-codeTemplates [base-url]
-  (doseq [loc (fetch-all (str base-url "/codeTemplates") [:list :codeTemplate])]
-    (serialize-node "codeTemplates" loc [:name zip/down zip/node])))
+(def codeTemplate-config
+  {:element-preds [:list :codeTemplate]
+   :name-preds [:name zip/down zip/node]
+   :path "codeTemplates"})
+
+(defn download
+  "Serializes all xml found at the api path using the supplied config"
+  [base-url {:keys [element-preds name-preds path]}]
+  (doseq [loc (fetch-all (str base-url (str "/" path)) element-preds)]
+    (serialize-node path loc name-preds)))
 
 (defn makeitso
   "App logic"
   [base-url username password]
   (with-authentication base-url username password
     (fn [] (do
-            (run-channels base-url)
-            (run-codeTemplates base-url)))))
+            (download base-url channel-config)
+            (download base-url codeTemplate-config)))))
 
 (defn -main
   [& args]
