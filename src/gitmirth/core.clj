@@ -47,7 +47,7 @@
   [dirname xmlloc name-predicate]
   (let [name (apply zx/xml1-> xmlloc name-predicate)
         xml-str (xml/indent-str (zip/node xmlloc))
-        file-path (str "blarfnarg/" dirname (File/separator) "/" name)]
+        file-path (str "target/tmpfoo/" dirname (File/separator) "/" name)]
     (io/make-parents file-path)
     (spit file-path xml-str)))
 
@@ -87,7 +87,7 @@
 (defn upload
   ""
   [base-url {:keys [id-preds path]}]
-  (doseq [f (.listFiles (io/file (str "blarfnarg/" path "/")))]
+  (doseq [f (.listFiles (io/file (str "target/tmpfoo/" path "/")))]
     (upload-node base-url path id-preds (to-zip (slurp f)))))
 
 (defn makeitso
