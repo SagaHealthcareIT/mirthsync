@@ -27,8 +27,9 @@
       :insecure? true})
     (func)))
 
-(defn fetch-all-channels-zip
-  "Fetch all channels from remote server"
+(defn fetch-all-channel-locs
+  "Fetch all channels from remote server and return a sequence of
+  channel locs within the zipper"
   [base-url]
   (-> base-url
       (str "/channels")                 ;combine the base url with the rest path
@@ -36,13 +37,13 @@
        {:insecure? true})
       :body                             ;extract the response body
       to-zip                            ;get an xml zipper
-      (zx/xml-> :list :channel)         ;get a zipper per channel
+      (zx/xml-> :list :channel)         ;get a loc per channel
       ))
 
 (defn process-channel
   "Take a channel zip and write to the filesystem"
   [chanzip]
-  (let [channel-name (first (zx/xml-> chanzip :name zip/node))
+  (let [channel-name (zx/xml1-> chanzip :name zip/down zip/node)
         channel-xml (xml/indent-str (zip/node chanzip))
         base-dir "blarfnarg" ;; (java.util.UUID/randomUUID)
         file-path (str base-dir "/" channel-name)]
@@ -53,7 +54,7 @@
   "App logic"
   [base-url username password]
   (with-authentication base-url username password
-    #(map process-channel (fetch-all-channels-zip base-url))))
+    #(map process-channel (fetch-all-channel-locs base-url))))
 
 (defn -main
   [& args]
