@@ -67,13 +67,30 @@
   (doseq [loc (fetch-all (str base-url (str "/" path)) element-preds)]
     (serialize-node path loc name-preds)))
 
+(defn upload-node
+  ""
+  [base-url path xmlloc]
+  (let [id (zx/xml1-> xmlloc :id zip/down zip/node)]
+    (client/put (str base-url "/" path "/" id)
+                {:insecure? true
+                 :body (xml/indent-str (zip/node xmlloc))
+                 :content-type "application/xml"})))
+
+(defn upload
+  ""
+  [base-url {:keys [id-preds path]}]
+  (doseq [f (.listFiles (io/file (str "blarfnarg/" path "/")))]
+    (upload-node base-url path (to-zip (slurp f)))))
+
 (defn makeitso
   "App logic"
   [base-url username password]
   (with-authentication base-url username password
     (fn [] (do
             (download base-url channel-config)
-            (download base-url codeTemplate-config)))))
+            (download base-url codeTemplate-config)
+            (upload base-url channel-config)
+            (upload base-url codeTemplate-config)))))
 
 (defn -main
   [& args]
