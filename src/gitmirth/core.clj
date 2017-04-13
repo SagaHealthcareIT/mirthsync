@@ -5,7 +5,8 @@
              [pprint :as pp]
              [zip :as zip]]
             [clojure.data.xml :as xml]
-            [clojure.data.zip.xml :as zx]))
+            [clojure.data.zip.xml :as zx]
+            [clojure.java.io :as io]))
 
 (defn to-zip
   "Takes a string of xml and returns an xml zipper"
@@ -41,7 +42,12 @@
 (defn process-channel
   "Take a channel zip and write to the filesystem"
   [chanzip]
-  (zx/xml-> chanzip :name zip/down zip/node))
+  (let [channel-name (first (zx/xml-> chanzip :name zip/node))
+        channel-xml (xml/indent-str (zip/node chanzip))
+        base-dir "blarfnarg" ;; (java.util.UUID/randomUUID)
+        file-path (str base-dir "/" channel-name)]
+    (io/make-parents file-path)
+    (spit file-path channel-xml)))
 
 (defn makeitso
   "App logic"
