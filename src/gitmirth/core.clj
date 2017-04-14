@@ -51,23 +51,28 @@
     (io/make-parents file-path)
     (spit file-path xml-str)))
 
-(def channel-config
-  {:element-preds [:list :channel]
-   :id-preds [:id zip/down zip/node]
-   :name-preds [:name zip/down zip/node]
-   :path "channels"})
+(def config
+  {:channel {:element-preds [:list :channel]
+             :id-preds [:id zip/down zip/node]
+             :name-preds [:name zip/down zip/node]
+             :path "channels"}
 
-(def codeTemplate-config
-  {:element-preds [:list :codeTemplate]
-   :id-preds [:id zip/down zip/node]
-   :name-preds [:name zip/down zip/node]
-   :path "codeTemplates"})
+   :codeTemplate {:element-preds [:list :codeTemplate]
+                  :id-preds [:id zip/down zip/node]
+                  :name-preds [:name zip/down zip/node]
+                  :path "codeTemplates"}
 
-(def configurationMap-config
-  {:element-preds [:map]
-   :id-preds [(fn [_] "")]
-   :name-preds [(fn [_] "configurationMap")]
-   :path "server/configurationMap"})
+   :configurationMap {:element-preds [:map]
+                      :id-preds [(fn [_] "")]
+                      :name-preds [(fn [_] "configurationMap")]
+                      :path "server/configurationMap"}
+
+   :globalScripts {:element-preds [:map]
+                   :id-preds [(fn [_] "")]
+                   :name-preds [(fn [_] "globalScripts")]
+                   :path "server/globalScripts"}
+   })
+
 
 (defn download
   "Serializes all xml found at the api path using the supplied config"
@@ -94,15 +99,9 @@
   "App logic"
   [base-url username password]
   (with-authentication base-url username password
-    (fn [] (do
-            (download base-url channel-config)
-            (download base-url codeTemplate-config)
-            (download base-url configurationMap-config)
-
-            (upload base-url channel-config)
-            (upload base-url codeTemplate-config)
-            (upload base-url configurationMap-config)
-            ))))
+    (fn [] (doseq [c config]
+            (download base-url (val c))
+            (upload base-url (val c))))))
 
 (defn -main
   [& args]
