@@ -47,43 +47,43 @@
   [dirname xmlloc name-predicate]
   (let [name (apply zx/xml1-> xmlloc name-predicate)
         xml-str (xml/indent-str (zip/node xmlloc))
-        file-path (str "target/tmpfoo/" dirname (File/separator) "/" name)]
+        file-path (str "target/tmpfoo/" dirname (File/separator) "/" name ".xml")]
     (io/make-parents file-path)
     (spit file-path xml-str)))
 
 (def config
-  {:channel {:element-preds [:list :channel]
-             :id-preds [:id zip/down zip/node]
-             :name-preds [:name zip/down zip/node]
+  {:channel {:find-elements [:list :channel]
+             :find-id [:id zip/down zip/node]
+             :find-name [:name zip/down zip/node]
              :path "channels"}
 
-   :codeTemplate {:element-preds [:list :codeTemplate]
-                  :id-preds [:id zip/down zip/node]
-                  :name-preds [:name zip/down zip/node]
+   :codeTemplate {:find-elements [:list :codeTemplate]
+                  :find-id [:id zip/down zip/node]
+                  :find-name [:name zip/down zip/node]
                   :path "codeTemplates"}
 
-   :configurationMap {:element-preds [:map]
-                      :id-preds [(fn [_] "")]
-                      :name-preds [(fn [_] "configurationMap")]
+   :configurationMap {:find-elements [:map]
+                      :find-id [(fn [_] nil)]
+                      :find-name [(fn [_] "configurationMap")]
                       :path "server/configurationMap"}
 
-   :globalScripts {:element-preds [:map]
-                   :id-preds [(fn [_] "")]
-                   :name-preds [(fn [_] "globalScripts")]
+   :globalScripts {:find-elements [:map]
+                   :find-id [(fn [_] nil)]
+                   :find-name [(fn [_] "globalScripts")]
                    :path "server/globalScripts"}
    })
 
 
 (defn download
   "Serializes all xml found at the api path using the supplied config"
-  [base-url {:keys [element-preds name-preds path]}]
-  (doseq [loc (fetch-all (str base-url (str "/" path)) element-preds)]
-    (serialize-node path loc name-preds)))
+  [base-url {:keys [find-elements find-name path]}]
+  (doseq [loc (fetch-all (str base-url (str "/" path)) find-elements)]
+    (serialize-node path loc find-name)))
 
 (defn upload-node
   ""
-  [base-url path id-preds xmlloc]
-  (let [id (apply zx/xml1-> xmlloc id-preds)]
+  [base-url path find-id xmlloc]
+  (let [id (apply zx/xml1-> xmlloc find-id)]
     (client/put (str base-url "/" path "/" id)
                 {:insecure? true
                  :body (xml/indent-str (zip/node xmlloc))
@@ -91,9 +91,9 @@
 
 (defn upload
   ""
-  [base-url {:keys [id-preds path]}]
+  [base-url {:keys [find-id path]}]
   (doseq [f (.listFiles (io/file (str "target/tmpfoo/" path "/")))]
-    (upload-node base-url path id-preds (to-zip (slurp f)))))
+    (upload-node base-url path find-id (to-zip (slurp f)))))
 
 (defn makeitso
   "App logic"
