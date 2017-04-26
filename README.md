@@ -1,16 +1,25 @@
-# gitmirth
+# mirthsync
 
-FIXME: description
+Mirthsync is a command line tool for keeping a local copy of important
+aspects of Mirth Connect configuration in order to allow for the use
+of traditional version control tools like Git or SVN. Downloading and
+uploading to a remote Mirth server are both supported. The only
+requirements are having credentials for the server that is being
+synced and the server also needs to support and allow access to the
+REST API.
 
 ## Installation
 
-Download from http://example.com/FIXME.
+Source code is at [github](https://github.com/SagaHealthcareIT/mirthsync)
+
+  * clone
+  * `lein uberjar`
 
 ## Usage
 
-FIXME: explanation
+Run the compiled jar for usage help
 
-    $ java -jar gitmirth-0.1.0-standalone.jar [args]
+    $ java -jar target/uberjar/mirthsync-0.1.0-SNAPSHOT-standalone.jar
 
 ## Options
 
@@ -20,17 +29,8 @@ FIXME: listing of options this app accepts.
 
 ...
 
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
-
 ## License
 
-Copyright © 2017 FIXME
+Copyright © 2017 Saga IT LLC
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Eclipse Public License either version 1.0 or any later version.

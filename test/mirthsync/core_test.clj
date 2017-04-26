@@ -1,6 +1,6 @@
-(ns gitmirth.core-test
+(ns mirthsync.core-test
   (:require [clojure.test :refer :all]
-            [gitmirth.core :refer :all]))
+            [mirthsync.core :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."
