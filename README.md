@@ -27,7 +27,7 @@ FIXME: listing of options this app accepts.
 
 ## Examples
 
-...
+java -jar mirthsync.jar -a fetch
 
 ## License
 
