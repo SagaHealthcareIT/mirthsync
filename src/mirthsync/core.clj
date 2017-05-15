@@ -1,12 +1,11 @@
 (ns mirthsync.core
   (:gen-class)
   (:require [clj-http.client :as client]
-            [clojure
-             [pprint :as pp]
-             [zip :as zip]]
             [clojure.data.xml :as xml]
             [clojure.data.zip.xml :as zx]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [clojure.zip :as zip]
+            [mirthsync.cli :as cli])
   (:import java.io.File))
 
 (defn to-zip
@@ -44,10 +43,10 @@
 (defn serialize-node
   "Take an xml location and write to the filesystem with a meaningful
   name and path"
-  [dirname xmlloc name-predicate]
+  [target-dir dirname xmlloc name-predicate]
   (let [name (apply zx/xml1-> xmlloc name-predicate)
         xml-str (xml/indent-str (zip/node xmlloc))
-        file-path (str "target/tmpfoo/" dirname (File/separator) "/" name ".xml")]
+        file-path (str target-dir (File/separator) dirname (File/separator) name ".xml")]
     (io/make-parents file-path)
     (spit file-path xml-str)))
 
@@ -76,9 +75,10 @@
 
 (defn download
   "Serializes all xml found at the api path using the supplied config"
-  [base-url {:keys [find-elements find-name path]}]
+  [base-url target-dir {:keys [find-elements find-name path]}]
+  (cli/output 0 (str "Downloading " path))
   (doseq [loc (fetch-all (str base-url (str "/" path)) find-elements)]
-    (serialize-node path loc find-name)))
+    (serialize-node target-dir path loc find-name)))
 
 (defn upload-node
   ""
@@ -91,20 +91,40 @@
 
 (defn upload
   ""
-  [base-url {:keys [find-id path]}]
-  (doseq [f (.listFiles (io/file (str "target/tmpfoo/" path "/")))]
-    (upload-node base-url path find-id (to-zip (slurp f)))))
+  [base-url target-dir {:keys [find-id path]}]
+  (cli/output 0 (str "Uploading " path))
+  (let [files (.listFiles (io/file (str target-dir (File/separator) path)))]
+    (cli/output 0 (str "found " (count files) " files"))
+    (doseq [f files]
+      (upload-node base-url path find-id (to-zip (slurp f))))))
 
-(defn makeitso
-  "App logic"
-  [base-url username password]
+(defn run
+  "App logic. Returns nil."
+  [base-url username password target-dir action]
+  (cli/output 0 (str "Authenticating to server at " base-url " as " username))
   (with-authentication base-url username password
     (fn [] (doseq [c config]
-            (download base-url (val c))
-            (upload base-url (val c))))))
+            (cli/output 1 (key c))
+            (action base-url target-dir (val c)))))
+  (cli/output 0 "Finished!")
+  nil)
+
+(defn exit! [status msg]
+  "Print message and System/exit with status code"
+  (cli/output msg)
+  ;; (System/exit status)
+  )
 
 (defn -main
   [& args]
-  (println "starting")
-  (pp/pprint (makeitso "https://misc:8443/api" "admin" "admin"))
-  (println "finished"))
+  (let [{:keys [action options exit-message ok?]} (cli/validate-args args)
+        actions {"push" upload "pull" download}]
+    (if exit-message
+      (exit! (if ok? 0 1) exit-message)
+      (run
+        (:server options)
+        (:username options)
+        (:password options)
+        (:target options)
+        (actions action)))))
+
