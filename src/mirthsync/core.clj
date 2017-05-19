@@ -42,13 +42,20 @@
 
 (defn serialize-node
   "Take an xml location and write to the filesystem with a meaningful
-  name and path"
+  name and path. If the file exists it is not overwritten unless the
+  -f option is set. Returns nil."
   [target-dir dirname xmlloc name-predicate]
   (let [name (apply zx/xml1-> xmlloc name-predicate)
         xml-str (xml/indent-str (zip/node xmlloc))
         file-path (str target-dir (File/separator) dirname (File/separator) name ".xml")]
-    (io/make-parents file-path)
-    (spit file-path xml-str)))
+    (if (and (.exists (io/file file-path))
+             (not cli/*force*))
+      (cli/output (str "File at " file-path " already exists and the "
+                        "force (-f) option was not specified. Refusing "
+                        "to overwrite the file."))
+      (do (io/make-parents file-path)
+          (spit file-path xml-str)))
+    nil))
 
 (def config
   {:channel {:find-elements [:list :channel]

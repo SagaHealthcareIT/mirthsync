@@ -5,6 +5,7 @@
   (:import java.net.URL))
 
 (def ^:dynamic *verbosity* 0)
+(def ^:dynamic *force* nil)
 
 (defn output
   "Print the message if the verbosity level is high enough"
@@ -62,6 +63,8 @@
 
     ;; set the verbosity to use for output from the parsed options
     (alter-var-root #'*verbosity* (constantly (:verbosity options)))
+    ;; same for force
+    (alter-var-root #'*force* (constantly (:force options)))
 
     ;; decide what to return
     (cond
