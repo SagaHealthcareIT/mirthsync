@@ -9,7 +9,7 @@ synced and the server also needs to support and allow access to the
 REST API.
 
 
-##Usage 
+## Usage 
 
 git clone https://github.com/SagaHealthcareIT/mirthsync.git
 
