@@ -119,8 +119,7 @@
 (defn exit! [status msg]
   "Print message and System/exit with status code"
   (cli/output msg)
-  ;; (System/exit status)
-  )
+  (System/exit status))
 
 (defn -main
   [& args]
