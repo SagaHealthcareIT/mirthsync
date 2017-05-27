@@ -1,12 +1,8 @@
-# mirthsync
+# Mirthsync
 
-Mirthsync is a command line tool for keeping a local copy of important
-aspects of Mirth Connect configuration in order to allow for the use
-of traditional version control tools like Git or SVN. Downloading and
-uploading to a remote Mirth server are both supported. The only
-requirements are having credentials for the server that is being
-synced and the server also needs to support and allow access to the
-REST API.
+Mirthsync is a command line tool for synchronizing Mirth Connect code between servers by allowing you to push or pull channels, code templates, configuration map and global scripts using version control tools like Git or SVN. The only requirements are having credentials for the server that is being synced and the server also needs to support and allow access to Mirth Connect's REST API.
+
+Mirthsync is ideal for implementing code across environments such as Production, Test and Development. Environment specific variables such as data sources can be stored in the configuration map allowing the rest of the Mirth Connect code to be environment agnostic.
 
 
 ## Installation 
