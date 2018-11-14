@@ -58,25 +58,31 @@
     nil))
 
 (def config
-  {:channel {:find-elements [:list :channel]
-             :find-id [:id zip/down zip/node]
-             :find-name [:name zip/down zip/node]
-             :path "channels"}
+  {:configurationMap {:find-elements [:map]
+                      :find-id [(fn [_] nil)]
+                      :find-name [(fn [_] "configurationMap")]
+                      :path "server/configurationMap"}
 
    :codeTemplate {:find-elements [:list :codeTemplate]
                   :find-id [:id zip/down zip/node]
                   :find-name [:name zip/down zip/node]
                   :path "codeTemplates"}
 
-   :configurationMap {:find-elements [:map]
-                      :find-id [(fn [_] nil)]
-                      :find-name [(fn [_] "configurationMap")]
-                      :path "server/configurationMap"}
-
    :globalScripts {:find-elements [:map]
                    :find-id [(fn [_] nil)]
                    :find-name [(fn [_] "globalScripts")]
                    :path "server/globalScripts"}
+
+   :channelGroup {:find-elements [:list :channelGroup]
+                  :find-id [:id zip/down zip/node]
+                  :find-name [:name zip/down zip/node]
+                  :path "channelgroups"
+                  :prevent-push true}
+
+   :channel {:find-elements [:list :channel]
+             :find-id [:id zip/down zip/node]
+             :find-name [:name zip/down zip/node]
+             :path "channels"}
    })
 
 
@@ -98,12 +104,15 @@
 
 (defn upload
   ""
-  [base-url target-dir {:keys [find-id path]}]
-  (cli/output 0 (str "Uploading " path))
-  (let [files (.listFiles (io/file (str target-dir (File/separator) path)))]
-    (cli/output 0 (str "found " (count files) " files"))
-    (doseq [f files]
-      (upload-node base-url path find-id (to-zip (slurp f))))))
+  [base-url target-dir {:keys [find-id path prevent-push]}]
+  (if prevent-push
+    (cli/output 0 (str "Uploading " path " is not currently supported - skipping"))
+    (do
+      (cli/output 0 (str "Uploading " path))
+      (let [files (.listFiles (io/file (str target-dir (File/separator) path)))]
+        (cli/output 0 (str "found " (count files) " files"))
+        (doseq [f files]
+          (upload-node base-url path find-id (to-zip (slurp f))))))))
 
 (defn run
   "App logic. Returns nil."
@@ -119,7 +128,8 @@
 (defn exit! [status msg]
   "Print message and System/exit with status code"
   (cli/output msg)
-  (System/exit status))
+  ;; (System/exit status)
+  )
 
 (defn -main
   [& args]
