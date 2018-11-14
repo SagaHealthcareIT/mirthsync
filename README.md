@@ -4,6 +4,10 @@ Mirthsync is a command line tool for synchronizing Mirth Connect code between se
 
 Mirthsync is ideal for implementing code across environments such as Production, Test and Development. Environment specific variables such as data sources can be stored in the configuration map allowing the rest of the Mirth Connect code to be environment agnostic.
 
+## Status
+The v0.1.0 tag and release is stable. 
+
+Recently, preliminary support was added for groups on the master branch. There is no release or tag for this yet. If you would like to use a version that supports groups you'll need to build from the master branch source. The current groups code will only pull groups - not push. Code for pushing groups will be coming soon.
 
 ## Installation 
 
