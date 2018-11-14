@@ -12,7 +12,7 @@ Mirthsync is ideal for implementing code across environments such as Production,
 
 ## Prerequisites 
 
-Requires Java JRE
+Requires Java JRE or JDK version 8 (versions 9 and above are not currently supported)
 
 
 ## Help
