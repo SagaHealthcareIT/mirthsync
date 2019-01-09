@@ -44,12 +44,13 @@
   "Take an xml location and write to the filesystem with a meaningful
   name and path. If the file exists it is not overwritten unless the
   -f option is set. Returns nil."
-  [target-dir dirname xmlloc name-predicate]
-  (let [name (apply zx/xml1-> xmlloc name-predicate)
+  [xmlloc {:keys [target] :as app-conf} {:keys [path find-name] :as api}]
+  
+  (let [name (apply zx/xml1-> xmlloc find-name)
         xml-str (xml/indent-str (zip/node xmlloc))
-        file-path (str target-dir (File/separator) dirname (File/separator) name ".xml")]
+        file-path (str target (File/separator) path (File/separator) name ".xml")]
     (if (and (.exists (io/file file-path))
-             (not cli/*force*))
+             (not (:force app-conf)))
       (cli/output (str "File at " file-path " already exists and the "
                         "force (-f) option was not specified. Refusing "
                         "to overwrite the file."))
@@ -57,7 +58,7 @@
           (spit file-path xml-str)))
     nil))
 
-(def config
+(def apis
   {:configurationMap {:find-elements [:map]
                       :find-id [(fn [_] nil)]
                       :find-name [(fn [_] "configurationMap")]
@@ -88,10 +89,10 @@
 
 (defn download
   "Serializes all xml found at the api path using the supplied config"
-  [base-url target-dir {:keys [find-elements find-name path]}]
+  [{:keys [server target] :as app-conf} {:keys [find-elements path] :as api}]
   (cli/output 0 (str "Downloading " path))
-  (doseq [loc (fetch-all (str base-url (str "/" path)) find-elements)]
-    (serialize-node target-dir path loc find-name)))
+  (doseq [loc (fetch-all (str server (str "/" path)) find-elements)]
+    (serialize-node loc app-conf api)))
 
 (defn upload-node
   ""
@@ -104,43 +105,39 @@
 
 (defn upload
   ""
-  [base-url target-dir {:keys [find-id path prevent-push]}]
+  [{:keys [server target] :as app-conf} {:keys [find-id path prevent-push] :as api}]
   (if prevent-push
     (cli/output 0 (str "Uploading " path " is not currently supported - skipping"))
     (do
       (cli/output 0 (str "Uploading " path))
-      (let [files (.listFiles (io/file (str target-dir (File/separator) path)))]
+      (let [files (.listFiles (io/file (str target (File/separator) path)))]
         (cli/output 0 (str "found " (count files) " files"))
         (doseq [f files]
-          (upload-node base-url path find-id (to-zip (slurp f))))))))
+          (upload-node server path find-id (to-zip (slurp f))))))))
 
 (defn run
-  "App logic. Returns nil."
-  [base-url username password target-dir action]
-  (cli/output 0 (str "Authenticating to server at " base-url " as " username))
-  (with-authentication base-url username password
-    (fn [] (doseq [c config]
-            (cli/output 1 (key c))
-            (action base-url target-dir (val c)))))
-  (cli/output 0 "Finished!")
-  nil)
+  "App logic. Returns the config map."
+  [{:keys [server username password] :as app-conf}]
 
-(defn exit! [status msg]
+  (let [action ({"push" upload, "pull" download} (:action app-conf))]
+    (cli/output 0 (str "Authenticating to server at " server " as " username))
+    (with-authentication server username password
+      (fn [] (doseq [api apis]
+              (cli/output 1 (key api))
+              (action app-conf (val api)))))
+    (cli/output 0 "Finished!")
+    app-conf))
+
+(defn exit! [{:keys [exit-msg exit-code] :as conf}]
   "Print message and System/exit with status code"
-  (cli/output msg)
-  ;; (System/exit status)
-  )
+  (cli/output exit-msg)
+  (System/exit exit-code))
 
 (defn -main
   [& args]
-  (let [{:keys [action options exit-message ok?]} (cli/validate-args args)
-        actions {"push" upload "pull" download}]
-    (if exit-message
-      (exit! (if ok? 0 1) exit-message)
-      (run
-        (:server options)
-        (:username options)
-        (:password options)
-        (:target options)
-        (actions action)))))
+  (let [conf (cli/config args)]
+    (when-not (seq (:exit-msg conf))
+      (run conf))
+    
+    (exit! conf)))
 

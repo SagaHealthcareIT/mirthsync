@@ -4,15 +4,14 @@
              [cli :refer [parse-opts]]])
   (:import java.net.URL))
 
-(def ^:dynamic *verbosity* 0)
-(def ^:dynamic *force* nil)
+(def verbosity 0)
 
 (defn output
   "Print the message if the verbosity level is high enough"
   ([message]
    (output 0 message))
   ([level message]
-   (when (<= level *verbosity*) (println message))))
+   (when (<= level verbosity) (println message))))
 
 (def cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
@@ -37,50 +36,51 @@
 
    ["-h" "--help"]])
 
-(defn usage [options-summary]
-  (->> ["Usage: mirthsync [options] action"
-        ""
-        "Options:"
-        options-summary
-        ""
-        "Actions:"
-        "  push     Push local code to remote"
-        "  pull     Pull remote code to local"]
-       (string/join \newline)))
+(defn usage [errors summary]
+  (str
+   (when errors (str "The following errors occurred while parsing your command:\n\n"
+                     (string/join \newline errors)
+                     "\n\n"))
+   (string/join \newline
+                ["Usage: mirthsync [options] action"
+                 ""
+                 "Options:"
+                 summary
+                 ""
+                 "Actions:"
+                 "  push     Push local code to remote"
+                 "  pull     Pull remote code to local"])))
 
-(defn error-msg [errors]
-  (str "The following errors occurred while parsing your command:\n\n"
-       (string/join \newline errors)))
-
-(defn validate-args
-  "Validate command line arguments. Either return a map indicating the
-  program should exit (with a error message, and optional ok status),
-  or a map indicating the action the program should take and the
-  options provided."
+(defn config
+  "Parse the CLI arguments and construct a map representing selected
+  options and action with sensible defaults provided if
+  necessary."
   [args]
-  ;; (log/debug args)
-  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
+  (let [config (parse-opts args cli-options)
 
-    ;; set the verbosity to use for output from the parsed options
-    (alter-var-root #'*verbosity* (constantly (:verbosity options)))
-    ;; same for force
-    (alter-var-root #'*force* (constantly (:force options)))
+        ;; pull options and first arg into top level
+        config (-> config 
+                   (into (:options config))
+                   (dissoc :options)
+                   (assoc :action (first (:arguments config))))
 
-    ;; decide what to return
-    (cond
-      ;; help => exit OK with usage summary
-      (:help options)
-      {:exit-message (usage summary) :ok? true}
+        args-valid? (or (:help config)
+                        (and (= 1 (count (:arguments config)))
+                             (#{"pull" "push"} (first (:arguments config)))))
 
-      ;; errors => exit with description of errors
-      errors
-      {:exit-message (str (error-msg errors) (usage summary))}
+        ;; Set up our exit code
+        config (assoc config :exit-code
+                      (if (or (:errors config)
+                              (not args-valid?))
+                        1
+                        0))
+        ;; exit message if errors
+        config (assoc config :exit-msg (when (or (> (:exit-code config) 0)
+                                                 (:help config))
+                                         (usage (:errors config) (:summary config))))
+        ;; keep config clean by removing unecessary entries
+        config (dissoc config :summary :arguments)]
 
-      ;; custom validation on arguments
-      (and (= 1 (count arguments))
-           (#{"pull" "push"} (first arguments)))
-      {:action (first arguments) :options options}
-      
-      ;; failed custom validation => exit with usage summary
-      :else
-      {:exit-message (usage summary)})))
+    (def verbosity (:verbosity config))
+    
+    config))
