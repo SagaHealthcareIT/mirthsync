@@ -58,6 +58,51 @@
           (spit file-path xml-str)))
     nil))
 
+(comment TODO - We need to always pull channel groups first when
+  working with channels. Every channel is now in a channel group,
+  whether 'Default Group' or custom. The new directory structure will
+  be "Channels/[group-name]". Each [group-name] directory will contain
+  a "Group.xml" and one or more channels. Upon upload of a group, this
+  Group.xml file will be parsed and the respective channels in the
+  directory will be inserted in the Group.xml "Channels" element. The
+  resulting xml will be posted multipart to the bulkUpload
+  webservice.)
+
+(defn upload-node
+  "Extracts the id from the xmlloc using the find-id predicates. PUTs
+  the formatted XML to the location constructed from the base-url,
+  path, and id."
+  [base-url path find-id xmlloc]
+  (let [id (apply zx/xml1-> xmlloc find-id)]
+    (client/put (str base-url "/" path "/" id)
+                {:insecure? true
+                 :body (xml/indent-str (zip/node xmlloc))
+                 :content-type "application/xml"})))
+
+(defn download
+  "Serializes all xml found at the api path using the supplied config."
+  [{:keys [server target] :as app-conf} {:keys [find-elements path] :as api}]
+  (cli/output 0 (str "Downloading " path))
+  (doseq [loc (fetch-all (str server (str "/" path)) find-elements)]
+    (serialize-node loc app-conf api)))
+
+(defn upload
+  "Extracts the server url and the target local directory that contains
+  our mirth files from the application config param. Also extracts
+  some of the api spec from the api param. If pushing is allowed for
+  the current API, the files in the specified path directory are
+  iterated, parsed, and uploaded to mirth via the upload-node
+  function."
+  [{:keys [server target] :as app-conf} {:keys [find-id path prevent-push] :as api}]
+  (if prevent-push
+    (cli/output 0 (str "Uploading " path " is not currently supported - skipping"))
+    (do
+      (cli/output 0 (str "Uploading " path))
+      (let [files (.listFiles (io/file (str target (File/separator) path)))]
+        (cli/output 0 (str "found " (count files) " files"))
+        (doseq [f files]
+          (upload-node server path find-id (to-zip (slurp f))))))))
+
 (def apis
   {:configurationMap {:find-elements [:map]
                       :find-id [(fn [_] nil)]
@@ -86,39 +131,13 @@
              :path "channels"}
    })
 
-
-(defn download
-  "Serializes all xml found at the api path using the supplied config"
-  [{:keys [server target] :as app-conf} {:keys [find-elements path] :as api}]
-  (cli/output 0 (str "Downloading " path))
-  (doseq [loc (fetch-all (str server (str "/" path)) find-elements)]
-    (serialize-node loc app-conf api)))
-
-(defn upload-node
-  ""
-  [base-url path find-id xmlloc]
-  (let [id (apply zx/xml1-> xmlloc find-id)]
-    (client/put (str base-url "/" path "/" id)
-                {:insecure? true
-                 :body (xml/indent-str (zip/node xmlloc))
-                 :content-type "application/xml"})))
-
-(defn upload
-  ""
-  [{:keys [server target] :as app-conf} {:keys [find-id path prevent-push] :as api}]
-  (if prevent-push
-    (cli/output 0 (str "Uploading " path " is not currently supported - skipping"))
-    (do
-      (cli/output 0 (str "Uploading " path))
-      (let [files (.listFiles (io/file (str target (File/separator) path)))]
-        (cli/output 0 (str "found " (count files) " files"))
-        (doseq [f files]
-          (upload-node server path find-id (to-zip (slurp f))))))))
-
 (defn run
-  "App logic. Returns the config map."
+  "Start of app logic. Links the action specified in the application
+  config to the appropriate function, authenticates to the server, and
+  calls the function for each api in the api map (in order). These
+  calls happen within the context of an authenticated (thread local)
+  http client. Returns the application config."
   [{:keys [server username password] :as app-conf}]
-
   (let [action ({"push" upload, "pull" download} (:action app-conf))]
     (cli/output 0 (str "Authenticating to server at " server " as " username))
     (with-authentication server username password
@@ -128,8 +147,10 @@
     (cli/output 0 "Finished!")
     app-conf))
 
-(defn exit! [{:keys [exit-msg exit-code] :as conf}]
+
+(defn exit!
   "Print message and System/exit with status code"
+  [{:keys [exit-msg exit-code] :as conf}]
   (cli/output exit-msg)
   (System/exit exit-code))
 
