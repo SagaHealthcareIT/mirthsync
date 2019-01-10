@@ -104,32 +104,37 @@
           (upload-node server path find-id (to-zip (slurp f))))))))
 
 (def apis
-  {:configurationMap {:find-elements [:map]
-                      :find-id [(fn [_] nil)]
-                      :find-name [(fn [_] "configurationMap")]
-                      :path "server/configurationMap"}
+  [{:api 'configurationMap'
+    :find-elements [:map]
+    :find-id [(fn [_] nil)]
+    :find-name [(fn [_] "configurationMap")]
+    :path "server/configurationMap"}
 
-   :codeTemplate {:find-elements [:list :codeTemplate]
-                  :find-id [:id zip/down zip/node]
-                  :find-name [:name zip/down zip/node]
-                  :path "codeTemplates"}
+   {:api 'codeTemplate'
+    :find-elements [:list :codeTemplate]
+    :find-id [:id zip/down zip/node]
+    :find-name [:name zip/down zip/node]
+    :path "codeTemplates"}
 
-   :globalScripts {:find-elements [:map]
-                   :find-id [(fn [_] nil)]
-                   :find-name [(fn [_] "globalScripts")]
-                   :path "server/globalScripts"}
+   {:api 'globalScripts'
+    :find-elements [:map]
+    :find-id [(fn [_] nil)]
+    :find-name [(fn [_] "globalScripts")]
+    :path "server/globalScripts"}
 
-   :channelGroup {:find-elements [:list :channelGroup]
-                  :find-id [:id zip/down zip/node]
-                  :find-name [:name zip/down zip/node]
-                  :path "channelgroups"
-                  :prevent-push true}
+   {:api 'channelGroup'
+    :find-elements [:list :channelGroup]
+    :find-id [:id zip/down zip/node]
+    :find-name [:name zip/down zip/node]
+    :path "channelgroups"
+    :prevent-push true}
 
-   :channel {:find-elements [:list :channel]
-             :find-id [:id zip/down zip/node]
-             :find-name [:name zip/down zip/node]
-             :path "channels"}
-   })
+   {:api 'channel'
+    :find-elements [:list :channel]
+    :find-id [:id zip/down zip/node]
+    :find-name [:name zip/down zip/node]
+    :path "channels"}
+   ])
 
 (defn run
   "Start of app logic. Links the action specified in the application
@@ -142,8 +147,8 @@
     (cli/output 0 (str "Authenticating to server at " server " as " username))
     (with-authentication server username password
       (fn [] (doseq [api apis]
-              (cli/output 1 (key api))
-              (action app-conf (val api)))))
+              (cli/output 1 (:api api))
+              (action app-conf api))))
     (cli/output 0 "Finished!")
     app-conf))
 
