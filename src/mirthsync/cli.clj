@@ -11,7 +11,7 @@
   ([message]
    (output 0 message))
   ([level message]
-   (when (<= level verbosity) (println message))))
+   (when (>= verbosity level) (println message))))
 
 (def cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"

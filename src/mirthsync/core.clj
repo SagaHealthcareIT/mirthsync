@@ -44,11 +44,11 @@
   "Take an xml location and write to the filesystem with a meaningful
   name and path. If the file exists it is not overwritten unless the
   -f option is set. Returns nil."
-  [xmlloc {:keys [target] :as app-conf} {:keys [path find-name] :as api}]
+  [xmlloc {:keys [target] :as app-conf} {:keys [local-path find-name] :as api}]
   
   (let [name (apply zx/xml1-> xmlloc find-name)
         xml-str (xml/indent-str (zip/node xmlloc))
-        file-path (str target (File/separator) path (File/separator) name ".xml")]
+        file-path (str target (File/separator) local-path (File/separator) name ".xml")]
     (if (and (.exists (io/file file-path))
              (not (:force app-conf)))
       (cli/output (str "File at " file-path " already exists and the "
@@ -81,10 +81,14 @@
 
 (defn download
   "Serializes all xml found at the api path using the supplied config."
-  [{:keys [server target] :as app-conf} {:keys [find-elements path] :as api}]
-  (cli/output 0 (str "Downloading " path))
-  (doseq [loc (fetch-all (str server (str "/" path)) find-elements)]
-    (serialize-node loc app-conf api)))
+  [{:keys [server target parent-api api] :as app-conf}]
+  (let [{:keys [find-elements path local-path]} api
+        local-path (if parent-api
+                     (str (:local-path parent-api) "/" local-path)
+                     local-path)]
+    (cli/output 0 (str "Downloading from " path " to " local-path))
+    (doseq [loc (fetch-all (str server (str "/" path)) find-elements)]
+      (serialize-node loc app-conf api))))
 
 (defn upload
   "Extracts the server url and the target local directory that contains
@@ -93,48 +97,62 @@
   the current API, the files in the specified path directory are
   iterated, parsed, and uploaded to mirth via the upload-node
   function."
-  [{:keys [server target] :as app-conf} {:keys [find-id path prevent-push] :as api}]
-  (if prevent-push
-    (cli/output 0 (str "Uploading " path " is not currently supported - skipping"))
-    (do
-      (cli/output 0 (str "Uploading " path))
-      (let [files (.listFiles (io/file (str target (File/separator) path)))]
-        (cli/output 0 (str "found " (count files) " files"))
-        (doseq [f files]
-          (upload-node server path find-id (to-zip (slurp f))))))))
+  [{:keys [server target api parent-api api] :as app-conf}]
+  (let [{:keys [find-id local-path path prevent-push]} api
+        local-path (if parent-api
+                     (str (:local-path parent-api) "/" local-path)
+                     local-path)]
+    (if prevent-push
+      (cli/output 0 (str "Uploading from " local-path " to " path " is not currently supported - skipping"))
+      (do
+        (cli/output 0 (str "Uploading from " local-path " to " path))
+        (let [files (filter #(not (.isDirectory %)) (.listFiles (io/file (str target (File/separator) local-path))))]
+          (cli/output 0 (str "found " (count files) " files"))
+          (doseq [f files]
+            (upload-node server path find-id (to-zip (slurp f)))))))))
 
 (def apis
-  [{:api 'configurationMap'
+  [{:local-path "."
     :find-elements [:map]
-    :find-id [(fn [_] nil)]
-    :find-name [(fn [_] "configurationMap")]
+    :find-id [(constantly nil)]
+    :find-name [(fn [_] "ConfigurationMap")]
     :path "server/configurationMap"}
 
-   {:api 'codeTemplate'
+   {:local-path "CodeTemplates"
     :find-elements [:list :codeTemplate]
     :find-id [:id zip/down zip/node]
     :find-name [:name zip/down zip/node]
     :path "codeTemplates"}
 
-   {:api 'globalScripts'
+   {:local-path "GlobalScripts"
     :find-elements [:map]
-    :find-id [(fn [_] nil)]
+    :find-id [(constantly nil)]
     :find-name [(fn [_] "globalScripts")]
     :path "server/globalScripts"}
 
-   {:api 'channelGroup'
+   {:local-path "Channels"
     :find-elements [:list :channelGroup]
     :find-id [:id zip/down zip/node]
     :find-name [:name zip/down zip/node]
     :path "channelgroups"
-    :prevent-push true}
-
-   {:api 'channel'
-    :find-elements [:list :channel]
-    :find-id [:id zip/down zip/node]
-    :find-name [:name zip/down zip/node]
-    :path "channels"}
+    :prevent-push true
+    :apis [{:local-path "tmp-channels"
+            :find-elements [:list :channel]
+            :find-id [:id zip/down zip/node]
+            :find-name [:name zip/down zip/node]
+            :path "channels"}]}
    ])
+
+(defn- apis-action
+  [app-conf parent-api apis action]
+  (doseq [api apis]
+    (let [app-conf (-> app-conf
+                       (assoc :parent-api parent-api)
+                       (assoc :api api))]
+      (cli/output 1 api)
+      (action app-conf)
+      (when (seq (:apis api))
+        (apis-action app-conf api (:apis api) action)))))
 
 (defn run
   "Start of app logic. Links the action specified in the application
@@ -146,9 +164,7 @@
   (let [action ({"push" upload, "pull" download} (:action app-conf))]
     (cli/output 0 (str "Authenticating to server at " server " as " username))
     (with-authentication server username password
-      (fn [] (doseq [api apis]
-              (cli/output 1 (:api api))
-              (action app-conf api))))
+      #(apis-action app-conf nil apis action))
     (cli/output 0 "Finished!")
     app-conf))
 
