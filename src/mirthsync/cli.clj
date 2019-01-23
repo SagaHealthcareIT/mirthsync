@@ -6,10 +6,10 @@
 
 (def verbosity 0)
 
-(defn output
+(defn out
   "Print the message if the verbosity level is high enough"
   ([message]
-   (output 0 message))
+   (out 0 message))
   ([level message]
    (when (>= verbosity level) (println message))))
 

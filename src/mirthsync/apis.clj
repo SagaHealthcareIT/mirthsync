@@ -128,5 +128,5 @@
                        action)]
       (when (seq (:apis api))
         (apis-action app-conf api (:apis api) action))
-      (cli/output 2 "Current application config: ")
-      (cli/output 2 app-conf))))
+      (cli/out 2 "Current application config: ")
+      (cli/out 2 app-conf))))

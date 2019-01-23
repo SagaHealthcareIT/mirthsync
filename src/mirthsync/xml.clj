@@ -33,7 +33,7 @@
                        extra-path name ".xml")]
     (if (and (.exists (io/file file-path))
              (not (:force app-conf)))
-      (cli/output (str "File at " file-path " already exists and the "
+      (cli/out (str "File at " file-path " already exists and the "
                        "force (-f) option was not specified. Refusing "
                        "to overwrite the file."))
       (do (io/make-parents file-path)

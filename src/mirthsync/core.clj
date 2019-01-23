@@ -26,26 +26,27 @@
   )
 
 (defn run
-  "Start of app logic. Links the action specified in the application
-  config to the appropriate function, authenticates to the server, and
-  calls the function for each api in the api map (in order). These
-  calls happen within the context of an authenticated (thread local)
-  http client. Returns the application config."
+  "Links the action specified in the application config to the
+  appropriate function, authenticates to the server, and calls the
+  function for each api in the defined apis (in order). These calls
+  happen within the context of an authenticated (thread local) http
+  client. The app-config is returned with any updates from the
+  action."
   [{:keys [server username password action] :as app-conf}]
 
-  (cli/output 0 (str "Authenticating to server at " server " as " username))
+  (cli/out (str "Authenticating to server at " server " as " username))
   (let [action   ({"push" upload, "pull" download} action)
         app-conf (with-authentication server username password
                    #(apis-action app-conf nil apis action))]
     
-    (cli/output 0 "Finished!")
+    (cli/out "Finished!")
     app-conf))
 
 
 (defn exit!
   "Print message and System/exit with status code"
   [{:keys [exit-msg exit-code] :as conf}]
-  (cli/output exit-msg)
+  (cli/out exit-msg)
   (System/exit exit-code))
 
 (defn -main
