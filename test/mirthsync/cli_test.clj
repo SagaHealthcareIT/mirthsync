@@ -5,42 +5,45 @@
              [cli :refer [parse-opts]]]))
 
 (deftest configuration
-  (are [args] (let [conf (config args)]
-                (is (seq (:exit-msg conf)))
-                (is (= 1 (:exit-code conf))))
-    ["blah"]
-    ["-z"]
-    [""]
-    ["-f"]
-    nil)
+  (testing "Fail on invalid arguments"
+    (are [args] (let [conf (config args)]
+                  (is (seq (:exit-msg conf)))
+                  (is (= 1 (:exit-code conf))))
+      ["blah"]
+      ["-z"]
+      [""]
+      ["-f"]
+      nil))
 
-  (is (= 3 (:verbosity (config ["-vvv" "push"]))))
+  (testing "Verbosity increases with extra v's"
+    (is (= 3 (:verbosity (config ["-vvv" "push"])))))
 
-  (let [conf {:errors nil,
-              :exit-code 0,
-              :verbosity 0,
-              :password "",
-              :arguments ["push"],
-              :server "https://localhost:8443/api",
-              :username "admin",
-              :action "push",
-              :target ".",
-              :exit-msg nil}]
-    (is (= conf (config ["push"]))))
+  (testing "Sensible push defaults"
+    (let [conf {:errors nil,
+                :exit-code 0,
+                :verbosity 0,
+                :password "",
+                :server "https://localhost:8443/api",
+                :username "admin",
+                :action "push",
+                :target ".",
+                :exit-msg nil}]
+      (is (= conf (config ["push"])))))
 
-  (let [conf {:errors nil,
-              :exit-code 0,
-              :force true,
-              :verbosity 0,
-              :password "",
-              :arguments ["pull"],
-              :server "https://localhost:8443/api",
-              :username "admin",
-              :action "pull",
-              :target ".",
-              :exit-msg nil}]
-    (is (= conf (config ["-f" "pull"]))))
+  (testing "Sensible pull defaults"
+    (let [conf {:errors nil,
+                :exit-code 0,
+                :force true,
+                :verbosity 0,
+                :password "",
+                :server "https://localhost:8443/api",
+                :username "admin",
+                :action "pull",
+                :target ".",
+                :exit-msg nil}]
+      (is (= conf (config ["-f" "pull"])))))
 
-  (is (nil? (:force (config ["pull"])))))
+  (testing "Force defaults to nil"
+    (is (nil? (:force (config ["pull"]))))))
 
 
