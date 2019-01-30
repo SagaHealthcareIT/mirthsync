@@ -1,13 +1,22 @@
 # Mirthsync
 
-Mirthsync is a command line tool for synchronizing Mirth Connect code between servers by allowing you to push or pull channels, code templates, configuration map and global scripts using version control tools like Git or SVN. The only requirements are having credentials for the server that is being synced and the server also needs to support and allow access to Mirth Connect's REST API.
+Mirthsync is a command line tool for synchronizing Mirth Connect code
+between servers by allowing you to push or pull channels, code
+templates, configuration map and global scripts using version control
+tools like Git or SVN. The only requirements are having credentials
+for the server that is being synced and the server also needs to
+support and allow access to Mirth Connect's REST API.
 
-Mirthsync is ideal for implementing code across environments such as Production, Test and Development. Environment specific variables such as data sources can be stored in the configuration map allowing the rest of the Mirth Connect code to be environment agnostic.
+Mirthsync is ideal for implementing code across environments such as
+Production, Test and Development. Environment specific variables such
+as data sources can be stored in the configuration map allowing the
+rest of the Mirth Connect code to be environment agnostic.
 
 ## Status
-The v0.1.0 tag and release is stable. 
-
-Recently, preliminary support was added for groups on the master branch. There is no release or tag for this yet. If you would like to use a version that supports groups you'll need to build from the master branch source. The current groups code will only pull groups - not push. Code for pushing groups will be coming soon.
+### 2.0 Release is coming soon.
+The 2.0 release of Mirthsync will bring bi-directional groups
+support. The 2.0 snapshot release is fully functional and will be
+released as 2.0 after further testing.
 
 ## Installation 
 
@@ -16,7 +25,8 @@ Recently, preliminary support was added for groups on the master branch. There i
 
 ## Prerequisites 
 
-Requires Java JRE or JDK version 8 (versions 9 and above are not currently supported)
+Requires Java JRE or JDK version 8 (versions 9 and above are not
+currently supported)
 
 
 ## Help
@@ -72,7 +82,6 @@ Requires [Leiningen](https://leiningen.org/)
 ## Todo
 
 - strip or encode filenames created from server data
-- look into bulk group download
 
 ## License
 
