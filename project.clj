@@ -1,4 +1,4 @@
-(defproject com.saga-it/mirthsync "1.0.1-SNAPSHOT"
+(defproject com.saga-it/mirthsync "2.0.0-SNAPSHOT"
   :description "Mirthsync is a command line tool, created by Saga IT,
   for keeping a local copy of important aspects of Mirth Connect
   configuration in order to allow for the use of traditional version
@@ -30,4 +30,13 @@
   :plugins [[lein-ancient "0.6.15"]]
   :main mirthsync.core
   :target-path "target/%s"
-  :profiles {:uberjar {:aot :all}})
+  :profiles {:uberjar {:aot :all
+                       :omit-source true}}
+  :aliases {"devbump" ["change" "version" "leiningen.release/bump-version"]}
+  :release-tasks [["clean"]
+                  ["test"]
+                  ["vcs" "assert-committed"]
+                  ["change" "version"
+                   "leiningen.release/bump-version" "release"]
+                  ["vcs" "commit"]
+                  ["uberjar"]])
