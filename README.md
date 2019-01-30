@@ -53,12 +53,26 @@ How to pull Mirth Connect code from a remote repository:
 
 `$ java -jar mirthsync.jar  -s https://localhost:8443/api -u admin -p admin pull -t /home/user/`
 
+Pull/Push from a REPL using mostly CLI defaults. The following pulls
+code to a directory called 'tmp' (relative to the execution
+environment), overwriting existing files ("-f"), and then pushes back
+to the local server from the same directory.
+
+```clojure
+(do (mirthsync.core/run (mirthsync.cli/config ["pull" "-t" "tmp" "-p" "admin" "-f"]))
+    (mirthsync.core/run (mirthsync.cli/config ["push" "-t" "tmp" "-p" "admin"])))
+```
+
 ## Build from Source
 
 Requires [Leiningen](https://leiningen.org/)
 
 `$ lein uberjar`
 
+## Todo
+
+- strip or encode filenames created from server data
+- look into bulk group download
 
 ## License
 

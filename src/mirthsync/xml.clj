@@ -14,22 +14,22 @@
   "Take an xml location and write to the filesystem with a meaningful
   name and path. If the file exists it is not overwritten unless the
   -f option is set. Returns nil."
-  [{:keys [target channel-groups] :as app-conf}
-   {:keys [local-path find-name find-elements find-id append-name path] :as api}
-   loc]
+  [{:keys [channel-groups el-loc]
+    {:keys [local-path find-name
+            find-id append-name path] :as api} :api
+    :as app-conf}]
 
-  (let [id (find-id loc)
+  (let [id (find-id el-loc)
         extra-path (when (and
                           channel-groups
-                          (= "channels" (path api))
+                          (= "/channels" (path api))
                           (channel-groups id))
                      (str (first (channel-groups id))
                           File/separator))
-        name (str (find-name loc) (append-name api))
+        name (str (find-name el-loc) (append-name api))
 
-        xml-str (xml/indent-str (zip/node loc))
-        file-path (str target (File/separator)
-                       (local-path api) (File/separator)
+        xml-str (xml/indent-str (zip/node el-loc))
+        file-path (str (local-path app-conf) (File/separator)
                        extra-path name ".xml")]
     (if (and (.exists (io/file file-path))
              (not (:force app-conf)))

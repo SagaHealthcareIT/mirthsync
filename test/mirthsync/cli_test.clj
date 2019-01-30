@@ -18,7 +18,8 @@
   (testing "Verbosity increases with extra v's"
     (is (= 3 (:verbosity (config ["-vvv" "push"])))))
 
-  (testing "Sensible push defaults"
+  (testing "Sensible push defaults and ensure end slash stripped from
+  api"
     (let [conf {:errors nil,
                 :exit-code 0,
                 :verbosity 0,
@@ -28,7 +29,7 @@
                 :action "push",
                 :target ".",
                 :exit-msg nil}]
-      (is (= conf (config ["push"])))))
+      (is (= conf (config ["push" "-shttps://localhost:8443/api/"])))))
 
   (testing "Sensible pull defaults"
     (let [conf {:errors nil,

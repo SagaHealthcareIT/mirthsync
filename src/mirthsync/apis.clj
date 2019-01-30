@@ -18,34 +18,57 @@
   [app-conf & _]
   app-conf)
 
-(defn xml-files
-  "Sequence of xml files in the target dir and base path."
-  [target local-path]
+(defn dir-files
+  "Sequence of java.io.File within specified directory matching all
+  predicates. Each predicate receives a file as a parameter."
+  [dir preds]
   (filter
-   (fn [file]
-     (and (not (.isDirectory file))
-          (-> file
-              (.getName)
-              str/lower-case
-              (str/ends-with? ".xml"))))
-   (.listFiles (io/file (str target (File/separator) local-path)))))
+   (fn [f] (every? #(% f) preds))
+   (.listFiles (io/file dir))))
+
+(defn xml-file?
+  "True if the file ends with xml."
+  [file]
+  (and
+   (not (.isDirectory file))
+   #(-> file
+        (.getName)
+        str/lower-case
+        (str/ends-with? ".xml"))))
+
+(defn xml-files
+  "Sequence of java.io.File in the target dir filtered by preds."
+  [dir]
+  (dir-files dir [xml-file?]))
+
+(defn channel-xml-files
+  "Sequence of channel xml files contained within directories in the
+  target dir and 1st level subdirectories."
+  [dir]
+  (let [dirs (dir-files dir [#(.isDirectory %)])
+        dirs (conj dirs (io/file dir))]
+    (mapcat (fn [dir]
+              (dir-files dir [xml-file?
+                              #(not= "Group.xml" (.getName %))]))
+            dirs)))
 
 (defn group-xml-files
-  "Sequence of group.xml files nested within the target dir and base
-  path."
-  [target local-path]
-  (map #(io/file % "Group.xml")
-       (filter #(.isDirectory %)
-               (-> target
-                   (str (File/separator) local-path)
-                   io/file
-                   .listFiles))))
+  "Sequence of group.xml files contained within directories in the
+  target dir."
+  [dir]
+  (let [dirs (dir-files dir [#(.isDirectory %)])]
+    (mapcat (fn [dir]
+              (dir-files dir [xml-file?
+                              #(= "Group.xml" (.getName %))]))
+            dirs)))
 
 (defn groups-handler
   "Takes the application config and an element loc. Adds a map of
   channel ids (keys) group names (values) to the app config and
   returns the new config."
-  [app-conf {:keys [find-id find-name] :as api} el-loc]
+  [{:keys [el-loc] 
+    {:keys [find-id find-name] :as api} :api
+    :as app-conf}]
   (let [id (find-id el-loc)
         group-name (find-name el-loc)
         channel-ids (zx/xml-> el-loc :channels :channel :id zip/down zip/node)
@@ -57,76 +80,71 @@
       channel-groups
       (map #(sorted-map % [group-name id]) channel-ids)))))
 
+(defn local-path
+  "Returns a fn that takes the app-conf and prepends the target
+  directory to the supplied path."
+  [path]
+  (fn [app-conf]
+    (str (:target app-conf) path)))
+
 (def apis
-  [{:path (constantly "server/configurationMap")
-    :local-path (constantly ".")
+  [{:path (constantly "/server/configurationMap")
+    :local-path (local-path "/.")
     :find-elements #(zx/xml-> % :map)
     :find-id (constantly nil)
     :find-name (constantly "ConfigurationMap")
     :append-name (constantly nil)
     :api-files xml-files
-    :transformer default-transformer
-    :apis nil}
+    :transformer default-transformer}
 
-   {:path (constantly "codeTemplates")
-    :local-path (constantly "CodeTemplates")
+   {:path (constantly "/codeTemplates")
+    :local-path (local-path "/CodeTemplates")
     :find-elements #(zx/xml-> % :list :codeTemplate)
     :find-id (zxffby :id)
     :find-name (zxffby :name)
     :append-name (constantly nil)
     :api-files xml-files
-    :transformer default-transformer
-    :apis nil}
+    :transformer default-transformer}
 
-   {:path (constantly "server/globalScripts")
-    :local-path (constantly "GlobalScripts")
+   {:path (constantly "/server/globalScripts")
+    :local-path (local-path "/GlobalScripts")
     :find-elements #(zx/xml-> % :map)
     :find-id (constantly nil)
     :find-name (constantly "globalScripts")
     :append-name (constantly nil)
     :api-files xml-files
-    :transformer default-transformer
-    :apis nil}
+    :transformer default-transformer}
+   
+   {:path (constantly "/channels")
+    :local-path (local-path "/Channels")
+    :find-elements #(zx/xml-> % :list :channel)
+    :find-id (zxffby :id)
+    :find-name (zxffby :name)
+    :append-name (constantly nil)
+    :api-files channel-xml-files
+    :transformer default-transformer}
 
-   {:path (constantly "channelgroups")
-    :local-path (constantly "Channels")
-    :find-elements #(zx/xml-> % :list :channelGroup)
+   {:path (constantly "/channelgroups")
+    :local-path (local-path "/Channels")
+    :find-elements #(or (zx/xml-> % :list :channelGroup) ; from server
+                        (zx/xml-> % :channelGroup)) ; from filesystem
     :find-id (zxffby :id)
     :find-name (zxffby :name)
     :append-name (constantly (str File/separator "Group"))
     :api-files group-xml-files
-    :transformer groups-handler
-    ;;:transformer (fn [app-conf api loc] (assoc app-conf :channel-groups loc))
-    :apis [{:path (constantly "channels")
-            :local-path (constantly ".")
-            :find-elements #(zx/xml-> % :list :channel)
-            :find-id (zxffby :id)
-            :find-name (zxffby :name)
-            :append-name (constantly nil)
-            :api-files xml-files
-            :transformer default-transformer
-            :apis nil}]}
-   ])
+    :transformer groups-handler}])
 
 (defn apis-action
-  "Recursively iterate apis and perform the action with the
+  "Iterates through the apis calling action on app-conf. If an api
+  updates app-conf the apis processed afterward use the updated
   app-conf."
-  [app-conf parent-api apis action]
-  (doseq [api apis]
-    (let [api (if parent-api
-                (assoc api
-                       :local-path
-                       (constantly
-                        (str
-                         ((:local-path parent-api) parent-api)
-                         File/separator
-                         ((:local-path api) api))))
-                api)
-          app-conf (-> app-conf
-                       (assoc :parent-api parent-api)
+  [app-conf apis action]
+  (if-let [api (first apis)]
+    (let [app-conf (-> app-conf
                        (assoc :api api)
                        action)]
-      (when (seq (:apis api))
-        (apis-action app-conf api (:apis api) action))
-      (cli/out 2 "Current application config: ")
-      (cli/out 2 app-conf))))
+      (cli/out 2 "App config post-api: ")
+      (cli/out 2 app-conf)
+      (recur app-conf (rest apis) action))  
+
+    app-conf))

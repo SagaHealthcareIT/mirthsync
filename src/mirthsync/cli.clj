@@ -1,7 +1,8 @@
 (ns mirthsync.cli
   (:require [clojure.string :as string]
             [clojure.tools
-             [cli :refer [parse-opts]]])
+             [cli :refer [parse-opts]]]
+            [clojure.string :as str])
   (:import java.net.URL))
 
 (def verbosity 0)
@@ -63,6 +64,13 @@
                    (into (:options config))
                    (dissoc :options)
                    (assoc :action (first (:arguments config))))
+
+        ;; remove trailing slash from server url if found
+        config (if (str/ends-with? (:server config) "/")
+                 (assoc config
+                        :server
+                        (.substring (:server config) 0 (.lastIndexOf (:server config) "/")))
+                 config)
 
         args-valid? (or (:help config)
                         (and (= 1 (count (:arguments config)))

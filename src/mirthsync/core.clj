@@ -5,26 +5,6 @@
             [mirthsync.cli :as cli]
             [mirthsync.http-client :refer [with-authentication]]))
 
-(comment
-  - REPL
-    (do
-      (run (cli/config ["pull" "-t" "tmp" "-p" "admin" "-f"]))
-      (run (cli/config ["push" "-t" "tmp" "-p" "admin" "-f"]))
-      )
-  - api via curl
-  curl -v -include --cookie \
-    "JSESSIONID=node06i1z8hqqzbed1axrw3nfn8enx1.node0"  -k \
-    --header "Accept: application/xml" -X POST --header \
-    "Content-Type: application/xml" -F "body=@./foo.xml" \
-    "https://localhost:8443/api/channelgroups/_getChannelGroups"
-
-  - TODO
-    - strip or encode filenames
-    - remove need for download before upload
-    - look into bulk group download
-    - group upload
-  )
-
 (defn run
   "Links the action specified in the application config to the
   appropriate function, authenticates to the server, and calls the
@@ -37,7 +17,7 @@
   (cli/out (str "Authenticating to server at " server " as " username))
   (let [action   ({"push" upload, "pull" download} action)
         app-conf (with-authentication server username password
-                   #(apis-action app-conf nil apis action))]
+                   #(apis-action app-conf apis action))]
     
     (cli/out "Finished!")
     app-conf))
