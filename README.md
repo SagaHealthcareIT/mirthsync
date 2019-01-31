@@ -18,6 +18,11 @@ The 2.0 release of Mirthsync will bring bi-directional groups
 support. The 2.0 snapshot release is fully functional and will be
 released as 2.0 after further testing.
 
+## Changes
+### 2.0.0-SNAPSHOT
+The local directory structure has been changed to nest channels within
+their respective group.
+
 ## Installation 
 
 `$ git clone https://github.com/SagaHealthcareIT/mirthsync.git`
@@ -68,7 +73,7 @@ code to a directory called 'tmp' (relative to the execution
 environment), overwriting existing files ("-f"), and then pushes back
 to the local server from the same directory.
 
-```clojure
+```clj
 (do (mirthsync.core/run (mirthsync.cli/config ["pull" "-t" "tmp" "-p" "admin" "-f"]))
     (mirthsync.core/run (mirthsync.cli/config ["push" "-t" "tmp" "-p" "admin"])))
 ```
