@@ -3,86 +3,27 @@
             [clojure.data.xml :as xml]
             [clojure.zip :as zip]
             [mirthsync.cli :as cli]
-            [mirthsync.http-client :refer [fetch-all]]
+            [mirthsync.http-client :refer [fetch-all put-xml post-xml]]
             [mirthsync.xml :refer [serialize-node to-zip]]
             [clojure.data.zip.xml :as zx]))
 
 (defn api-url
   "Returns the constructed api url."
   [{:keys [server]
-    {:keys [path find-elements] :as api} :api}]
-  (str server (path api)))
-
-(defn download
-  "Serializes all xml found at the api path to the filesystem using the
-  supplied config. Returns a (potentially) updated app-conf with
-  details about the fetched apis. If the save parameter is false, the
-  apis are fetched and processed but not saved to the filesystem. This
-  is useful for accumulating data related to the apis without
-  committing anything to disk."
-  ([app-conf]
-   (download true app-conf))
-
-  ([save {:keys [server]
-          {:keys [find-elements path local-path transformer] :as api} :api
-          :as app-conf}]
-   (let [remote-path (api-url app-conf)
-         _ (when save
-             (cli/out 0 (str "Downloading from "
-                                remote-path " to " (local-path app-conf))))]
-
-     (loop [app-conf app-conf
-            el-locs (fetch-all remote-path find-elements)]
-       (if (seq el-locs)
-         (let [el-loc (first el-locs)
-               app-conf (assoc app-conf :el-loc el-loc)
-               app-conf (transformer app-conf)]
-           (when save (serialize-node app-conf))
-           (recur app-conf (rest el-locs)))
-         app-conf)))))
+    {:keys [rest-path find-elements] :as api} :api}]
+  (str server (rest-path api)))
 
 (defn upload-node
-  "Extracts the id from the xmlloc using the find-id predicates. PUTs
-  the formatted XML to the location constructed from the base-url,
-  path, and id."
-  [{:keys [server api server server-groups
-           channel-groups el-loc] :as app-conf
-    {:keys [path find-id path find-id find-name] :as api} :api}]
-  (let [id (find-id el-loc)
-        name (find-name el-loc)]
-    (if (= (path api) "/channelgroups")
-      (let [existing-id-loc (zx/xml1-> server-groups
-                                       :set
-                                       :channelGroup
-                                       :id
-                                       (zx/text= id))
-
-            server-groups (if existing-id-loc
-                            (zip/remove (zip/up existing-id-loc))
-                            server-groups)
-
-            server-groups (zip/append-child server-groups (zip/node el-loc))
-            set-el (zip/node server-groups)
-            ;; set-el (xml/element "set" nil (zip/node el-loc))
-            ;; set-el (xml/element "set" nil (zip/children el-loc))
-            ]
-        (client/post (str server (path api) "/_bulkUpdate")
-                     {:insecure? true
-                      :multipart [{:name "channelGroups"
-                                   :content (xml/indent-str set-el)
-                                   :mime-type "application/xml"
-                                   :encoding "UTF-8"}
-                                  {:name "removedChannelGroupIds"
-                                   :content "<set/>"
-                                   :mime-type "application/xml"
-                                   :encoding "UTF-8"}]})
-        (assoc app-conf :server-groups server-groups))
-      (do
-        (client/put (str server (path api) "/" id)
-                    {:insecure? true
-                     :body (xml/indent-str (zip/node el-loc))
-                     :content-type "application/xml"})
-        app-conf))))
+  "Extracts the id from the xmlloc using the find-id predicates. PUTs or
+  POSTs the params to the location constructed from the base-url,
+  rest-path, and id."
+  [{:keys [el-loc] :as app-conf
+    {:keys [post-path post-params] :as api} :api}]
+  
+  (if (post-path api)
+    (apply post-xml app-conf (post-params app-conf))
+    (put-xml app-conf))
+  app-conf)
 
 (defn assoc-server-groups
   "Fetches the current groups from server. Adds the top level element
@@ -96,32 +37,56 @@
                            (fetch-all (api-url app-conf)
                                       identity))))))
 
+(defn local-locs
+  "Lazy seq of local el-locs for the current api."
+  [{:as app-conf
+    {:keys [local-path api-files]} :api}]
+  (map #(to-zip (slurp %)) (api-files (local-path app-conf))))
+
+(defn remote-locs
+  "Seq of remote el-locs for the current api. Could be lazy or not
+  depending on the implementation of find-elements."
+  [{:as app-conf
+    {:keys [find-elements] :as api} :api}]
+  (fetch-all (api-url app-conf) find-elements))
+
+(defn process
+  "Prints the message and processes the el-locs via the action."
+  [{:as app-conf
+    {:keys [pre-transform]} :api} msg el-locs action]
+  (cli/out msg)
+  (loop [app-conf app-conf
+         el-locs el-locs]
+    (if-let [el-loc (first el-locs)]
+      (recur
+       (-> app-conf
+           (assoc :el-loc el-loc)
+           (pre-transform)
+           action)
+       (rest el-locs))
+      app-conf)))
+
+(defn download
+  "Serializes all xml found at the api rest-path to the filesystem using the
+  supplied config. Returns a (potentially) updated app-conf with
+  details about the fetched apis."
+  [{:as app-conf
+    {:keys [local-path transformer] :as api} :api}]
+  (process
+   app-conf
+   (str "Downloading from " (api-url app-conf) " to " (local-path app-conf))
+   (remote-locs app-conf)
+   serialize-node))
 
 (defn upload
   "Takes the current app-conf with the current api and finds associated
-  files within the target directory. If pushing is allowed for the
-  current API, the files in the specified path directory are each read
-  and handed to upload-node to push to Mirth."
-  [{:keys [server] :as app-conf
-    {:keys [local-path path api-files transformer] :as api} :api}]
+  files within the target directory. The files in the specified path
+  directory are each read and handed to upload-node to push to Mirth."
+  [{:as app-conf
+    {:keys [local-path rest-path transformer] :as api} :api}]
 
-  (cli/out 0 (str "Uploading from " (local-path app-conf) " to " (path api)))
-  (let [app-conf (if (= (path api) "/channelgroups")
-                   (assoc-server-groups app-conf)
-                   app-conf)
-        files (api-files (local-path app-conf))]
-    
-    (cli/out 0 (str "found " (count files) " files"))
-    
-    (loop [app-conf app-conf
-           files files]
-      (if-let [f (first files)]
-        (do
-          (cli/out 1 (.getName f))
-          (recur
-           (-> app-conf
-               (assoc :el-loc (to-zip (slurp f)))
-               (transformer)
-               upload-node)
-           (rest files)))
-        app-conf))))
+  (process
+   app-conf
+   (str "Uploading from " (local-path app-conf) " to " (rest-path api))
+   (local-locs app-conf)
+   upload-node))

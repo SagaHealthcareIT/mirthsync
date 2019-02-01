@@ -1,6 +1,36 @@
 (ns mirthsync.http-client
   (:require [clj-http.client :as client]
-            [mirthsync.xml :as mxml]))
+            [mirthsync.xml :as mxml]
+            [clojure.data.xml :as xml]
+            [clojure.zip :as zip]))
+
+(defn put-xml
+  "HTTP PUTs the current api and el-loc to the server."
+  [{:keys [server el-loc]
+    {:keys [find-id rest-path] :as api} :api}]
+  (client/put (str server (rest-path api) "/" (find-id el-loc))
+              {:insecure? true
+               :body (xml/indent-str (zip/node el-loc))
+               :content-type "application/xml"}))
+
+(defn post-xml
+  "HTTP multipart posts the params of the api to the server. Multiple
+  params are supported and should be passed as one or more [name
+  value] vectors. Name should be a string and value should be an xml
+  string."
+  [{:keys [server]
+    {:keys [post-path] :as api} :api}
+   & params]
+  
+  (client/post (str server (post-path api))
+               {:insecure? true
+                :multipart (map (fn
+                                  [[n x]]
+                                  {:name n
+                                   :content x
+                                   :mime-type "application/xml"
+                                   :encoding "UTF-8"})
+                                params)}))
 
 (defn with-authentication
   "Binds a cookie store to keep auth cookies, authenticates using the

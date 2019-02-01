@@ -13,29 +13,17 @@
 (defn serialize-node
   "Take an xml location and write to the filesystem with a meaningful
   name and path. If the file exists it is not overwritten unless the
-  -f option is set. Returns nil."
-  [{:keys [channel-groups el-loc]
-    {:keys [local-path find-name
-            find-id append-name path] :as api} :api
-    :as app-conf}]
+  -f option is set. Returns app-conf."
+  [{:keys [server-groups el-loc] :as app-conf
+    {:keys [file-path]} :api}]
 
-  (let [id (find-id el-loc)
-        extra-path (when (and
-                          channel-groups
-                          (= "/channels" (path api))
-                          (channel-groups id))
-                     (str (first (channel-groups id))
-                          File/separator))
-        name (str (find-name el-loc) (append-name api))
-
-        xml-str (xml/indent-str (zip/node el-loc))
-        file-path (str (local-path app-conf) (File/separator)
-                       extra-path name ".xml")]
-    (if (and (.exists (io/file file-path))
+  (let [xml-str (xml/indent-str (zip/node el-loc))
+        fpath (file-path app-conf)]
+    (if (and (.exists (io/file fpath))
              (not (:force app-conf)))
-      (cli/out (str "File at " file-path " already exists and the "
+      (cli/out (str "File at " fpath " already exists and the "
                        "force (-f) option was not specified. Refusing "
                        "to overwrite the file."))
-      (do (io/make-parents file-path)
-          (spit file-path xml-str)))
-    nil))
+      (do (io/make-parents fpath)
+          (spit fpath xml-str)))
+    app-conf))

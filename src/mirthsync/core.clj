@@ -1,6 +1,6 @@
 (ns mirthsync.core
   (:gen-class)
-  (:require [mirthsync.actions :refer [download upload]]
+  (:require [mirthsync.actions :refer [download upload assoc-server-groups]]
             [mirthsync.apis :refer [apis apis-action]]
             [mirthsync.cli :as cli]
             [mirthsync.http-client :refer [with-authentication]]))
@@ -17,7 +17,11 @@
   (cli/out (str "Authenticating to server at " server " as " username))
   (let [action   ({"push" upload, "pull" download} action)
         app-conf (with-authentication server username password
-                   #(apis-action app-conf apis action))]
+                   ;; add server groups to app-conf as first step
+                   #(apis-action
+                     (assoc-server-groups (assoc app-conf :api (first apis)))
+                     apis
+                     action))]
     
     (cli/out "Finished!")
     app-conf))

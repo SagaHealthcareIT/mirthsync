@@ -74,8 +74,8 @@ environment), overwriting existing files ("-f"), and then pushes back
 to the local server from the same directory.
 
 ```clj
-(do (mirthsync.core/run (mirthsync.cli/config ["pull" "-t" "tmp" "-p" "admin" "-f"]))
-    (mirthsync.core/run (mirthsync.cli/config ["push" "-t" "tmp" "-p" "admin"])))
+(do (mirthsync.core/run (mirthsync.cli/config ["pull" "-t" "target/tmp" "-p" "admin" "-f"]))
+    (mirthsync.core/run (mirthsync.cli/config ["push" "-t" "target/tmp" "-p" "admin"])))
 ```
 
 ## Build from Source
