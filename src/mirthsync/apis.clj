@@ -92,6 +92,21 @@
         server-groups (zip/append-child server-groups (zip/node el-loc))]
     (assoc app-conf :server-groups server-groups)))
 
+(defn safe-name?
+  "Takes and returns an unmodified string that should represent a
+  creatable file that doesn't span paths. Logs a human readable error
+  and then throws an exception if any problems are detected."
+  [name]
+  (if (and
+       name
+       (not= name (.getName (File. name))))
+    (do
+      (cli/out (str name " has invalid characters."))
+      (throw (AssertionError. (str "Name does not appear to be safe"
+                                    " for file creation: " name))))
+    name))
+
+
 (defn file-path
   "Returns a function that, when given an app conf, returns a string file
   path for the current api with path appended."
@@ -100,7 +115,7 @@
        {:keys [local-path find-name] :as api} :api}]
     (str (local-path app-conf)
          File/separator
-         (find-name el-loc)
+         (safe-name? (find-name el-loc))
          path)))
 
 (defn channel-file-path
@@ -109,12 +124,12 @@
     {:keys [local-path find-name find-id] :as api} :api}]
   (str (local-path app-conf)
        File/separator
-       (let [id (find-id el-loc)]
-         (zx/xml1-> server-groups 
-                    :channelGroup :channels :channel
-                    :id id
-                    zip/up zip/up zip/up
-                    :name zx/text))
+       (safe-name? (let [id (find-id el-loc)]
+                     (zx/xml1-> server-groups 
+                                :channelGroup :channels :channel
+                                :id id
+                                zip/up zip/up zip/up
+                                :name zx/text)))
        File/separator
        (find-name el-loc)
        ".xml"))
