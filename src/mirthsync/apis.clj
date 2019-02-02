@@ -124,13 +124,14 @@
     {:keys [local-path find-name find-id] :as api} :api}]
   (str (local-path app-conf)
        File/separator
-       (safe-name? (let [id (find-id el-loc)]
-                     (zx/xml1-> server-groups 
-                                :channelGroup :channels :channel
-                                :id id
-                                zip/up zip/up zip/up
-                                :name zx/text)))
-       File/separator
+       (if-let [group-name (safe-name?
+                            (let [id (find-id el-loc)]
+                              (zx/xml1-> server-groups 
+                                         :channelGroup :channels :channel
+                                         :id id
+                                         zip/up zip/up zip/up
+                                         :name zx/text)))]
+         (str group-name File/separator))
        (find-name el-loc)
        ".xml"))
 
@@ -173,7 +174,7 @@
      :find-elements #(zx/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
-     :file-path (file-path (str File/separator "ConfigurationMap.xml"))})
+     :file-path (file-path "ConfigurationMap.xml")})
 
    (make-api
     {:rest-path (constantly "/codeTemplates")
@@ -186,7 +187,7 @@
      :find-elements #(zx/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
-     :file-path (file-path (str File/separator "globalScripts.xml"))})
+     :file-path (file-path "globalScripts.xml")})
    
    (make-api
     {:rest-path (constantly "/channels")

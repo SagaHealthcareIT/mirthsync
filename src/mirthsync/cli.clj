@@ -14,10 +14,17 @@
   ([level message]
    (when (>= verbosity level) (println message))))
 
+(defn strip-trailing-slashes
+  "Removes one or more trailing forward or backward trailing slashes
+  from the string unless the string is all slashes."
+  [s]
+  (str/replace s #"(?!^)[\\/]+$" ""))
+
 (def cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
     :default "https://localhost:8443/api"
-    :validate-fn #(URL. %)]
+    :validate-fn #(URL. %)
+    :parse-fn strip-trailing-slashes]
    
    ["-u" "--username USERNAME" "Username used for authentication"
     :default "admin"]
@@ -28,7 +35,8 @@
    ["-f" "--force" "Overwrite any conflicting files in the target directory"]
 
    ["-t" "--target TARGET_DIR" "Base directory used for pushing or pulling files"
-    :default "."]
+    :default "."
+    :parse-fn strip-trailing-slashes]
 
    ["-v" nil "Verbosity level; may be specified multiple times to increase value"
     :id :verbosity
@@ -64,13 +72,6 @@
                    (into (:options config))
                    (dissoc :options)
                    (assoc :action (first (:arguments config))))
-
-        ;; remove trailing slash from server url if found
-        config (if (str/ends-with? (:server config) "/")
-                 (assoc config
-                        :server
-                        (.substring (:server config) 0 (.lastIndexOf (:server config) "/")))
-                 config)
 
         args-valid? (or (:help config)
                         (and (= 1 (count (:arguments config)))

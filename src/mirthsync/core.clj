@@ -30,7 +30,8 @@
 (defn exit!
   "Print message and System/exit with status code"
   [{:keys [exit-msg exit-code] :as conf}]
-  (cli/out exit-msg)
+  (when exit-msg
+    (cli/out exit-msg))
   (System/exit exit-code))
 
 (defn -main
