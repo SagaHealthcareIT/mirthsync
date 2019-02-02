@@ -2,15 +2,21 @@
 
 Mirthsync is a command line tool for synchronizing Mirth Connect code
 between servers by allowing you to push or pull channels, code
-templates, configuration map and global scripts using version control
-tools like Git or SVN. The only requirements are having credentials
-for the server that is being synced and the server also needs to
-support and allow access to Mirth Connect's REST API.
+templates, configuration map and global scripts. The tool can also be
+integrated with Git or other version control systems for the purpose
+of tracking changes to Mirth Connect code and configuration. 
 
-Mirthsync is ideal for implementing code across environments such as
-Production, Test and Development. Environment specific variables such
-as data sources can be stored in the configuration map allowing the
-rest of the Mirth Connect code to be environment agnostic.
+The only requirements are having credentials for the server that is
+being synced and the server also needs to support and allow access to
+Mirth Connect's REST API.
+
+## Suggestions for use
+
+- Use Mirthsync in conjunction with Git (or any VCS) to back up and
+  track changes to code and settings
+- Pull and push changes between Mirth Connect servers
+- Utilize Git branches to track and merge code between dev, test, and
+  prod environments
 
 ## Status
 ### 2.0 Release is coming soon.
@@ -64,16 +70,49 @@ Actions:
 
 ## Examples
 
-How to pull Mirth Connect code from a remote repository:
+### CLI
 
-`$ java -jar mirthsync.jar  -s https://localhost:8443/api -u admin -p admin pull -t /home/user/`
+How to pull Mirth Connect code from a Mirth Connect instance:
+
+``` shell
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin pull -t /home/user/
+```
+> Note that the -t paramter accepts absolute and relative paths.
+
+Pulling code from a Mirth Connect instance allowing for overwriting existing files:
+
+``` shell
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -f pull -t /home/user/
+```
+Pushing code to a Mirth Connect instance (doesn't have to be the same
+instance that was pulled from):
+
+``` shell
+$ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin push -t /home/user/
+```
+### Cron
+
+There is a sample script (git-cron-sample.sh) packaged that can be
+customized and utilized from a cron job and/or the command line. The
+script can take an optional commit message in cases where it is
+desirable to immediately pull and commit changes to git with
+meaningful commit messages.
+
+Sample crontab...
+
+``` shell
+# At 02:24 on every day-of-week from Sunday through Saturday 
+24 2 * * 0-6 /opt/mirthsync/git-cron-sample.sh >/dev/null 2>&1
+```
+
+### REPL
 
 Pull/Push from a REPL using mostly CLI defaults. The following pulls
 code to a directory called 'tmp' (relative to the execution
 environment), overwriting existing files ("-f"), and then pushes back
 to the local server from the same directory.
 
-```clj
+``` clj
 (do (mirthsync.core/run (mirthsync.cli/config ["pull" "-t" "target/tmp" "-p" "admin" "-f"]))
     (mirthsync.core/run (mirthsync.cli/config ["push" "-t" "target/tmp" "-p" "admin"])))
 ```
@@ -86,7 +125,10 @@ Requires [Leiningen](https://leiningen.org/)
 
 ## Todo
 
-- strip or encode filenames created from server data
+- Add the ability to selectively push or pull any channel, group,
+  script, etc
+- Add granular extraction of scripts into their own files and merge
+  back into XML for pushing
 
 ## License
 
