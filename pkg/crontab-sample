@@ -1,0 +1,2 @@
+# At 02:24 on every day-of-week from Sunday through Saturday 
+24 2 * * 0-6 /opt/mirthsync/git-cron-sample.sh >/dev/null 2>&1
