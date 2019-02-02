@@ -20,14 +20,15 @@
                  [org.clojure/data.xml "0.0.8"]
                  [org.clojure/data.zip "0.1.2"]
                  [org.clojure/tools.cli "0.4.1"]
-                 [tolitius/xml-in "0.1.0"]
+                 ;; [tolitius/xml-in "0.1.0"]
                  [org.clojure/tools.logging "0.4.1"]
                  ;;;; don't need this for now
                  ;; [com.fasterxml.jackson.core/jackson-core "2.9.6"]
                  ;; [com.fasterxml.jackson.dataformat/jackson-dataformat-xml "2.9.6"]
                  ;; [com.fasterxml.jackson.core/jackson-databind "2.9.6"]
                  ]
-  :plugins [[lein-ancient "0.6.15"]]
+  :plugins [[lein-ancient "0.6.15"]
+            [lein-tar "3.3.0"]]
   :main mirthsync.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all
@@ -40,4 +41,6 @@
                    "leiningen.release/bump-version" "release"]
                   ["vcs" "commit"]
                   ["vcs" "tag" "--no-sign"]
-                  ["uberjar"]])
+                  ["uberjar"]]
+  :tar {:uberjar true
+        :format :tar-gz})
