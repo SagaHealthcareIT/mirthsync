@@ -33,14 +33,17 @@
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all
                        :omit-source true}}
-  :aliases {"devbump" ["change" "version" "leiningen.release/bump-version"]}
+
   :release-tasks [["clean"]
                   ["test"]
                   ["vcs" "assert-committed"]
-                  ["change" "version"
-                   "leiningen.release/bump-version" "release"]
+                  ;; bump minor
+                  ["change" "version" "leiningen.release/bump-version"]
+                  ;; bump major
+                  ;; ["change" "version"
+                  ;;  "leiningen.release/bump-version" "release"]
                   ["vcs" "commit"]
                   ["vcs" "tag" "--no-sign"]
-                  ["uberjar"]]
+                  ["tar"]]
   :tar {:uberjar true
         :format :tar-gz})
