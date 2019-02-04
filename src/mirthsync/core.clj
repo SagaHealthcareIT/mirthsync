@@ -1,32 +1,26 @@
 (ns mirthsync.core
-  (:gen-class);FIXME: redo these requires/refers
-  (:require [mirthsync.actions :refer [download upload assoc-server-codelibs assoc-server-groups]]
-            [mirthsync.apis :refer [apis apis-action]]
+  (:gen-class)
+  (:require [mirthsync.actions :as act]
+            [mirthsync.apis :as api]
             [mirthsync.cli :as cli]
-            [mirthsync.http-client :refer [with-authentication]]))
+            [mirthsync.http-client :as http]))
 
 (defn run
   "Links the action specified in the application config to the
   appropriate function, authenticates to the server, and calls the
-  function for each api in the defined apis (in order). These calls
+  function for each api in the defined api/apis (in order). These calls
   happen within the context of an authenticated (thread local) http
   client. The app-config is returned with any updates from the
   action."
   [{:keys [server username password action] :as app-conf}]
 
   (cli/out (str "Authenticating to server at " server " as " username))
-  (let [action   ({"push" upload, "pull" download} action)
-        app-conf (with-authentication server username password
-                   ;; add server groups to app-conf as first step
-                   #(apis-action
-                                        ;FIXME: automate these 'bulk' cases
-                     (let [app-conf (assoc-server-groups (assoc app-conf :api (second apis)))
-                           app-conf (assoc-server-codelibs (assoc app-conf :api (first apis)))]
-                       app-conf)
-
-                     apis
-                     action))]
-    
+  (let [action   ({"push" act/upload, "pull" act/download} action)
+        app-conf (http/with-authentication
+                   server username password
+                   #(-> app-conf
+                        (api/apis-action api/apis api/preprocess)
+                        (api/apis-action api/apis action)))]    
     (cli/out "Finished!")
     app-conf))
 

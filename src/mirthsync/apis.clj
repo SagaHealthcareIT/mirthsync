@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.zip :as zip]
+            [mirthsync.actions :as mact]
             [mirthsync.cli :as cli]
             [mirthsync.files :as mf]
             [clojure.data.xml :as xml])
@@ -43,7 +44,7 @@
    ["updatedCodeTemplates" "<list/>"]
    ["removedCodeTemplateIds" "<set/>"]))
 
-(defn groups-pre-transform
+(defn groups-pre-node-action
   "Returns an updated app-conf with the current group added to
   server-groups."
   [{:keys [server-groups el-loc] :as app-conf
@@ -62,7 +63,7 @@
     (assoc app-conf :server-groups server-groups)))
 
 ;FIXME: dedupe with groups
-(defn codelibs-pre-transform
+(defn codelibs-pre-node-action
   "Returns an updated app-conf with the current codelib added to
   server-codelibs."
   [{:keys [server-codelibs el-loc] :as app-conf
@@ -104,6 +105,10 @@
          File/separator
          (safe-name? (find-name el-loc))
          path)))
+
+(defn preprocess
+  [{:as app-conf {:keys [preprocess]} :api}]
+  (preprocess app-conf))
 
 (defn channel-file-path
   "Returns the channel xml path accounting for group nesting."
@@ -148,6 +153,7 @@
   (merge {:rest-path nil                ; required - server api path for GET/PUT
           :local-path nil               ; required - base dir for saving files
           :find-elements nil            ; required - find elements in the returned xml
+
           :find-id by-id                ; find the current xml loc id
           :find-name by-name            ; find the current xml loc name
 
@@ -155,7 +161,8 @@
           :api-files (partial mf/xml-file-seq 1) ; find local api xml files for upload
           :post-path (constantly nil)   ; HTTP POST on upload path
           :post-params (constantly nil) ; params for HTTP POST
-          :pre-transform identity}      ; transform app-conf before processing
+          :pre-node-action identity     ; transform app-conf before processing
+          :preprocess identity}         ; preprocess app-conf before any other work
          api))
 
 (defn post-path
@@ -173,7 +180,8 @@
      :api-files (partial mf/only-index-files-seq 2)
      :post-path post-path
      :post-params codelib-post-params
-     :pre-transform codelibs-pre-transform})
+     :preprocess mact/assoc-server-codelibs
+     :pre-node-action codelibs-pre-node-action})
 
    (make-api
     {:rest-path (constantly "/channelgroups")
@@ -184,7 +192,8 @@
      :api-files (partial mf/only-index-files-seq 2)
      :post-path post-path
      :post-params group-post-params
-     :pre-transform groups-pre-transform})
+     :preprocess mact/assoc-server-groups
+     :pre-node-action groups-pre-node-action})
    
    (make-api
     {:rest-path (constantly "/server/configurationMap")

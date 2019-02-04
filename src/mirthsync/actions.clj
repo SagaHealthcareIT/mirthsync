@@ -1,11 +1,9 @@
 (ns mirthsync.actions
-  (:require [clj-http.client :as client]
-            [clojure.data.xml :as xml]
+  (:require [clojure.data.xml :as xml]
             [clojure.zip :as zip]
             [mirthsync.cli :as cli]
-            [mirthsync.http-client :refer [fetch-all put-xml post-xml]]
-            [mirthsync.xml :refer [serialize-node to-zip]]
-            [clojure.data.zip.xml :as zx]))
+            [mirthsync.http-client :as mhttp]
+            [mirthsync.xml :as mxml]))
 
 (defn api-url
   "Returns the constructed api url."
@@ -21,8 +19,8 @@
     {:keys [post-path post-params] :as api} :api}]
   
   (if (post-path api)
-    (apply post-xml app-conf (post-params app-conf))
-    (put-xml app-conf))
+    (apply mhttp/post-xml app-conf (post-params app-conf))
+    (mhttp/put-xml app-conf))
   app-conf)
 
 (defn assoc-server-groups
@@ -34,7 +32,7 @@
          (zip/xml-zip
           (apply xml/element
                  :set nil (zip/children
-                           (fetch-all (api-url app-conf)
+                           (mhttp/fetch-all (api-url app-conf)
                                       identity))))))
 
 ;FIXME: dedupe 'bulk' logic
@@ -47,25 +45,25 @@
          (zip/xml-zip
           (apply xml/element
                  :list nil (zip/children
-                           (fetch-all (api-url app-conf)
+                           (mhttp/fetch-all (api-url app-conf)
                                       identity))))))
 (defn local-locs
   "Lazy seq of local el-locs for the current api."
   [{:as app-conf
     {:keys [local-path api-files]} :api}]
-  (map #(to-zip (slurp %)) (api-files (local-path app-conf))))
+  (map #(mxml/to-zip (slurp %)) (api-files (local-path app-conf))))
 
 (defn remote-locs
   "Seq of remote el-locs for the current api. Could be lazy or not
   depending on the implementation of find-elements."
   [{:as app-conf
     {:keys [find-elements] :as api} :api}]
-  (fetch-all (api-url app-conf) find-elements))
+  (mhttp/fetch-all (api-url app-conf) find-elements))
 
 (defn process
   "Prints the message and processes the el-locs via the action."
   [{:as app-conf
-    {:keys [pre-transform]} :api} msg el-locs action]
+    {:keys [pre-node-action]} :api} msg el-locs action]
   (cli/out msg)
   (loop [app-conf app-conf
          el-locs el-locs]
@@ -73,7 +71,7 @@
       (recur
        (-> app-conf
            (assoc :el-loc el-loc)
-           (pre-transform)
+           (pre-node-action)
            action)
        (rest el-locs))
       app-conf)))
@@ -88,7 +86,7 @@
    app-conf
    (str "Downloading from " (api-url app-conf) " to " (local-path app-conf))
    (remote-locs app-conf)
-   serialize-node))
+   mxml/serialize-node))
 
 (defn upload
   "Takes the current app-conf with the current api and finds associated
