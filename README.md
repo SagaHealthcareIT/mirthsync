@@ -21,11 +21,11 @@ Mirth Connect's REST API.
 ## Status
 ### 2.0 Release is coming soon.
 The 2.0 release of Mirthsync will bring bi-directional groups
-support. The 2.0 snapshot release is fully functional and will be
-released as 2.0 after further testing.
+support. The 2.0.2-SNAPSHOT release is fully functional and will be
+released as 2.0.2 after further testing.
 
 ## Changes
-### 2.0.0-SNAPSHOT
+### 2.0.2-SNAPSHOT
 The local directory structure has been changed to nest channels within
 their respective group.
 
