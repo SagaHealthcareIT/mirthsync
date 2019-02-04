@@ -172,6 +172,22 @@
 
 (def apis
   [(make-api
+    {:rest-path (constantly "/server/configurationMap")
+     :local-path (local-path ".")
+     :find-elements #(zx/xml-> % :map)
+     :find-id (constantly nil)
+     :find-name (constantly nil)
+     :file-path (file-path "ConfigurationMap.xml")})
+
+   (make-api
+    {:rest-path (constantly "/server/globalScripts")
+     :local-path (local-path "GlobalScripts")
+     :find-elements #(zx/xml-> % :map)
+     :find-id (constantly nil)
+     :find-name (constantly nil)
+     :file-path (file-path "globalScripts.xml")})
+   
+   (make-api
     {:rest-path (constantly "/codeTemplateLibraries")
      :local-path (local-path "CodeTemplates")
      :find-elements #(or (zx/xml-> % :list :codeTemplateLibrary) ; from server
@@ -180,9 +196,16 @@
      :api-files (partial mf/only-index-files-seq 2)
      :post-path post-path
      :post-params codelib-post-params
-     :preprocess mact/assoc-server-codelibs
+     :preprocess (partial mact/fetch-and-pre-assoc :server-codelibs :list)
      :pre-node-action codelibs-pre-node-action})
 
+   (make-api
+    {:rest-path (constantly "/codeTemplates")
+     :local-path (local-path "CodeTemplates")
+     :find-elements #(zx/xml-> % :list :codeTemplate)
+     :file-path codetemplate-file-path
+     :api-files (partial mf/without-index-files-seq 2)})
+   
    (make-api
     {:rest-path (constantly "/channelgroups")
      :local-path (local-path "Channels")
@@ -192,31 +215,8 @@
      :api-files (partial mf/only-index-files-seq 2)
      :post-path post-path
      :post-params group-post-params
-     :preprocess mact/assoc-server-groups
+     :preprocess (partial mact/fetch-and-pre-assoc :server-groups :set)
      :pre-node-action groups-pre-node-action})
-   
-   (make-api
-    {:rest-path (constantly "/server/configurationMap")
-     :local-path (local-path ".")
-     :find-elements #(zx/xml-> % :map)
-     :find-id (constantly nil)
-     :find-name (constantly nil)
-     :file-path (file-path "ConfigurationMap.xml")})
-
-   (make-api
-    {:rest-path (constantly "/codeTemplates")
-     :local-path (local-path "CodeTemplates")
-     :find-elements #(zx/xml-> % :list :codeTemplate)
-     :file-path codetemplate-file-path
-     :api-files (partial mf/without-index-files-seq 2)})
-
-   (make-api
-    {:rest-path (constantly "/server/globalScripts")
-     :local-path (local-path "GlobalScripts")
-     :find-elements #(zx/xml-> % :map)
-     :find-id (constantly nil)
-     :find-name (constantly nil)
-     :file-path (file-path "globalScripts.xml")})
    
    (make-api
     {:rest-path (constantly "/channels")

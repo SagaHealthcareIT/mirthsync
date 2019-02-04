@@ -23,30 +23,21 @@
     (mhttp/put-xml app-conf))
   app-conf)
 
-(defn assoc-server-groups
-  "Fetches the current groups from server. Adds the top level element
-  loc to app-conf."
-  [app-conf]
-  (assoc app-conf
-         :server-groups
-         (zip/xml-zip
-          (apply xml/element
-                 :set nil (zip/children
-                           (mhttp/fetch-all (api-url app-conf)
-                                      identity))))))
 
-;FIXME: dedupe 'bulk' logic
-(defn assoc-server-codelibs
-  "Fetches the current code libs from server. Adds the top level element
-  loc to app-conf."
-  [app-conf]
+(defn fetch-and-pre-assoc
+  "Fetches the children of the current api from the server. Wraps the
+  children with the supplied keyword tag, zippers the zml and returns
+  a modified app-conf with the zipper assoc'ed using the supplied
+  keyword."
+  [k ktag app-conf]
   (assoc app-conf
-         :server-codelibs
+         k
          (zip/xml-zip
           (apply xml/element
-                 :list nil (zip/children
+                 ktag nil (zip/children
                            (mhttp/fetch-all (api-url app-conf)
-                                      identity))))))
+                                            identity))))))
+
 (defn local-locs
   "Lazy seq of local el-locs for the current api."
   [{:as app-conf
