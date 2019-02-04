@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [clojure.zip :as zip]
             [mirthsync.cli :as cli]
+            [mirthsync.files :as mf]
             [clojure.data.xml :as xml])
   (:import java.io.File))
 
@@ -15,50 +16,6 @@
 
 (def by-id (zxffby :id))
 (def by-name (zxffby :name))
-
-(defn dir-files
-  "Sequence of java.io.File within specified directory matching all
-  predicates. Each predicate receives a file as a parameter."
-  [dir preds]
-  (filter
-   (fn [f] (every? #(% f) preds))
-   (.listFiles (io/file dir))))
-
-(defn xml-file?
-  "True if the file ends with xml."
-  [file]
-  (and
-   (not (.isDirectory file))
-   #(-> file
-        (.getName)
-        str/lower-case
-        (str/ends-with? ".xml"))))
-
-(defn xml-files
-  "Sequence of java.io.File in the target dir filtered by preds."
-  [dir]
-  (dir-files dir [xml-file?]))
-
-(defn channel-xml-files
-  "Sequence of channel xml files contained within directories in the
-  target dir and 1st level subdirectories."
-  [dir]
-  (let [dirs (dir-files dir [#(.isDirectory %)])
-        dirs (conj dirs (io/file dir))]
-    (mapcat (fn [dir]
-              (dir-files dir [xml-file?
-                              #(not= "Group.xml" (.getName %))]))
-            dirs)))
-
-(defn group-xml-files
-  "Sequence of group.xml files contained within directories in the
-  target dir."
-  [dir]
-  (let [dirs (dir-files dir [#(.isDirectory %)])]
-    (mapcat (fn [dir]
-              (dir-files dir [xml-file?
-                              #(= "Group.xml" (.getName %))]))
-            dirs)))
 
 (defn local-path
   "Returns a fn that takes the app-conf and prepends the target
@@ -73,6 +30,18 @@
   (vector
    ["channelGroups" (xml/indent-str (zip/node server-groups))]
    ["removedChannelGroupsIds" "<set/>"]))
+
+;FIXME: put this fixme elsewhere. Need to check http response and deal
+;accordingly
+(defn codelib-post-params
+  "Build params for codelib post-xml."
+  ;FIXME: dedupe with groups, also deal with 'override' params
+  [{:keys [server-codelibs]}]
+  (vector
+   ["libraries" (xml/indent-str (zip/node server-codelibs))]
+   ["removedLibraryIds" "<set/>"]
+   ["updatedCodeTemplates" "<list/>"]
+   ["removedCodeTemplateIds" "<set/>"]))
 
 (defn groups-pre-transform
   "Returns an updated app-conf with the current group added to
@@ -92,9 +61,28 @@
         server-groups (zip/append-child server-groups (zip/node el-loc))]
     (assoc app-conf :server-groups server-groups)))
 
+;FIXME: dedupe with groups
+(defn codelibs-pre-transform
+  "Returns an updated app-conf with the current codelib added to
+  server-codelibs."
+  [{:keys [server-codelibs el-loc] :as app-conf
+    {:keys [find-id]} :api}]
+  (let [existing-id-loc (zx/xml1-> server-codelibs
+                                   :list ;FIXME: this needs to be a list most likely
+                                   :codeTemplateLibrary
+                                   :id
+                                   (zx/text= (find-id el-loc)))
+
+        server-codelibs (if existing-id-loc
+                        (zip/remove (zip/up existing-id-loc))
+                        server-codelibs)
+
+        server-codelibs (zip/append-child server-codelibs (zip/node el-loc))]
+    (assoc app-conf :server-codelibs server-codelibs)))
+
 (defn safe-name?
   "Takes and returns an unmodified string that should represent a
-  creatable file that doesn't span paths. Logs a human readable error
+  creatable file that doesn't span paths. Prints a human readable error
   and then throws an exception if any problems are detected."
   [name]
   (if (and
@@ -105,7 +93,6 @@
       (throw (AssertionError. (str "Name does not appear to be safe"
                                     " for file creation: " name))))
     name))
-
 
 (defn file-path
   "Returns a function that, when given an app conf, returns a string file
@@ -135,6 +122,24 @@
        (find-name el-loc)
        ".xml"))
 
+                                        ;FIXME: dedupe
+(defn codetemplate-file-path
+  "Returns the codetemplate xml path accounting for lib nesting."
+  [{:keys [server-codelibs el-loc] :as app-conf
+    {:keys [local-path find-name find-id] :as api} :api}]
+  (str (local-path app-conf)
+       File/separator
+       (if-let [lib-name (safe-name?
+                            (let [id (find-id el-loc)]
+                              (zx/xml1-> server-codelibs
+                                         :codeTemplateLibrary :codeTemplates :codeTemplate
+                                         :id id
+                                         zip/up zip/up zip/up
+                                         :name zx/text)))]
+         (str lib-name File/separator))
+       (find-name el-loc)
+       ".xml"))
+
 (defn make-api
   "Builds an api from an api-map. rest-path, local-path and find-elements fns
   are required and the rest of the api uses sensible defaults if a
@@ -147,24 +152,37 @@
           :find-name by-name            ; find the current xml loc name
 
           :file-path (file-path ".xml") ; build the xml file path
-          :api-files xml-files          ; find local api xml files for upload
+          :api-files (partial mf/xml-file-seq 1) ; find local api xml files for upload
           :post-path (constantly nil)   ; HTTP POST on upload path
           :post-params (constantly nil) ; params for HTTP POST
           :pre-transform identity}      ; transform app-conf before processing
          api))
 
+(defn post-path
+  "Takes an api and builds a _bulkUpdate from the rest-path"
+  [{:keys [rest-path] :as api}]
+  (str (rest-path api) "/_bulkUpdate"))
+
 (def apis
-  [;; Always keep channelgroups first. These are processed
-   ;; sequentially and it's expected that the first api is
-   ;; channelGroups
+  [(make-api
+    {:rest-path (constantly "/codeTemplateLibraries")
+     :local-path (local-path "CodeTemplates")
+     :find-elements #(or (zx/xml-> % :list :codeTemplateLibrary) ; from server
+                         (zx/xml-> % :codeTemplate)) ; from filesystem
+     :file-path (file-path (str File/separator "index.xml"))
+     :api-files (partial mf/only-index-files-seq 2)
+     :post-path post-path
+     :post-params codelib-post-params
+     :pre-transform codelibs-pre-transform})
+
    (make-api
     {:rest-path (constantly "/channelgroups")
      :local-path (local-path "Channels")
      :find-elements #(or (zx/xml-> % :list :channelGroup) ; from server
                          (zx/xml-> % :channelGroup)) ; from filesystem
-     :file-path (file-path (str File/separator "Group.xml"))
-     :api-files group-xml-files
-     :post-path #(str ((:rest-path %) %) "/_bulkUpdate")
+     :file-path (file-path (str File/separator "index.xml"))
+     :api-files (partial mf/only-index-files-seq 2)
+     :post-path post-path
      :post-params group-post-params
      :pre-transform groups-pre-transform})
    
@@ -179,7 +197,9 @@
    (make-api
     {:rest-path (constantly "/codeTemplates")
      :local-path (local-path "CodeTemplates")
-     :find-elements #(zx/xml-> % :list :codeTemplate)})
+     :find-elements #(zx/xml-> % :list :codeTemplate)
+     :file-path codetemplate-file-path
+     :api-files (partial mf/without-index-files-seq 2)})
 
    (make-api
     {:rest-path (constantly "/server/globalScripts")
@@ -194,7 +214,7 @@
      :local-path (local-path "Channels")
      :find-elements #(zx/xml-> % :list :channel)
      :file-path channel-file-path
-     :api-files channel-xml-files})])
+     :api-files (partial mf/without-index-files-seq 2)})])
 
 (defn apis-action
   "Iterates through the apis calling action on app-conf. If an api

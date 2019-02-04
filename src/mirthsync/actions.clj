@@ -37,6 +37,18 @@
                            (fetch-all (api-url app-conf)
                                       identity))))))
 
+;FIXME: dedupe 'bulk' logic
+(defn assoc-server-codelibs
+  "Fetches the current code libs from server. Adds the top level element
+  loc to app-conf."
+  [app-conf]
+  (assoc app-conf
+         :server-codelibs
+         (zip/xml-zip
+          (apply xml/element
+                 :list nil (zip/children
+                           (fetch-all (api-url app-conf)
+                                      identity))))))
 (defn local-locs
   "Lazy seq of local el-locs for the current api."
   [{:as app-conf

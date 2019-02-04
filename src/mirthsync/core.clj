@@ -1,6 +1,6 @@
 (ns mirthsync.core
-  (:gen-class)
-  (:require [mirthsync.actions :refer [download upload assoc-server-groups]]
+  (:gen-class);FIXME: redo these requires/refers
+  (:require [mirthsync.actions :refer [download upload assoc-server-codelibs assoc-server-groups]]
             [mirthsync.apis :refer [apis apis-action]]
             [mirthsync.cli :as cli]
             [mirthsync.http-client :refer [with-authentication]]))
@@ -19,7 +19,11 @@
         app-conf (with-authentication server username password
                    ;; add server groups to app-conf as first step
                    #(apis-action
-                     (assoc-server-groups (assoc app-conf :api (first apis)))
+                                        ;FIXME: automate these 'bulk' cases
+                     (let [app-conf (assoc-server-groups (assoc app-conf :api (second apis)))
+                           app-conf (assoc-server-codelibs (assoc app-conf :api (first apis)))]
+                       app-conf)
+
                      apis
                      action))]
     

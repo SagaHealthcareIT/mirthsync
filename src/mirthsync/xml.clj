@@ -14,7 +14,7 @@
   "Take an xml location and write to the filesystem with a meaningful
   name and path. If the file exists it is not overwritten unless the
   -f option is set. Returns app-conf."
-  [{:keys [server-groups el-loc] :as app-conf
+  [{:keys [el-loc] :as app-conf
     {:keys [file-path]} :api}]
 
   (let [xml-str (xml/indent-str (zip/node el-loc))
