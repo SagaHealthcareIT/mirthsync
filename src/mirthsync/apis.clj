@@ -25,6 +25,11 @@
   (fn [app-conf]
     (str (:target app-conf) File/separator path)))
 
+;; FIXME: Maybe there's a better way to handle post params that
+;; results in less duplication. Also, the Mirth api can take override
+;; parameters that are version related. This ties into the FIXME
+;; comment in http_client.clj. We need to gracefully handle responses
+;; and overrides.
 (defn group-post-params
   "Build params for groups post-xml."
   [{:keys [server-groups]}]
@@ -32,11 +37,8 @@
    ["channelGroups" (xml/indent-str (zip/node server-groups))]
    ["removedChannelGroupsIds" "<set/>"]))
 
-;FIXME: put this fixme elsewhere. Need to check http response and deal
-;accordingly
 (defn codelib-post-params
   "Build params for codelib post-xml."
-  ;FIXME: dedupe with groups, also deal with 'override' params
   [{:keys [server-codelibs]}]
   (vector
    ["libraries" (xml/indent-str (zip/node server-codelibs))]
@@ -69,7 +71,7 @@
   [{:keys [server-codelibs el-loc] :as app-conf
     {:keys [find-id]} :api}]
   (let [existing-id-loc (zx/xml1-> server-codelibs
-                                   :list ;FIXME: this needs to be a list most likely
+                                   :list
                                    :codeTemplateLibrary
                                    :id
                                    (zx/text= (find-id el-loc)))

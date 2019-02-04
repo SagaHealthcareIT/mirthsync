@@ -4,6 +4,10 @@
             [clojure.data.xml :as xml]
             [clojure.zip :as zip]))
 
+;FIXME: Need to check http response and/or exception. Status codes can
+;cause an exception to be thrown and the server can also return xml
+;body responses that indicate success/failure.
+
 (defn put-xml
   "HTTP PUTs the current api and el-loc to the server."
   [{:keys [server el-loc]
