@@ -46,42 +46,31 @@
    ["updatedCodeTemplates" "<list/>"]
    ["removedCodeTemplateIds" "<set/>"]))
 
-(defn groups-pre-node-action
-  "Returns an updated app-conf with the current group added to
-  server-groups."
-  [{:keys [server-groups el-loc] :as app-conf
+;FIXME: The logic is fine but the function could stand to have some
+;attention to make it a little less ugly both here and in the apis
+;that use it below.
+(defn pre-node-action
+  "Returns an updated app-conf with the current api element node added
+  to the relevant api list/set in app conf. If node matching by id is
+  found - it is removed before the new element is appended. set-key is
+  the key used to find the root loc in app-conf and root-tag is the
+  key for the root tag. node tag is the wrapper tag keyword."
+  [set-key root-tag node-tag
+   {:keys [el-loc] :as app-conf
     {:keys [find-id]} :api}]
-  (let [existing-id-loc (zx/xml1-> server-groups
-                                   :set
-                                   :channelGroup
-                                   :id
-                                   (zx/text= (find-id el-loc)))
+  (let [set (set-key app-conf)
+        found-id-loc (zx/xml1-> set
+                                root-tag
+                                node-tag
+                                :id
+                                (zx/text= (find-id el-loc)))
 
-        server-groups (if existing-id-loc
-                        (zip/remove (zip/up existing-id-loc))
-                        server-groups)
+        set (if found-id-loc
+              (zip/remove (zip/up found-id-loc))
+              set)
 
-        server-groups (zip/append-child server-groups (zip/node el-loc))]
-    (assoc app-conf :server-groups server-groups)))
-
-;FIXME: dedupe with groups
-(defn codelibs-pre-node-action
-  "Returns an updated app-conf with the current codelib added to
-  server-codelibs."
-  [{:keys [server-codelibs el-loc] :as app-conf
-    {:keys [find-id]} :api}]
-  (let [existing-id-loc (zx/xml1-> server-codelibs
-                                   :list
-                                   :codeTemplateLibrary
-                                   :id
-                                   (zx/text= (find-id el-loc)))
-
-        server-codelibs (if existing-id-loc
-                        (zip/remove (zip/up existing-id-loc))
-                        server-codelibs)
-
-        server-codelibs (zip/append-child server-codelibs (zip/node el-loc))]
-    (assoc app-conf :server-codelibs server-codelibs)))
+        set (zip/append-child set (zip/node el-loc))]
+    (assoc app-conf set-key set)))
 
 (defn safe-name?
   "Takes and returns an unmodified string that should represent a
@@ -199,8 +188,8 @@
      :post-path post-path
      :post-params codelib-post-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-codelibs :list)
-     :pre-node-action codelibs-pre-node-action})
-
+     :pre-node-action (partial pre-node-action :server-codelibs :list :codeTemplateLibrary)})
+   
    (make-api
     {:rest-path (constantly "/codeTemplates")
      :local-path (local-path "CodeTemplates")
@@ -218,7 +207,7 @@
      :post-path post-path
      :post-params group-post-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-groups :set)
-     :pre-node-action groups-pre-node-action})
+     :pre-node-action (partial pre-node-action :server-groups :set :channelGroup)})
    
    (make-api
     {:rest-path (constantly "/channels")
