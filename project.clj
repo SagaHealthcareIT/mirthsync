@@ -43,7 +43,7 @@
                   ;; ["change" "version"
                   ;;  "leiningen.release/bump-version" "release"]
                   ["vcs" "commit"]
-                  ["vcs" "tag" "--no-sign"]
+                  ;; ["vcs" "tag" "--no-sign"]
                   ["tar"]]
   :tar {:uberjar true
         :format :tar-gz})
