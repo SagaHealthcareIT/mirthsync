@@ -129,6 +129,8 @@ Requires [Leiningen](https://leiningen.org/)
   script, etc
 - Add granular extraction of scripts into their own files and merge
   back into XML for pushing
+- Don't trust self-signed certs by default
+- Remove defaults for username and server
 
 ## License
 
