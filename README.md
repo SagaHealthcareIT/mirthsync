@@ -63,8 +63,8 @@ Options:
 
 Actions:
   
-  push     Push local code to remote  
-  pull     Pull remote code to local
+  push     Push filesystem code to server
+  pull     Pull server code to filesystem
  
 
 
