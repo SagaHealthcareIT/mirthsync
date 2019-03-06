@@ -6,7 +6,8 @@
             [mirthsync.actions :as mact]
             [mirthsync.cli :as cli]
             [mirthsync.files :as mf]
-            [clojure.data.xml :as xml])
+            [clojure.data.xml :as xml]
+            [clojure.tools.logging :as log])
   (:import java.io.File))
 
 (defn zxffby
@@ -81,7 +82,7 @@
        name
        (not= name (.getName (File. name))))
     (do
-      (cli/out (str name " has invalid characters."))
+      (log/info (str name " has invalid characters."))
       (throw (AssertionError. (str "Name does not appear to be safe"
                                     " for file creation: " name))))
     name))
@@ -225,8 +226,8 @@
     (let [app-conf (-> app-conf
                        (assoc :api api)
                        action)]
-      (cli/out 2 "App config post-api: ")
-      (cli/out 2 app-conf)
+      (log/trace "App config post-api:")
+      (log/trace app-conf)
       (recur app-conf (rest apis) action))  
 
     app-conf))

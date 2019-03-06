@@ -3,7 +3,8 @@
             [clojure.zip :as zip]
             [mirthsync.cli :as cli]
             [mirthsync.http-client :as mhttp]
-            [mirthsync.xml :as mxml]))
+            [mirthsync.xml :as mxml]
+            [clojure.tools.logging :as log]))
 
 (defn api-url
   "Returns the constructed api url."
@@ -17,10 +18,18 @@
   rest-path, and id."
   [{:keys [el-loc] :as app-conf
     {:keys [post-path post-params] :as api} :api}]
-  
-  (if (post-path api)
-    (apply mhttp/post-xml app-conf (post-params app-conf))
-    (mhttp/put-xml app-conf))
+
+  (let [result (if (post-path api)
+                 (apply mhttp/post-xml app-conf (post-params app-conf))
+                 (mhttp/put-xml app-conf))]
+    (if (log/enabled? :trace)
+      (log/trace result)
+      (log/debugf "status: %s
+phrase: %s
+body: %s"
+                  (:status result)
+                  (:reason-phrase result)
+                  (:body result))))
   app-conf)
 
 
@@ -42,7 +51,9 @@
   "Lazy seq of local el-locs for the current api."
   [{:as app-conf
     {:keys [local-path api-files]} :api}]
-  (map #(mxml/to-zip (slurp %)) (api-files (local-path app-conf))))
+  (map #(mxml/to-zip (do
+                       (log/debug "file: " (.toString %))
+                       (slurp %))) (api-files (local-path app-conf))))
 
 (defn remote-locs
   "Seq of remote el-locs for the current api. Could be lazy or not
@@ -55,7 +66,7 @@
   "Prints the message and processes the el-locs via the action."
   [{:as app-conf
     {:keys [pre-node-action]} :api} msg el-locs action]
-  (cli/out msg)
+  (log/info msg)
   (loop [app-conf app-conf
          el-locs el-locs]
     (if-let [el-loc (first el-locs)]

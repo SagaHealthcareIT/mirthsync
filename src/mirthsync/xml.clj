@@ -2,7 +2,8 @@
   (:require [clojure.data.xml :as xml]
             [clojure.java.io :as io]
             [clojure.zip :as zip]
-            [mirthsync.cli :as cli])
+            [mirthsync.cli :as cli]
+            [clojure.tools.logging :as log])
   (:import java.io.File))
 
 (defn to-zip
@@ -21,9 +22,10 @@
         fpath (file-path app-conf)]
     (if (and (.exists (io/file fpath))
              (not (:force app-conf)))
-      (cli/out (str "File at " fpath " already exists and the "
+      (log/info (str "File at " fpath " already exists and the "
                        "force (-f) option was not specified. Refusing "
                        "to overwrite the file."))
       (do (io/make-parents fpath)
+          (log/debug "file: " fpath)
           (spit fpath xml-str)))
     app-conf))

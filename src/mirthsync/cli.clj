@@ -2,8 +2,14 @@
   (:require [clojure.string :as string]
             [clojure.tools
              [cli :refer [parse-opts]]]
-            [clojure.string :as str])
-  (:import java.net.URL))
+            [clojure.string :as str]
+            [clojure.java.io :as io]
+            [clojure.tools.logging :as log]
+            [clojure.tools.logging.impl :as log-impl]
+            )
+  (:import java.net.URL
+           ch.qos.logback.classic.Level
+           ))
 
 (def verbosity 0)
 
@@ -19,6 +25,12 @@
   from the string unless the string is all slashes."
   [s]
   (str/replace s #"(?!^)[\\/]+$" ""))
+
+(def log-levels (concat
+                 [Level/INFO
+                  Level/DEBUG
+                  Level/TRACE]
+                 (repeat Level/ALL)))
 
 (def cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
@@ -41,7 +53,7 @@
    ["-v" nil "Verbosity level; may be specified multiple times to increase value"
     :id :verbosity
     :default 0
-    :assoc-fn (fn [m k _] (update-in m [k] inc))]
+    :update-fn inc]
 
    ["-h" "--help"]])
 
@@ -90,6 +102,8 @@
         ;; keep config clean by removing unecessary entries
         config (dissoc config :summary :arguments)]
 
-    (def verbosity (:verbosity config))
+    (let [logger (log-impl/get-logger (log-impl/find-factory) "mirthsync")
+          verbosity (:verbosity config)]
+      (.setLevel logger (nth log-levels verbosity)))
     
     config))

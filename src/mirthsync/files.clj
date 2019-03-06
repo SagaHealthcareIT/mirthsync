@@ -1,6 +1,7 @@
 (ns mirthsync.files
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.tools.logging :as log]))
 
 (defn filtered-file-seq
   "Sequence of java.io.File including files within directories nested to

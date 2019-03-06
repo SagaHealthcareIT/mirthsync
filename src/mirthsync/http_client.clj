@@ -2,7 +2,8 @@
   (:require [clj-http.client :as client]
             [mirthsync.xml :as mxml]
             [clojure.data.xml :as xml]
-            [clojure.zip :as zip]))
+            [clojure.zip :as zip]
+            [clojure.tools.logging :as log]))
 
 ;FIXME: Need to check http response and/or exception. Status codes can
 ;cause an exception to be thrown and the server can also return xml
@@ -25,7 +26,6 @@
   [{:keys [server]
     {:keys [post-path] :as api} :api}
    & params]
-  
   (client/post (str server (post-path api))
                {:insecure? true
                 :multipart (map (fn
