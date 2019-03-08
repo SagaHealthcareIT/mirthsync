@@ -52,8 +52,8 @@
   :main mirthsync.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all
-                       :omit-source true}}
-
+                       :omit-source true}
+             :repl {:plugins [[cider/cider-nrepl "0.21.1"]]}}
   :release-tasks [["clean"]
                   ["test"]
                   ["vcs" "assert-committed"]

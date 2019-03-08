@@ -11,15 +11,6 @@
            ch.qos.logback.classic.Level
            ))
 
-(def verbosity 0)
-
-(defn out
-  "Print the message if the verbosity level is high enough"
-  ([message]
-   (out 0 message))
-  ([level message]
-   (when (>= verbosity level) (println message))))
-
 (defn strip-trailing-slashes
   "Removes one or more trailing forward or backward trailing slashes
   from the string unless the string is all slashes."
