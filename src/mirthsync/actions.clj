@@ -17,20 +17,12 @@
   POSTs the params to the location constructed from the base-url,
   rest-path, and id."
   [{:keys [el-loc] :as app-conf
-    {:keys [post-path post-params] :as api} :api}]
+    {:keys [post-path post-params after-push] :as api} :api}]
 
   (let [result (if (post-path api)
                  (apply mhttp/post-xml app-conf (post-params app-conf))
                  (mhttp/put-xml app-conf))]
-    (if (log/enabled? :trace)
-      (log/trace result)
-      (log/debugf "status: %s
-phrase: %s
-body: %s"
-                  (:status result)
-                  (:reason-phrase result)
-                  (:body result))))
-  app-conf)
+    (after-push app-conf result)))
 
 
 (defn fetch-and-pre-assoc
@@ -52,7 +44,7 @@ body: %s"
   [{:as app-conf
     {:keys [local-path api-files]} :api}]
   (map #(mxml/to-zip (do
-                       (log/debug "file: " (.toString %))
+                       (log/info "\tFile: " (.toString %))
                        (slurp %))) (api-files (local-path app-conf))))
 
 (defn remote-locs

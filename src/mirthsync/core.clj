@@ -24,7 +24,7 @@
                         (api/apis-action api/apis api/preprocess)
                         (api/apis-action api/apis action)))]    
     (log/info "Finished!")
-    app-conf))
+    (log/spy :trace app-conf)))
 
 
 (defn exit!
@@ -32,7 +32,9 @@
   [{:keys [exit-msg exit-code] :as conf}]
   (when exit-msg
     (log/info exit-msg))
-  (System/exit exit-code))
+  ;; don't exit if nrepl is loaded
+  (if-not (resolve 'nrepl.version/version)
+    (System/exit exit-code)))
 
 (defn -main
   [& args]

@@ -73,6 +73,7 @@
         set (zip/append-child set (zip/node el-loc))]
     (assoc app-conf set-key set)))
 
+;FIXME: change this to assert and test
 (defn safe-name?
   "Takes and returns an unmodified string that should represent a
   creatable file that doesn't span paths. Prints a human readable error
@@ -137,12 +138,55 @@
        (find-name el-loc)
        ".xml"))
 
+(defn unexpected-response
+  [r]
+  (log/warn "An unexpected response was received from the server...")
+  (log/warnf "Status: %s, Phrase: %s" (:status r) (:phrase r)))
+
+(defn after-push
+  "Returns a function that takes app-conf and the result of an action
+  and calls all assertions with the action result in order (short
+  circuiting and logging failures). Associates the result and returns
+  app-conf."
+  [& preds]
+  (fn [app-conf result]
+    (if (log/enabled? :trace)
+      (log/trace result)
+      (log/debugf "status: %s, phrase: %s, body: %s"
+                  (:status result)
+                  (:reason-phrase result)
+                  (:body result)))
+
+    (when-not ((apply every-pred preds) result)
+      (unexpected-response result))
+    (assoc app-conf :result result)))
+
+(def null-204 (after-push #(= 204 (:status %))
+                          #(nil? (:body %))))
+
+(def true-200 (after-push #(= 200 (:status %))
+                          #(= "<boolean>true</boolean>" (:body %))))
+
+(def revision-success
+  (after-push
+   (fn [{body :body}]
+     (let [loc (-> body
+                   xml/parse-str
+                   zip/xml-zip)
+           override (zx/xml1-> loc :overrideNeeded zip/node)
+           success  (zx/xml1-> loc :librariesSuccess zip/node)]
+       (and
+        (= "false" (first (:content override)))
+        (= "true" (first (:content success))))))))
+
+
 (defn make-api
-  "Builds an api from an api-map. rest-path, local-path and find-elements fns
-  are required and the rest of the api uses sensible defaults if a
-  value is not supplied."
+  "Builds an api from an api-map. rest-path, local-path and
+  find-elements fns are required and the rest of the api uses sensible
+  defaults if a value is not supplied."
   [api]
-  (merge {:rest-path nil                ; required - server api path for GET/PUT
+  (merge {
+          :rest-path nil                ; required - server api path for GET/PUT
           :local-path nil               ; required - base dir for saving files
           :find-elements nil            ; required - find elements in the returned xml
 
@@ -154,7 +198,9 @@
           :post-path (constantly nil)   ; HTTP POST on upload path
           :post-params (constantly nil) ; params for HTTP POST
           :pre-node-action identity     ; transform app-conf before processing
-          :preprocess identity}         ; preprocess app-conf before any other work
+          :after-push true-200          ; process result of item push
+          :preprocess identity          ; preprocess app-conf before any other work
+          }
          api))
 
 (defn post-path
@@ -169,16 +215,18 @@
      :find-elements #(zx/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
-     :file-path (file-path "ConfigurationMap.xml")})
-
+     :file-path (file-path "ConfigurationMap.xml")
+     :after-push null-204})
+   
    (make-api
     {:rest-path (constantly "/server/globalScripts")
      :local-path (local-path "GlobalScripts")
      :find-elements #(zx/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
-     :file-path (file-path "globalScripts.xml")})
-   
+     :file-path (file-path "globalScripts.xml")
+     :after-push null-204})
+
    (make-api
     {:rest-path (constantly "/codeTemplateLibraries")
      :local-path (local-path "CodeTemplates")
@@ -189,15 +237,16 @@
      :post-path post-path
      :post-params codelib-post-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-codelibs :list)
-     :pre-node-action (partial pre-node-action :server-codelibs :list :codeTemplateLibrary)})
-   
+     :pre-node-action (partial pre-node-action :server-codelibs :list :codeTemplateLibrary)
+     :after-push revision-success})
+
    (make-api
     {:rest-path (constantly "/codeTemplates")
      :local-path (local-path "CodeTemplates")
      :find-elements #(zx/xml-> % :list :codeTemplate)
      :file-path codetemplate-file-path
      :api-files (partial mf/without-index-files-seq 2)})
-   
+
    (make-api
     {:rest-path (constantly "/channelgroups")
      :local-path (local-path "Channels")
@@ -209,7 +258,7 @@
      :post-params group-post-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-groups :set)
      :pre-node-action (partial pre-node-action :server-groups :set :channelGroup)})
-   
+
    (make-api
     {:rest-path (constantly "/channels")
      :local-path (local-path "Channels")

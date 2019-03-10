@@ -1,14 +1,59 @@
 <configuration>
-  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+  <!-- <pattern>%date{HH:mm:ss.SSS} %-5level %logger [%thread]%n%msg%n</pattern> -->
+
+  <!-- Log everything at warn or above to stderr -->
+  <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+    <target>System.err</target>
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>WARN</level>
+    </filter>
     <encoder>
-      <!-- <pattern>%date{HH:mm:ss.SSS} %-5level %logger [%thread]%n%msg%n</pattern> -->
+      <pattern>%highlight(%-5level): %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Different pattern for INFO to stdout -->
+  <appender name="STDOUT_INFO" class="ch.qos.logback.core.ConsoleAppender">
+    <target>System.out</target>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+      <level>INFO</level>
+      <onMatch>ACCEPT</onMatch>
+      <onMismatch>DENY</onMismatch>
+    </filter>
+    <encoder>
       <pattern>%msg%n</pattern>
-      <charset>UTF-8</charset>
+    </encoder>
+  </appender>
+
+  <!-- Log everything at debug or below to stdout with different pattern -->
+  <appender name="STDOUT_DEBUG" class="ch.qos.logback.core.ConsoleAppender">
+    <target>System.out</target>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+      <level>DEBUG</level>
+      <onMatch>ACCEPT</onMatch>
+    </filter>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+      <level>TRACE</level>
+      <onMatch>ACCEPT</onMatch>
+    </filter>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+      <level>ALL</level>
+      <onMatch>ACCEPT</onMatch>
+    </filter>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+      <level>INFO</level>
+      <onMatch>DENY</onMatch>
+      <onMismatch>DENY</onMismatch>
+    </filter>
+    <encoder>
+      <pattern>%highlight(%-5level): %msg%n</pattern>
     </encoder>
   </appender>
 
   <root level="INFO">
-    <appender-ref ref="CONSOLE" />
+    <appender-ref ref="STDOUT_INFO" />
+    <appender-ref ref="STDOUT_DEBUG" />
+    <appender-ref ref="STDERR" />
   </root>
 
   <!-- <logger name="mirthsync" level="INFO"> -->
