@@ -25,23 +25,28 @@
 
 (def cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
-    :default "https://localhost:8443/api"
-    :validate-fn #(URL. %)
+    ;;;; Removing for safety. Server url should be explicitly specified.
+    ;; :default "https://localhost:8443/api"
+    :validate [#(URL. %) (str "Must be a valid URL to a mirth server api "
+                              "path (EX. https://mirth-server:8443/api)")]
     :parse-fn strip-trailing-slashes]
    
-   ["-u" "--username USERNAME" "Username used for authentication"
-    :default "admin"]
+   ["-u" "--username USERNAME" "Username used for authentication"]
 
    ["-p" "--password PASSWORD" "Password used for authentication"
     :default ""]
 
-   ["-f" "--force" "Overwrite any conflicting files in the target directory"]
+   ["-i" "--ignore-cert-warnings" "Ignore certificate warnings"]
+   
+   ["-f" "--force" (str "Overwrite existing local files during pull "
+                        "and always overwrite remote items without "
+                        "regard for revisions during push")]
 
    ["-t" "--target TARGET_DIR" "Base directory used for pushing or pulling files"
     :default "."
     :parse-fn strip-trailing-slashes]
 
-   ["-v" nil "Verbosity level; may be specified multiple times to increase value"
+   ["-v" nil "Verbosity level; may be specified multiple times to increase level"
     :id :verbosity
     :default 0
     :update-fn inc]
@@ -70,28 +75,34 @@
   [args]
   (let [config (parse-opts args cli-options)
 
-        ;; pull options and first arg into top level
-        config (-> config 
-                   (into (:options config))
-                   (dissoc :options)
-                   (assoc :action (first (:arguments config))))
-
         args-valid? (or (:help config)
                         (and (= 1 (count (:arguments config)))
                              (#{"pull" "push"} (first (:arguments config)))))
+        
+        config (-> config
 
-        ;; Set up our exit code
-        config (assoc config :exit-code
-                      (if (or (:errors config)
-                              (not args-valid?))
-                        1
-                        0))
-        ;; exit message if errors
-        config (assoc config :exit-msg (when (or (> (:exit-code config) 0)
-                                                 (:help config))
-                                         (usage (:errors config) (:summary config))))
-        ;; keep config clean by removing unecessary entries
-        config (dissoc config :summary :arguments)]
+                   ;; pull options and first arg into top level for
+                   ;; convenience in rest of code
+                   (into (:options config))
+                   (dissoc :options)
+                   (assoc :action (first (:arguments config)))
+                   
+                   ;; Set up our exit code
+                   (assoc :exit-code
+                          (if (or (:errors config)
+                                  (not args-valid?))
+                            1
+                            0)))
+
+        config (-> config
+                   ;; exit message if errors
+                   (assoc :exit-msg
+                          (when (or (> (:exit-code config) 0)
+                                    (:help config))
+                            (usage (:errors config) (:summary config))))
+
+                   ;; keep config clean by removing unecessary entries
+                   (dissoc :summary :arguments))]
 
     (let [logger (log-impl/get-logger (log-impl/find-factory) "mirthsync")
           verbosity (:verbosity config)]

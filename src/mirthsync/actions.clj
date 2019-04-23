@@ -36,7 +36,8 @@
          (zip/xml-zip
           (apply xml/element
                  ktag nil (zip/children
-                           (mhttp/fetch-all (api-url app-conf)
+                           (mhttp/fetch-all app-conf
+                                            (api-url app-conf)
                                             identity))))))
 
 (defn local-locs
@@ -44,7 +45,7 @@
   [{:as app-conf
     {:keys [local-path api-files]} :api}]
   (map #(mxml/to-zip (do
-                       (log/info "\tFile: " (.toString %))
+                       (log/infof "\tFile: %s" (.toString %))
                        (slurp %))) (api-files (local-path app-conf))))
 
 (defn remote-locs
@@ -52,7 +53,7 @@
   depending on the implementation of find-elements."
   [{:as app-conf
     {:keys [find-elements] :as api} :api}]
-  (mhttp/fetch-all (api-url app-conf) find-elements))
+  (mhttp/fetch-all app-conf (api-url app-conf) find-elements))
 
 (defn process
   "Prints the message and processes the el-locs via the action."

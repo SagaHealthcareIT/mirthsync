@@ -15,6 +15,7 @@
   :url "https://github.com/SagaHealthcareIT/mirthsync"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :min-lein-version "2.9.1"
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [clj-http "3.9.1" :exclusions [commons-logging]]
                  [org.clojure/data.xml "0.0.8"]

@@ -25,7 +25,7 @@
                 :verbosity 0,
                 :password "",
                 :server "https://localhost:8443/api",
-                :username "admin",
+                ;; :username "admin",
                 :action "push",
                 :target "./tmp",
                 :exit-msg nil}]
@@ -37,8 +37,8 @@
                 :force true,
                 :verbosity 0,
                 :password "",
-                :server "https://localhost:8443/api",
-                :username "admin",
+                ;; :server "https://localhost:8443/api",
+                ;; :username "admin",
                 :action "pull",
                 :target ".",
                 :exit-msg nil}]

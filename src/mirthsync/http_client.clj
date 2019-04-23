@@ -5,10 +5,6 @@
             [clojure.zip :as zip]
             [clojure.tools.logging :as log]))
 
-;FIXME: Need to check http response and/or exception. Status codes can
-;cause an exception to be thrown and the server can also return xml
-;body responses that indicate success/failure.
-
 (defn put-xml
   "HTTP PUTs the current api and el-loc to the server."
   [{:keys [server el-loc]
@@ -56,9 +52,12 @@
   from the url via a GET request, extract the :body of the result,
   parse the XML, create a 'zipper', and return the result of the
   function on the xml zipper."
-  [url find-elements]
-  (-> url
-      (client/get {:insecure? true})
+  [{:as app-conf :keys [ignore-cert-warnings] :or {ignore-cert-warnings false}}
+   api-url
+   find-elements]
+  (-> api-url
+      (client/get {:insecure? ignore-cert-warnings})
       (:body)
       (mxml/to-zip)
       (find-elements)))
+

@@ -26,6 +26,6 @@
                      "force (-f) option was not specified. Refusing "
                      "to overwrite the file."))
       (do (io/make-parents fpath)
-          (log/debug "file: " fpath)
+          (log/infof "\tFile: %s" fpath)
           (spit fpath xml-str)))
     app-conf))

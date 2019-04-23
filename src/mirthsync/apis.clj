@@ -26,26 +26,23 @@
   (fn [app-conf]
     (str (:target app-conf) File/separator path)))
 
-;; FIXME: Maybe there's a better way to handle post params that
-;; results in less duplication. Also, the Mirth api can take override
-;; parameters that are version related. This ties into the FIXME
-;; comment in http_client.clj. We need to gracefully handle responses
-;; and overrides.
 (defn group-post-params
   "Build params for groups post-xml."
-  [{:keys [server-groups]}]
+  [{:keys [server-groups force]}]
   (vector
    ["channelGroups" (xml/indent-str (zip/node server-groups))]
-   ["removedChannelGroupsIds" "<set/>"]))
+   ["removedChannelGroupsIds" "<set/>"]
+   ["override" (if force "true" "false")]))
 
 (defn codelib-post-params
   "Build params for codelib post-xml."
-  [{:keys [server-codelibs]}]
+  [{:keys [server-codelibs force]}]
   (vector
    ["libraries" (xml/indent-str (zip/node server-codelibs))]
    ["removedLibraryIds" "<set/>"]
    ["updatedCodeTemplates" "<list/>"]
-   ["removedCodeTemplateIds" "<set/>"]))
+   ["removedCodeTemplateIds" "<set/>"]
+   ["override" (if force "true" "false")]))
 
 ;FIXME: The logic is fine but the function could stand to have some
 ;attention to make it a little less ugly both here and in the apis
@@ -73,20 +70,19 @@
         set (zip/append-child set (zip/node el-loc))]
     (assoc app-conf set-key set)))
 
-;FIXME: change this to assert and test
-(defn safe-name?
-  "Takes and returns an unmodified string that should represent a
-  creatable file that doesn't span paths. Prints a human readable error
-  and then throws an exception if any problems are detected."
+(defn safe-name
+  "Asserts that the string param is creatable file that doesn't span
+  paths. Fails with an exception if any issues are detected, otherwise
+  returns the unmodified string."
   [name]
-  (if (and
-       name
-       (not= name (.getName (File. name))))
-    (do
-      (log/info (str name " has invalid characters."))
-      (throw (AssertionError. (str "Name does not appear to be safe"
-                                    " for file creation: " name))))
-    name))
+  (log/tracef "safe-name pre: (%s)" name)
+  (when name
+    (assert
+     (and (string? name) (= name (.getName (File. name))))
+     (str "Name does not appear to be safe"
+          " for file creation - " name
+          " - Check for invalid characters.")))
+  name)
 
 (defn file-path
   "Returns a function that, when given an app conf, returns a string file
@@ -96,20 +92,21 @@
        {:keys [local-path find-name] :as api} :api}]
     (str (local-path app-conf)
          File/separator
-         (safe-name? (find-name el-loc))
+         (safe-name (find-name el-loc))
          path)))
 
 (defn preprocess
   [{:as app-conf {:keys [preprocess]} :api}]
   (preprocess app-conf))
 
+;; FIXME: dedupe codetemplate...path and channel.....path
 (defn channel-file-path
   "Returns the channel xml path accounting for group nesting."
   [{:keys [server-groups el-loc] :as app-conf
     {:keys [local-path find-name find-id] :as api} :api}]
   (str (local-path app-conf)
        File/separator
-       (if-let [group-name (safe-name?
+       (if-let [group-name (safe-name
                             (let [id (find-id el-loc)]
                               (zx/xml1-> server-groups 
                                          :channelGroup :channels :channel
@@ -117,17 +114,17 @@
                                          zip/up zip/up zip/up
                                          :name zx/text)))]
          (str group-name File/separator))
-       (find-name el-loc)
+       (safe-name (find-name el-loc))
        ".xml"))
 
-                                        ;FIXME: dedupe
+;; FIXME: dedupe codetemplate...path and channel.....path
 (defn codetemplate-file-path
   "Returns the codetemplate xml path accounting for lib nesting."
   [{:keys [server-codelibs el-loc] :as app-conf
     {:keys [local-path find-name find-id] :as api} :api}]
   (str (local-path app-conf)
        File/separator
-       (if-let [lib-name (safe-name?
+       (if-let [lib-name (safe-name
                             (let [id (find-id el-loc)]
                               (zx/xml1-> server-codelibs
                                          :codeTemplateLibrary :codeTemplates :codeTemplate
@@ -135,7 +132,7 @@
                                          zip/up zip/up zip/up
                                          :name zx/text)))]
          (str lib-name File/separator))
-       (find-name el-loc)
+       (safe-name (find-name el-loc))
        ".xml"))
 
 (defn unexpected-response
