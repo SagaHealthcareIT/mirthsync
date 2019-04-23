@@ -8,10 +8,12 @@
 (defn put-xml
   "HTTP PUTs the current api and el-loc to the server."
   [{:keys [server el-loc]
-    {:keys [find-id rest-path] :as api} :api}]
+    {:keys [find-id rest-path] :as api} :api}
+   params]
   (client/put (str server (rest-path api) "/" (find-id el-loc))
               {:insecure? true
                :body (xml/indent-str (zip/node el-loc))
+               :query-params params
                :content-type "application/xml"}))
 
 (defn post-xml
@@ -21,13 +23,13 @@
   string."
   [{:keys [server]
     {:keys [post-path] :as api} :api}
-   & params]
+   params]
   (client/post (str server (post-path api))
                {:insecure? true
                 :multipart (map (fn
-                                  [[n x]]
-                                  {:name n
-                                   :content x
+                                  [[k v]]
+                                  {:name k
+                                   :content v
                                    :mime-type "application/xml"
                                    :encoding "UTF-8"})
                                 params)}))

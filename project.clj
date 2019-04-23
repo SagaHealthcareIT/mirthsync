@@ -50,11 +50,14 @@
   
   :plugins [[lein-ancient "0.6.15"]
             [lein-tar "3.3.0"]]
+  ;; :pedantic? :abort
+  :checksum :fail
+  :global-vars {*warn-on-reflection* true}
   :main mirthsync.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all
                        :omit-source true}
-             :repl {:plugins [[cider/cider-nrepl "0.21.1"]]}}
+             :repl {:plugins [[cider/cider-nrepl "0.21.2-SNAPSHOT"]]}}
   :release-tasks [["clean"]
                   ["test"]
                   ["vcs" "assert-committed"]

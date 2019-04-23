@@ -104,7 +104,9 @@
                    ;; keep config clean by removing unecessary entries
                    (dissoc :summary :arguments))]
 
-    (let [logger (log-impl/get-logger (log-impl/find-factory) "mirthsync")
+    (let [^ch.qos.logback.classic.Logger logger (log-impl/get-logger
+                                                 (log-impl/find-factory)
+                                                 "mirthsync")
           verbosity (:verbosity config)]
       (.setLevel logger (nth log-levels verbosity)))
     

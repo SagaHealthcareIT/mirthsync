@@ -1,7 +1,8 @@
 (ns mirthsync.files
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log])
+  (:import java.io.File))
 
 (defn filtered-file-seq
   "Sequence of java.io.File including files within directories nested to
@@ -11,7 +12,7 @@
    filtered-file-seq 0 preds file)
   ([max-depth preds file]
    (let [file (io/file file)
-         walk (fn walk [f depth]
+         walk (fn walk [^File f depth]
                 (lazy-seq
                  (cons f
                        (when (and (< depth max-depth)
@@ -21,12 +22,12 @@
 
 (defn file?
   "True if not a directory."
-  [f]
+  [^File f]
   (not (.isDirectory f)))
 
 (defn ends-xml?
   "True if the file ends with .xml."
-  [f] 
+  [^File f] 
   (-> f
       (.getName)
       (str/lower-case)
@@ -34,7 +35,7 @@
 
 (defn index-xml?
   "True if the file is index.xml"
-  [f]
+  [^File f]
   (-> f
       (.getName)
       (str/lower-case)

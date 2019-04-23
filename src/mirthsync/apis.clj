@@ -26,23 +26,26 @@
   (fn [app-conf]
     (str (:target app-conf) File/separator path)))
 
-(defn group-post-params
+(defn group-push-params
   "Build params for groups post-xml."
   [{:keys [server-groups force]}]
-  (vector
-   ["channelGroups" (xml/indent-str (zip/node server-groups))]
-   ["removedChannelGroupsIds" "<set/>"]
-   ["override" (if force "true" "false")]))
+  {"channelGroups" (xml/indent-str (zip/node server-groups))
+   "removedChannelGroupsIds" "<set/>"
+   "override" (if force "true" "false")})
 
-(defn codelib-post-params
+(defn codelib-push-params
   "Build params for codelib post-xml."
   [{:keys [server-codelibs force]}]
-  (vector
-   ["libraries" (xml/indent-str (zip/node server-codelibs))]
-   ["removedLibraryIds" "<set/>"]
-   ["updatedCodeTemplates" "<list/>"]
-   ["removedCodeTemplateIds" "<set/>"]
-   ["override" (if force "true" "false")]))
+  {"libraries" (xml/indent-str (zip/node server-codelibs))
+   "removedLibraryIds" "<set/>"
+   "updatedCodeTemplates" "<list/>"
+   "removedCodeTemplateIds" "<set/>"
+   "override" (if force "true" "false")})
+
+(defn override-params
+  "Override if force is specified"
+  [{:keys [force]}]
+  {"override" (if force "true" "false")})
 
 ;FIXME: The logic is fine but the function could stand to have some
 ;attention to make it a little less ugly both here and in the apis
@@ -78,7 +81,7 @@
   (log/tracef "safe-name pre: (%s)" name)
   (when name
     (assert
-     (and (string? name) (= name (.getName (File. name))))
+     (and (string? name) (= name (.getName (File. ^String name))))
      (str "Name does not appear to be safe"
           " for file creation - " name
           " - Check for invalid characters.")))
@@ -193,7 +196,7 @@
           :file-path (file-path ".xml") ; build the xml file path
           :api-files (partial mf/xml-file-seq 1) ; find local api xml files for upload
           :post-path (constantly nil)   ; HTTP POST on upload path
-          :post-params (constantly nil) ; params for HTTP POST
+          :push-params (constantly nil) ; params for HTTP PUT/POST
           :pre-node-action identity     ; transform app-conf before processing
           :after-push true-200          ; process result of item push
           :preprocess identity          ; preprocess app-conf before any other work
@@ -232,7 +235,7 @@
      :file-path (file-path (str File/separator "index.xml"))
      :api-files (partial mf/only-index-files-seq 2)
      :post-path post-path
-     :post-params codelib-post-params
+     :push-params codelib-push-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-codelibs :list)
      :pre-node-action (partial pre-node-action :server-codelibs :list :codeTemplateLibrary)
      :after-push revision-success})
@@ -242,7 +245,8 @@
      :local-path (local-path "CodeTemplates")
      :find-elements #(zx/xml-> % :list :codeTemplate)
      :file-path codetemplate-file-path
-     :api-files (partial mf/without-index-files-seq 2)})
+     :api-files (partial mf/without-index-files-seq 2)
+     :push-params override-params})
 
    (make-api
     {:rest-path (constantly "/channelgroups")
@@ -252,7 +256,7 @@
      :file-path (file-path (str File/separator "index.xml"))
      :api-files (partial mf/only-index-files-seq 2)
      :post-path post-path
-     :post-params group-post-params
+     :push-params group-push-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-groups :set)
      :pre-node-action (partial pre-node-action :server-groups :set :channelGroup)})
 
@@ -261,7 +265,8 @@
      :local-path (local-path "Channels")
      :find-elements #(zx/xml-> % :list :channel)
      :file-path channel-file-path
-     :api-files (partial mf/without-index-files-seq 2)})])
+     :api-files (partial mf/without-index-files-seq 2)
+     :push-params override-params})])
 
 (defn apis-action
   "Iterates through the apis calling action on app-conf. If an api

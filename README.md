@@ -48,25 +48,21 @@ How to generate help dialogue:
 
 ### Help Dialogue:
 
-Usage: mirthsync [options] action
-
-Options:
-
-  -s, --server SERVER_URL  https://localhost:8443/api  Full HTTP(s) url of the Mirth Connect server  
-  -u, --username USERNAME  admin                       Username used for authentication  
-  -p, --password PASSWORD                              Password used for authentication  
-  -f, --force                                          Overwrite any conflicting files in the target directory  
-  -t, --target TARGET_DIR  .                           Base directory used for pushing or pulling files  
-  -v                                                   Verbosity level; may be specified multiple times to increase value  
-  -h, --help
+  Usage: mirthsync [options] action  
   
-
-Actions:
+  Options:  
+    -s, --server SERVER_URL        Full HTTP(s) url of the Mirth Connect server  
+    -u, --username USERNAME        Username used for authentication  
+    -p, --password PASSWORD        Password used for authentication  
+    -i, --ignore-cert-warnings     Ignore certificate warnings  
+    -f, --force                    Overwrite existing local files during pull and always overwrite remote items without regard for revisions during push  
+    -t, --target TARGET_DIR     .  Base directory used for pushing or pulling files  
+    -v                             Verbosity level; may be specified multiple times to increase level  
+    -h, --help  
   
-  push     Push filesystem code to server
-  pull     Pull server code to filesystem
- 
-
+  Actions:  
+    push     Push filesystem code to server  
+    pull     Pull server code to filesystem  
 
 ## Examples
 
@@ -107,15 +103,16 @@ Sample crontab...
 
 ### REPL
 
-Pull/Push from a REPL using mostly CLI defaults. The following pulls
-code to a directory called 'tmp' (relative to the execution
-environment), overwriting existing files ("-f"), and then pushes back
-to the local server from the same directory.
+Pull/Push from a REPL.
+
+The following pulls code to a directory called 'tmp' (relative to the
+execution environment), overwriting existing files ("-f") and ignoring
+the validity of the server certificate ("-i"), and then pushes back to
+the local server from the same directory.
 
 ``` clj
-(mirthsync.core/-main "-s" "https://localhost:8443/api" "-p" "admin" "-t" "target/tmp" "-f" "pull")
-(mirthsync.core/-main "-s" "https://localhost:8443/api" "-p" "admin" "-t" "target/tmp" "push")
-
+(mirthsync.core/-main "-s" "https://localhost:8443/api" "-u" "admin" "-p" "admin" "-t" "target/tmp" "-f" "-i" "pull")
+(mirthsync.core/-main "-s" "https://localhost:8443/api" "-u" "admin" "-p" "admin" "-t" "target/tmp" "-f" "-i" "push")
 ```
 
 ## Build from Source

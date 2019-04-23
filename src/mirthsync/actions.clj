@@ -1,10 +1,11 @@
 (ns mirthsync.actions
   (:require [clojure.data.xml :as xml]
+            [clojure.tools.logging :as log]
             [clojure.zip :as zip]
             [mirthsync.cli :as cli]
             [mirthsync.http-client :as mhttp]
-            [mirthsync.xml :as mxml]
-            [clojure.tools.logging :as log]))
+            [mirthsync.xml :as mxml])
+  (:import java.io.File))
 
 (defn api-url
   "Returns the constructed api url."
@@ -17,11 +18,12 @@
   POSTs the params to the location constructed from the base-url,
   rest-path, and id."
   [{:keys [el-loc] :as app-conf
-    {:keys [post-path post-params after-push] :as api} :api}]
+    {:keys [post-path push-params after-push] :as api} :api}]
 
-  (let [result (if (post-path api)
-                 (apply mhttp/post-xml app-conf (post-params app-conf))
-                 (mhttp/put-xml app-conf))]
+  (let [params (log/spyf :trace "Push params: %s" (push-params app-conf))
+        result (if (post-path api)
+                 (mhttp/post-xml app-conf params)
+                 (mhttp/put-xml app-conf params))]
     (after-push app-conf result)))
 
 
@@ -44,9 +46,11 @@
   "Lazy seq of local el-locs for the current api."
   [{:as app-conf
     {:keys [local-path api-files]} :api}]
-  (map #(mxml/to-zip (do
-                       (log/infof "\tFile: %s" (.toString %))
-                       (slurp %))) (api-files (local-path app-conf))))
+  (map #(mxml/to-zip
+         (do
+           (log/infof "\tFile: %s" (.toString ^File %))
+           (slurp %)))
+       (api-files (local-path app-conf))))
 
 (defn remote-locs
   "Seq of remote el-locs for the current api. Could be lazy or not
