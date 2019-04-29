@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><channelGroup version="3.7.1">
+  <id>2b8b91c1-0340-4e44-af3b-333aae9c7262</id>
+  <name>This is a group</name>
+  <revision>2</revision>
+  <lastModified>
+    <time>1556295186077</time>
+    <timezone>America/New_York</timezone>
+  </lastModified>
+  <description>This is the group's description</description>
+  <channels>
+    <channel version="3.7.1">
+      <id>2521ed7e-156d-47dd-b701-0705583b99ec</id>
+      <revision>0</revision>
+    </channel>
+  </channels>
+</channelGroup>
