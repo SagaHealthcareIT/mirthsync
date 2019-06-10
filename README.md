@@ -1,6 +1,6 @@
-# Mirthsync
+# mirthSync
 
-Mirthsync is a command line tool for synchronizing Mirth Connect code
+mirthSync is a command line tool for synchronizing Mirth Connect code
 between servers by allowing you to push or pull channels, code
 templates, configuration map and global scripts. The tool can also be
 integrated with Git or other version control systems for the purpose
@@ -12,7 +12,7 @@ Mirth Connect's REST API.
 
 ## Suggestions for use
 
-- Use Mirthsync in conjunction with Git (or any VCS) to back up and
+- Use mirthSync in conjunction with Git (or any VCS) to back up and
   track changes to code and settings
 - Pull and push changes between Mirth Connect servers
 - Utilize Git branches to track and merge code between dev, test, and
@@ -20,7 +20,7 @@ Mirth Connect's REST API.
 
 ## Status
 ### 2.0 Release is coming soon.
-The 2.0 release of Mirthsync will bring bi-directional groups
+The 2.0 release of mirthSync will bring bi-directional groups
 support. The 2.0.2-SNAPSHOT release is fully functional and will be
 released as 2.0.2 after further testing.
 
