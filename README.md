@@ -24,6 +24,8 @@ The 2.0 release of mirthSync will bring bi-directional groups
 support. The 2.0.3-SNAPSHOT release is fully functional and will be
 released as 2.0.3 after further testing.
 
+You can check out the 2.0.3-SNAPSHOT release here - https://github.com/SagaHealthcareIT/mirthsync/releases/tag/2.0.3-SNAPSHOT
+
 ## Changes
 ### 2.0.2-SNAPSHOT
 The local directory structure has been changed to nest channels within
