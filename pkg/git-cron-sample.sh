@@ -26,7 +26,7 @@ rm -rf '/home/test/git/channels'
 rm -rf '/home/test/git/codeTemplates'
 rm -rf '/home/test/git/server'
 
-java -jar mirthsync-2.0.2-SNAPSHOT-standalone.jar -s https://localhost:8443/api -u admin -p admin -t '/home/test/git' -f pull
+java -jar mirthsync-2.0.3-SNAPSHOT-standalone.jar -s https://localhost:8443/api -u admin -p admin -t '/home/test/git' -f pull
 
 git -C '/home/test/git' add -A
 git -C '/home/test/git' commit -a -m "$message"
