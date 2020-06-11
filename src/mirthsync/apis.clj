@@ -228,6 +228,15 @@
      :after-push null-204})
 
    (make-api
+    {:rest-path (constantly "/server/resources")
+     :local-path (local-path "Resources")
+     :find-elements #(zx/xml-> % :list)
+     :find-id (constantly nil)
+     :find-name (constantly nil)
+     :file-path (file-path "resources.xml")
+     :after-push null-204}) 
+
+   (make-api
     {:rest-path (constantly "/codeTemplateLibraries")
      :local-path (local-path "CodeTemplates")
      :find-elements #(or (zx/xml-> % :list :codeTemplateLibrary) ; from server
