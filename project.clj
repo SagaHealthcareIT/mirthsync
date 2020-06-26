@@ -57,7 +57,8 @@
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all
                        :omit-source true}
-             :repl {:plugins [[cider/cider-nrepl "0.21.2-SNAPSHOT"]]}}
+             :repl {:plugins [[cider/cider-nrepl "0.21.2-SNAPSHOT"]]}
+             :dev {:dependencies [[clj-commons/conch "0.9.2"]]}}
   :release-tasks [["clean"]
                   ["test"]
                   ["vcs" "assert-committed"]
