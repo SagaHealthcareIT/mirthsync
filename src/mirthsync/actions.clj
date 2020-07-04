@@ -39,7 +39,6 @@
           (apply xml/element
                  ktag nil (zip/children
                            (mhttp/fetch-all app-conf
-                                            (api-url app-conf)
                                             identity))))))
 
 (defn local-locs
@@ -57,7 +56,7 @@
   depending on the implementation of find-elements."
   [{:as app-conf
     {:keys [find-elements] :as api} :api}]
-  (mhttp/fetch-all app-conf (api-url app-conf) find-elements))
+  (mhttp/fetch-all app-conf find-elements))
 
 (defn process
   "Prints the message and processes the el-locs via the action."

@@ -1,17 +1,18 @@
 (ns mirthsync.http-client
   (:require [clj-http.client :as client]
             [mirthsync.xml :as mxml]
+            [mirthsync.actions :as mactions]
             [clojure.data.xml :as xml]
             [clojure.zip :as zip]
             [clojure.tools.logging :as log]))
 
 (defn put-xml
   "HTTP PUTs the current api and el-loc to the server."
-  [{:keys [server el-loc]
+  [{:keys [server el-loc ignore-cert-warnings]
     {:keys [find-id rest-path] :as api} :api}
    params]
   (client/put (str server (rest-path api) "/" (find-id el-loc))
-              {:insecure? true
+              {:insecure? ignore-cert-warnings
                :body (xml/indent-str (zip/node el-loc))
                :query-params params
                :content-type "application/xml"}))
@@ -21,11 +22,11 @@
   params are supported and should be passed as one or more [name
   value] vectors. Name should be a string and value should be an xml
   string."
-  [{:keys [server]
+  [{:keys [server ignore-cert-warnings]
     {:keys [post-path] :as api} :api}
    params]
   (client/post (str server (post-path api))
-               {:insecure? true
+               {:insecure? ignore-cert-warnings
                 :multipart (map (fn
                                   [[k v]]
                                   {:name k
@@ -38,14 +39,14 @@
   "Binds a cookie store to keep auth cookies, authenticates using the
   supplied url/credentials, and returns the results of executing the
   supplied parameterless function for side effects"
-  [base-url username password func]
+  [{:as app-conf :keys [server username password ignore-cert-warnings]} func]
   (binding [clj-http.core/*cookie-store* (clj-http.cookies/cookie-store)]
     (client/post
-     (str base-url "/users/_login")
+     (str server "/users/_login")
      {:form-params
       {:username username
        :password password}
-      :insecure? true})
+      :insecure? ignore-cert-warnings})
     (func)))
 
 (defn fetch-all
@@ -54,10 +55,9 @@
   from the url via a GET request, extract the :body of the result,
   parse the XML, create a 'zipper', and return the result of the
   function on the xml zipper."
-  [{:as app-conf :keys [ignore-cert-warnings] :or {ignore-cert-warnings false}}
-   api-url
+  [{:as app-conf :keys [ignore-cert-warnings]}
    find-elements]
-  (-> api-url
+  (-> (mactions/api-url app-conf)
       (client/get {:insecure? ignore-cert-warnings})
       (:body)
       (mxml/to-zip)

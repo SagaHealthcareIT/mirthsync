@@ -19,7 +19,7 @@
   (log/info (str "Authenticating to server at " server " as " username))
   (let [action   ({"push" act/upload, "pull" act/download} action)
         app-conf (http/with-authentication
-                   server username password
+                   app-conf
                    #(-> app-conf
                         (api/apis-action api/apis api/preprocess)
                         (api/apis-action api/apis action)))]    

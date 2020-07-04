@@ -36,7 +36,8 @@
    ["-p" "--password PASSWORD" "Password used for authentication"
     :default ""]
 
-   ["-i" "--ignore-cert-warnings" "Ignore certificate warnings"]
+   ["-i" "--ignore-cert-warnings" "Ignore certificate warnings"
+    :default false]
    
    ["-f" "--force" (str "Overwrite existing local files during pull "
                         "and always overwrite remote items without "
