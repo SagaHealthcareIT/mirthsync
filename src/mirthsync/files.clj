@@ -33,31 +33,34 @@
       (str/lower-case)
       (str/ends-with? ".xml")))
 
-(defn index-xml?
-  "True if the file is index.xml"
-  [^File f]
-  (-> f
-      (.getName)
-      (str/lower-case)
-      (= "index.xml")))
+(defn filename-matches?
+  "Returns a predicate that returns true if the case-insensitive filename matches"
+  [filename]
+  (fn
+    [^File f]
+    (-> f
+        (.getName)
+        (str/lower-case)
+        (= (str/lower-case filename)))))
 
-(def not-index-xml?
-  "Complement of index-xml?"
-  (complement index-xml?))
+(defn not-filename-matches?
+  "Complement of filename-matches?"
+  [filename]
+  (complement (filename-matches? filename)))
 
 (defn xml-file-seq
   "Xml file sequence at dir up to depth."
   [depth dir]
   (filtered-file-seq depth [file? ends-xml?] dir))
 
-(defn without-index-files-seq
-  "Sequence of non-index.xml files contained within directories in the
+(defn without-named-xml-files-seq
+  "Sequence of named xml files contained within directories in the
   target dir and subdirectories up to depth."
-  [depth dir]
-  (filtered-file-seq depth [file? ends-xml? not-index-xml?] dir))
+  [depth name dir]
+  (filtered-file-seq depth [file? ends-xml? (not-filename-matches? (str name ".xml"))] dir))
 
-(defn only-index-files-seq
-  "Sequence of index.xml files contained within directories in the
+(defn only-named-xml-files-seq
+  "Sequence of named xml files contained within directories in the
   target dir and subdirectories up to depth."
-  [depth dir]
-  (filtered-file-seq depth [file? ends-xml? index-xml?] dir))
+  [depth name dir]
+  (filtered-file-seq depth [file? ends-xml? (filename-matches? (str name ".xml"))] dir))

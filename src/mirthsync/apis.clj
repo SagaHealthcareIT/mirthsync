@@ -189,11 +189,10 @@
           :rest-path nil                ; required - server api path for GET/PUT
           :local-path nil               ; required - base dir for saving files
           :find-elements nil            ; required - find elements in the returned xml
+          :file-path nil                ; required - build the xml file path
 
           :find-id by-id                ; find the current xml loc id
           :find-name by-name            ; find the current xml loc name
-
-          :file-path (file-path ".xml") ; build the xml file path
           :api-files (partial mf/xml-file-seq 1) ; find local api xml files for upload
           :post-path (constantly nil)   ; HTTP POST on upload path
           :push-params (constantly nil) ; params for HTTP PUT/POST
@@ -216,6 +215,7 @@
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "ConfigurationMap.xml")
+     :api-files (partial mf/only-named-xml-files-seq 1 "ConfigurationMap.xml")
      :after-push null-204})
    
    (make-api
@@ -228,12 +228,22 @@
      :after-push null-204})
 
    (make-api
+    {:rest-path (constantly "/server/resources")
+     :local-path (local-path ".")
+     :find-elements #(zx/xml-> % :list)
+     :find-id (constantly nil)
+     :find-name (constantly nil)
+     :file-path (file-path "Resources.xml")
+     :api-files (partial mf/only-named-xml-files-seq 1 "Resources.xml")
+     :after-push null-204})
+
+   (make-api
     {:rest-path (constantly "/codeTemplateLibraries")
      :local-path (local-path "CodeTemplates")
      :find-elements #(or (zx/xml-> % :list :codeTemplateLibrary) ; from server
                          (zx/xml-> % :codeTemplate)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
-     :api-files (partial mf/only-index-files-seq 2)
+     :api-files (partial mf/only-named-xml-files-seq 2 "index")
      :post-path post-path
      :push-params codelib-push-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-codelibs :list)
@@ -245,7 +255,7 @@
      :local-path (local-path "CodeTemplates")
      :find-elements #(zx/xml-> % :list :codeTemplate)
      :file-path codetemplate-file-path
-     :api-files (partial mf/without-index-files-seq 2)
+     :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})
 
    (make-api
@@ -254,7 +264,7 @@
      :find-elements #(or (zx/xml-> % :list :channelGroup) ; from server
                          (zx/xml-> % :channelGroup)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
-     :api-files (partial mf/only-index-files-seq 2)
+     :api-files (partial mf/only-named-xml-files-seq 2 "index")
      :post-path post-path
      :push-params group-push-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-groups :set)
@@ -265,7 +275,7 @@
      :local-path (local-path "Channels")
      :find-elements #(zx/xml-> % :list :channel)
      :file-path channel-file-path
-     :api-files (partial mf/without-index-files-seq 2)
+     :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})])
 
 (defn apis-action
