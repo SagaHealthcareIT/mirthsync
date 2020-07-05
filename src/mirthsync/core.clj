@@ -34,7 +34,8 @@
     (log/info exit-msg))
   ;; don't exit if nrepl is loaded
   (if-not (resolve 'nrepl.version/version)
-    (System/exit exit-code)))
+    (System/exit exit-code)
+    exit-code))
 
 (defn -main
   [& args]
@@ -43,8 +44,13 @@
   (SLF4JBridgeHandler/removeHandlersForRootLogger)
   (SLF4JBridgeHandler/install)
   
-  (let [conf (cli/config args)]
-    (when-not (seq (:exit-msg conf))
-      (run conf))
-    
+  (let [conf (cli/config args)
+        conf (if-not (seq (:exit-msg conf))
+               (try
+                 (run conf)
+                 (catch Exception e
+                   (-> conf
+                       (assoc :exit-code 1)
+                       (assoc :exit-msg (.getMessage e)))))
+               conf)]
     (exit! conf)))

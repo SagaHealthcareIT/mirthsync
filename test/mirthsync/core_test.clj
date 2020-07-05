@@ -1,6 +1,7 @@
 (ns mirthsync.core-test
   (:require [clojure.test :refer :all]
             [clojure.java.io :as io]
+            [clj-http.client :as client]
             [mirthsync.core :refer :all]
             [me.raynes.conch :refer [programs with-programs let-programs]]
             [me.raynes.conch.low-level :as sh]))
@@ -8,7 +9,7 @@
 ;;; note that these tests will only work in unix'ish environments with
 ;;; appropriate commands in the path
 
-(programs mkdir sha256sum curl tar cp)
+(programs mkdir sha256sum curl tar cp rm rmdir echo)
 
 ;;;; starting data and accessor fns
 (def mirths-dir "target/mirths")
@@ -42,6 +43,9 @@
 (defn mirth-base-dir [mirth]
   (str mirths-dir "/" (mirth-name mirth)))
 
+(defn mirth-db-dir [mirth]
+  (str (mirth-base-dir mirth) "/appdata/mirthdb" ))
+
 (defn mirth-unpacked? [mirth]
   (.isDirectory (io/file (mirth-base-dir mirth))))
 
@@ -63,6 +67,13 @@
   (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
       {:dir (mirth-base-dir mirth) :verbose true}))
 
+(defn remove-mirth-db [mirth]
+  (let-programs [system-test "test"]
+    (let [dbdir (mirth-db-dir mirth)]
+      (and (clojure.string/ends-with? dbdir "mirthdb")
+           (= 0 @(:exit-code (system-test "-d" dbdir {:throw false :verbose true})))
+           (rm "-f" "-v" "--preserve-root=all" "--one-file-system" "-r" (mirth-db-dir mirth))))))
+
 ;;;; A couple of helper functions to track the flow of
 ;;;; tracking the flow and outcomes
 (defn do-to-mirth [mirth mirth-fn]
@@ -83,7 +94,8 @@
                           download-mirth
                           validate-mirth
                           unpack-mirth
-                          select-jvm-9-options)))
+                          select-jvm-9-options
+                          remove-mirth-db)))
 
 (defn make-all-mirths-ready []
   (ensure-target-dir)
@@ -94,6 +106,14 @@
   (let [mirth-base (mirth-base-dir mirth)
         mcserver (sh/proc "./mcserver" :dir mirth-base)]
     (future (sh/stream-to-out mcserver))
+
+    ;; wait up to 10 seconds for the server to appear
+    (dotimes [i 10]
+      (try
+        (client/head "http://localhost:8080")
+        (catch Exception e))
+      (Thread/sleep 1000))
+    
     mcserver))
 
 (defn stop-mirth [mirth-proc]
@@ -109,3 +129,18 @@
 
 (use-fixtures :once mirth-8-fixture)
 
+(deftest integration
+  (testing "Actions fail with default params and invalid certification path."
+    (is (= 1 (mirthsync.core/-main "-s" "https://localhost:8443/api"
+                                      "-u" "admin" "-p" "admin" "-t" "target/tmp"
+                                      "-f" "pull"))))
+  
+  (testing "Actions fail with invalid credentials"
+    (is (= 1 (mirthsync.core/-main "-s" "https://localhost:8443/api"
+                                   "-u" "admin" "-p" "invalidpass" "-t" "target/tmp"
+                                   "-i" "-f" "pull"))))
+
+  (testing "Pull succeeds without errors"
+    (is (= 0 (mirthsync.core/-main "-s" "https://localhost:8443/api"
+                                   "-u" "admin" "-p" "admin" "-t" "target/tmp"
+                                   "-i" "-f" "pull")))))
