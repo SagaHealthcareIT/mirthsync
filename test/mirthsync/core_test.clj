@@ -20,6 +20,9 @@
               :sha256 "e4606d0a9ea9d35263fb7937d61c98f26a7295d79b8bf83d0dab920cf875206d"
               :what-happened? []}])
 
+(def mirth-9 (first mirths))
+(def mirth-8 (second mirths))
+
 (defn mirth-name [mirth]
   (str "mirthconnect-" (:version mirth) "-unix"))
 
@@ -82,14 +85,27 @@
                           unpack-mirth
                           select-jvm-9-options)))
 
-(defn make-all-mirths-available []
+(defn make-all-mirths-ready []
   (ensure-target-dir)
   (doall
    (map ensure-valid-mirth mirths)))
 
-;; (defn mirth-8-fixture [f]
-;;         (create-db)
-;;         (f)
-;;         (destroy-db))
+(defn start-mirth [mirth]
+  (let [mirth-base (mirth-base-dir mirth)
+        mcserver (sh/proc "./mcserver" :dir mirth-base)]
+    (future (sh/stream-to-out mcserver))
+    mcserver))
 
-;; (use-fixtures :once mirth-8-fixture)
+(defn stop-mirth [mirth-proc]
+  (let [exit-code (future (sh/exit-code mirth-proc))]
+    (sh/destroy mirth-proc)
+    @exit-code))
+
+(defn mirth-8-fixture [f]
+  (make-all-mirths-ready)
+  (let [mirth-proc (start-mirth mirth-8)]
+    (f)
+    (stop-mirth mirth-proc)))
+
+(use-fixtures :once mirth-8-fixture)
+
