@@ -9,7 +9,7 @@
 ;;; note that these tests will only work in unix'ish environments with
 ;;; appropriate commands in the path
 
-(programs mkdir sha256sum curl tar cp rm rmdir echo)
+(programs mkdir sha256sum curl tar cp rm rmdir echo diff sed)
 
 ;;;; starting data and accessor fns
 (def mirths-dir "target/mirths")
@@ -129,6 +129,8 @@
 
 (use-fixtures :once mirth-8-fixture)
 
+(def baseline-dir "dev-resources/mirth-8-baseline")
+
 (deftest integration
   (testing "Actions fail with default params and invalid certification path."
     (is (= 1 (mirthsync.core/-main "-s" "https://localhost:8443/api"
@@ -140,7 +142,32 @@
                                    "-u" "admin" "-p" "invalidpass" "-t" "target/tmp"
                                    "-i" "-f" "pull"))))
 
-  (testing "Pull succeeds without errors"
+  (testing "Push from baseline succeeds without errors"
+    (is (= 0 (mirthsync.core/-main "-s" "https://localhost:8443/api"
+                                   "-u" "admin" "-p" "admin" "-t" baseline-dir
+                                   "-i" "-f" "push"))))
+
+    (testing "Pull from Mirth succeeds without errors"
     (is (= 0 (mirthsync.core/-main "-s" "https://localhost:8443/api"
                                    "-u" "admin" "-p" "admin" "-t" "target/tmp"
-                                   "-i" "-f" "pull")))))
+                                   "-i" "-f" "pull"))))
+
+  (testing "Pull diff from baseline is identical to expected diff"
+    (is (= "7af9473e4b277ea4ef138d99ae218727d7aadb4787dadf8480502912da807f03  -\n"
+           (let-programs [native-sort "sort"] ; don't shadow clojure sort
+             (sha256sum
+              {:in
+               (native-sort {:seq true :in 
+                             (sed "s/<time>.*<\\/time>//"
+                                  {:seq true :in
+                                   (diff "-r" "target/tmp/" "dev-resources/mirth-8-baseline"
+                                         {:seq true :throw false})})})}))))))
+;; "003aec63ba454f2b158d0bd6151917928bea6a6fc20aa1018815f8382f2773c9  -\n"
+
+;; "161701a6dbbcbc5711f00ebac3f78512bf3070ad68d57ef3848413f2e5042eab  -\n"
+
+
+
+;; (sed "'s/diff -r.*\\/\\(target.*\\/ \\).*\\/\\(dev-resources.*\\)/diff -r \\1 \\2/'"
+;;      (diff "-r" "target/tmp/" "dev-resources/mirth-8-baseline" {:seq true :throw false}))
+;; ;; ;; diff -r target/tmp/ dev-resources/mirth-8-baseline | sed 's/diff -r.*\/\(target.*\/ \).*\/\(dev-resources.*\)/diff -r \1 \2/'
