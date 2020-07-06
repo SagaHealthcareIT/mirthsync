@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?><codeTemplateLibrary version="3.8.0">
+<?xml version="1.0" encoding="UTF-8"?><codeTemplateLibrary version="3.9.0">
   <id>3e5488e0-2c95-456e-bce3-0178d365d198</id>
   <name>Library 1</name>
   <revision>1</revision>
   <lastModified>
-    <time>1593976049058</time>
+    <time>1594072268685</time>
     <timezone>GMT</timezone>
   </lastModified>
   <description/>
@@ -14,7 +14,7 @@
     <string>51a75675-33cc-4d87-87c6-2a337dedff67</string>
   </disabledChannelIds>
   <codeTemplates>
-    <codeTemplate version="3.8.0">
+    <codeTemplate version="3.9.0">
       <id>66d76711-0274-49e4-b92a-73c4690bcbe7</id>
     </codeTemplate>
   </codeTemplates>

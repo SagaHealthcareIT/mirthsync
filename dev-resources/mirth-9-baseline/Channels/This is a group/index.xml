@@ -1,14 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?><channelGroup version="3.8.0">
+<?xml version="1.0" encoding="UTF-8"?><channelGroup version="3.9.0">
   <id>2b8b91c1-0340-4e44-af3b-333aae9c7262</id>
   <name>This is a group</name>
   <revision>1</revision>
   <lastModified>
-    <time>1593976049371</time>
+    <time>1594072269017</time>
     <timezone>GMT</timezone>
   </lastModified>
   <description>This is the group's description</description>
   <channels>
-    <channel version="3.8.0">
+    <channel version="3.9.0">
       <id>2521ed7e-156d-47dd-b701-0705583b99ec</id>
       <revision>0</revision>
     </channel>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><list>
-  <com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties version="3.8.0">
+  <com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties version="3.9.0">
     <pluginPointName>Directory Resource</pluginPointName>
     <type>Directory</type>
     <id>Default Resource</id>
