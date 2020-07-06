@@ -10,22 +10,22 @@
 
 (deftest integration
   (testing "Actions fail with default params and invalid certification path."
-    (is (= 1 (-main "-s" "https://localhost:8443/api"
+    (is (= 1 (main-func "-s" "https://localhost:8443/api"
                                       "-u" "admin" "-p" "admin" "-t" repo-dir
                                       "-f" "pull"))))
   
   (testing "Actions fail with invalid credentials"
-    (is (= 1 (-main "-s" "https://localhost:8443/api"
+    (is (= 1 (main-func "-s" "https://localhost:8443/api"
                                    "-u" "admin" "-p" "invalidpass" "-t" repo-dir
                                    "-i" "-f" "pull"))))
 
   (testing "Push from baseline succeeds without errors"
-    (is (= 0 (-main "-s" "https://localhost:8443/api"
+    (is (= 0 (main-func "-s" "https://localhost:8443/api"
                                    "-u" "admin" "-p" "admin" "-t" baseline-dir
                                    "-i" "-f" "push"))))
 
     (testing "Pull from Mirth succeeds without errors"
-    (is (= 0 (-main "-s" "https://localhost:8443/api"
+    (is (= 0 (main-func "-s" "https://localhost:8443/api"
                                    "-u" "admin" "-p" "admin" "-t" repo-dir
                                    "-i" "-f" "pull"))))
 
