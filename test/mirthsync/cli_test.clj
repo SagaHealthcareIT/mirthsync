@@ -28,7 +28,8 @@
                 ;; :username "admin",
                 :action "push",
                 :target "./tmp",
-                :exit-msg nil}]
+                :exit-msg nil
+                :ignore-cert-warnings false}]
       (is (= conf (config ["push" "-shttps://localhost:8443/api/" "-t./tmp/"])))))
 
   (testing "Sensible pull defaults"
@@ -41,7 +42,8 @@
                 ;; :username "admin",
                 :action "pull",
                 :target ".",
-                :exit-msg nil}]
+                :exit-msg nil
+                :ignore-cert-warnings false}]
       (is (= conf (config ["-f" "pull"])))))
 
   (testing "Force defaults to nil"

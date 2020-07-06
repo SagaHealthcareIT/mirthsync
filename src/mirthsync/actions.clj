@@ -7,12 +7,6 @@
             [mirthsync.xml :as mxml])
   (:import java.io.File))
 
-(defn api-url
-  "Returns the constructed api url."
-  [{:keys [server]
-    {:keys [rest-path find-elements] :as api} :api}]
-  (str server (rest-path api)))
-
 (defn upload-node
   "Extracts the id from the xmlloc using the find-id predicates. PUTs or
   POSTs the params to the location constructed from the base-url,
@@ -82,7 +76,7 @@
     {:keys [local-path transformer] :as api} :api}]
   (process
    app-conf
-   (str "Downloading from " (api-url app-conf) " to " (local-path app-conf))
+   (str "Downloading from " (mhttp/api-url app-conf) " to " (local-path app-conf))
    (remote-locs app-conf)
    mxml/serialize-node))
 

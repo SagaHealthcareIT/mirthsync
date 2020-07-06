@@ -1,7 +1,6 @@
 (ns mirthsync.http-client
   (:require [clj-http.client :as client]
             [mirthsync.xml :as mxml]
-            [mirthsync.actions :as mactions]
             [clojure.data.xml :as xml]
             [clojure.zip :as zip]
             [clojure.tools.logging :as log]))
@@ -49,6 +48,12 @@
       :insecure? ignore-cert-warnings})
     (func)))
 
+(defn api-url
+  "Returns the constructed api url."
+  [{:keys [server]
+    {:keys [rest-path find-elements] :as api} :api}]
+  (str server (rest-path api)))
+
 (defn fetch-all
   "Fetch everything at url from remote server and return a sequence of
   locs based on the supplied function. In other words - grab the xml
@@ -57,7 +62,7 @@
   function on the xml zipper."
   [{:as app-conf :keys [ignore-cert-warnings]}
    find-elements]
-  (-> (mactions/api-url app-conf)
+  (-> (api-url app-conf)
       (client/get {:insecure? ignore-cert-warnings})
       (:body)
       (mxml/to-zip)
