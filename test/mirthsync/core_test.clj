@@ -9,7 +9,7 @@
 ;;; note that these tests will only work in unix'ish environments with
 ;;; appropriate commands in the path
 
-(programs mkdir sha256sum curl tar cp rm rmdir echo diff sed)
+(programs mkdir sha256sum curl tar cp rm rmdir diff) ;; sed ;; echo
 
 ;;;; starting data and accessor fns
 (def mirths-dir "target/mirths")
@@ -152,21 +152,20 @@
                                    "-u" "admin" "-p" "admin" "-t" "target/tmp"
                                    "-i" "-f" "pull"))))
 
-  (testing "Pull diff from baseline is identical to expected diff"
-    (is (= "7af9473e4b277ea4ef138d99ae218727d7aadb4787dadf8480502912da807f03  -\n"
-           (let-programs [native-sort "sort"] ; don't shadow clojure sort
-             (sha256sum
-              {:in
-               (native-sort {:seq true :in 
-                             (sed "s/<time>.*<\\/time>//"
-                                  {:seq true :in
-                                   (diff "-r" "target/tmp/" "dev-resources/mirth-8-baseline"
-                                         {:seq true :throw false})})})}))))))
-;; "003aec63ba454f2b158d0bd6151917928bea6a6fc20aa1018815f8382f2773c9  -\n"
-
-;; "161701a6dbbcbc5711f00ebac3f78512bf3070ad68d57ef3848413f2e5042eab  -\n"
+  (testing "Pull diff from baseline has only inconsequential differences (ordering, etc)"
+    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I .*<contextType>.*" "-I .*<time>.*" "-I .*<revision>.*" "target/tmp" "dev-resources/mirth-8-baseline")))))
 
 
+;;;;; original approach till the proper diff params were found
+;; (is (= "cf447090a77086562eb0d6d9eb6e03703c936ed2a10c3afe02e51587171a665b  -\n"
+;;        (let-programs [native-sort "sort"] ; don't shadow clojure sort
+;;          (sha256sum
+;;           {:in
+;;            (native-sort "-bfi" {:seq true :in 
+;;                                 (sed "s/<time>.*<\\/time>//"
+;;                                      {:seq true :in
+;;                                       (diff "--rcs" "--suppress-common-lines" "target/tmp/" "dev-resources/mirth-8-baseline"
+;;                                             {:seq true :throw false})})})}))))
 
 ;; (sed "'s/diff -r.*\\/\\(target.*\\/ \\).*\\/\\(dev-resources.*\\)/diff -r \\1 \\2/'"
 ;;      (diff "-r" "target/tmp/" "dev-resources/mirth-8-baseline" {:seq true :throw false}))
