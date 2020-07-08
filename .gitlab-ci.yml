@@ -1,0 +1,24 @@
+image: clojure:openjdk-11-lein-slim-buster
+
+before_script:
+  - apt-get update && apt-get install -y apt-transport-https bash ca-certificates curl --no-install-recommends
+
+# Cache mirth downloads in between builds
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - vendor/mirths
+
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - lein test
+
+ancient:
+  stage: test
+  script:
+    - lein ancient
+  allow_failure: true
