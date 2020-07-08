@@ -30,4 +30,4 @@
                         "-i" "-f" "pull"))))
 
   (testing "Pull diff from baseline has only inconsequential differences (ordering, etc)"
-    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<revision>.*" repo-dir "dev-resources/mirth-9-baseline")))))
+    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir "dev-resources/mirth-9-baseline")))))
