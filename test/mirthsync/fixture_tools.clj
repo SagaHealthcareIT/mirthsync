@@ -85,11 +85,13 @@
 (defn ensure-valid-mirth [mirth]
   (cond
     (mirth-unpacked? mirth) (run-with-mirth mirth
-                                            select-jvm-9-options)
+                                            select-jvm-9-options
+                                            remove-mirth-db)
     (mirth-tgz-here? mirth) (run-with-mirth mirth
                                             validate-mirth
                                             unpack-mirth
-                                            select-jvm-9-options)
+                                            select-jvm-9-options
+                                            remove-mirth-db)
     :else (run-with-mirth mirth
                           download-mirth
                           validate-mirth
