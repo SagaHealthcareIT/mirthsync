@@ -141,7 +141,7 @@
 (defn unexpected-response
   [r]
   (log/warn "An unexpected response was received from the server...")
-  (log/warnf "Status: %s, Phrase: %s" (:status r) (:phrase r)))
+  (log/warnf "Status: %s, Phrase: %s" (:status r) (:reason-phrase r)))
 
 (defn after-push
   "Returns a function that takes app-conf and the result of an action
@@ -165,7 +165,14 @@
                           #(nil? (:body %))))
 
 (def true-200 (after-push #(= 200 (:status %))
-                          #(= "<boolean>true</boolean>" (:body %))))
+                          ;; Handle xml, json, or plain text to
+                          ;; accommodate different mirth
+                          ;; versions. Version 9, for instance,
+                          ;; returns json by default.
+                          (fn [{body :body}]
+                            (or (= body "<boolean>true</boolean>")
+                                (= body "{\"boolean\":true}")
+                                (= body "true")))))
 
 (def revision-success
   (after-push
