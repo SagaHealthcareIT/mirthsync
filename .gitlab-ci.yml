@@ -1,7 +1,7 @@
 image: clojure:openjdk-11-lein-slim-buster
 
 before_script:
-  - apt-get update && apt-get install -y apt-transport-https bash ca-certificates curl --no-install-recommends
+  - apt-get update && apt-get install -y apt-transport-https curl diff --no-install-recommends
 
 # Cache mirth downloads in between builds
 cache:
