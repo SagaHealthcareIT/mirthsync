@@ -4,10 +4,10 @@ before_script:
   - apt-get update && apt-get install -y apt-transport-https curl --no-install-recommends
 
 # Cache mirth downloads in between builds
-cache:
-  key: ${CI_COMMIT_REF_SLUG}
-  paths:
-    - vendor/mirths
+# cache:
+#   key: ${CI_COMMIT_REF_SLUG}
+#   paths:
+#     - vendor/mirths
 
 stages:
   - test
