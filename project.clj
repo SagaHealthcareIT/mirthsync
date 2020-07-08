@@ -16,23 +16,23 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :min-lein-version "2.9.1"
-  :dependencies [[org.clojure/clojure "1.10.0"]
-                 [clj-http "3.9.1" :exclusions [commons-logging]]
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [clj-http "3.10.1" :exclusions [commons-logging]]
                  [org.clojure/data.xml "0.0.8"]
-                 [org.clojure/data.zip "0.1.2"]
-                 [org.clojure/tools.cli "0.4.1"]
+                 [org.clojure/data.zip "1.0.0"]
+                 [org.clojure/tools.cli "1.0.194"]
                  ;; [tolitius/xml-in "0.1.0"]
-                 [org.clojure/tools.logging "0.4.1"]
-                 [ch.qos.logback/logback-classic "1.1.7"]
-                 [ch.qos.logback/logback-core "1.1.7"]
-                 [org.slf4j/slf4j-api "1.7.22"]
+                 [org.clojure/tools.logging "1.1.0"]
+                 [ch.qos.logback/logback-classic "1.2.3"]
+                 [ch.qos.logback/logback-core "1.2.3"]
+                 [org.slf4j/slf4j-api "1.7.30"]
 
                  ;; logging redirects
-                 [org.slf4j/jcl-over-slf4j "1.7.22"]
-                 [org.slf4j/log4j-over-slf4j "1.7.22"]
-                 [org.apache.logging.log4j/log4j-to-slf4j "2.7"]
-                 [org.slf4j/osgi-over-slf4j "1.7.22"]
-                 [org.slf4j/jul-to-slf4j "1.7.22"]
+                 [org.slf4j/jcl-over-slf4j "1.7.30"]
+                 [org.slf4j/log4j-over-slf4j "1.7.30"]
+                 [org.apache.logging.log4j/log4j-to-slf4j "2.13.3"]
+                 [org.slf4j/osgi-over-slf4j "1.7.30"]
+                 [org.slf4j/jul-to-slf4j "1.7.30"]
 
                  ;;;; don't need this for now
                  ;; [com.fasterxml.jackson.core/jackson-core "2.9.6"]
