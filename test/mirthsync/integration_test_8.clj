@@ -11,23 +11,23 @@
 (deftest integration
   (testing "Actions fail with default params and invalid certification path."
     (is (= 1 (main-func "-s" "https://localhost:8443/api"
-                                      "-u" "admin" "-p" "admin" "-t" repo-dir
-                                      "-f" "pull"))))
+                        "-u" "admin" "-p" "admin" "-t" repo-dir
+                        "-f" "pull"))))
   
   (testing "Actions fail with invalid credentials"
     (is (= 1 (main-func "-s" "https://localhost:8443/api"
-                                   "-u" "admin" "-p" "invalidpass" "-t" repo-dir
-                                   "-i" "-f" "pull"))))
+                        "-u" "admin" "-p" "invalidpass" "-t" repo-dir
+                        "-i" "-f" "pull"))))
 
   (testing "Push from baseline succeeds without errors"
     (is (= 0 (main-func "-s" "https://localhost:8443/api"
-                                   "-u" "admin" "-p" "admin" "-t" baseline-dir
-                                   "-i" "-f" "push"))))
+                        "-u" "admin" "-p" "admin" "-t" baseline-dir
+                        "-i" "-f" "push"))))
 
-    (testing "Pull from Mirth succeeds without errors"
+  (testing "Pull from Mirth succeeds without errors"
     (is (= 0 (main-func "-s" "https://localhost:8443/api"
-                                   "-u" "admin" "-p" "admin" "-t" repo-dir
-                                   "-i" "-f" "pull"))))
+                        "-u" "admin" "-p" "admin" "-t" repo-dir
+                        "-i" "-f" "pull"))))
 
   (testing "Pull diff from baseline has only inconsequential differences (ordering, etc)"
     (is (= "" (diff "--recursive" "--suppress-common-lines" "-I .*<contextType>.*" "-I .*<time>.*" "-I .*<revision>.*" repo-dir "dev-resources/mirth-8-baseline")))))
