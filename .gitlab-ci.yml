@@ -7,7 +7,8 @@ before_script:
 cache:
   key: ${CI_COMMIT_REF_SLUG}
   paths:
-    - vendor/mirths
+    - vendor/mirths/mirthconnect-3.8.0.b2464-unix.tar.gz
+    - vendor/mirths/mirthconnect-3.9.0.b2526-unix.tar.gz
 
 stages:
   - test
