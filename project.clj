@@ -49,7 +49,8 @@
   ;;              org.slf4j/slf4j-log4j13]
   
   :plugins [[lein-ancient "0.6.15"]
-            [lein-tar "3.3.0"]]
+            [lein-tar "3.3.0"]
+            [lein-nvd "1.4.0"]]
   ;; :pedantic? :abort
   :checksum :fail
   :global-vars {*warn-on-reflection* true}
