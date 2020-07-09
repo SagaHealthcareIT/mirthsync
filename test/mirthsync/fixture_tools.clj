@@ -109,12 +109,18 @@
         mcserver (sh/proc "./mcserver" :dir mirth-base)]
     (future (sh/stream-to-out mcserver))
 
-    ;; wait up to 10 seconds for the server to appear
-    (dotimes [i 10]
-      (try
-        (client/head "http://localhost:8080")
-        (catch Exception e))
-      (Thread/sleep 1000))
+    ;; wait up to 60 seconds for the server to appear
+    (loop [i 0]
+      (when-not (and (try
+                     (client/head "http://localhost:8080")
+                     true
+                     (catch Exception e
+                       false))
+                   (< i 60))
+        (do
+          (prn "sleeping")
+          (Thread/sleep 1000)
+          (recur (inc i)))))
     
     mcserver))
 
