@@ -72,7 +72,7 @@
     (let [dbdir (mirth-db-dir mirth)]
       (and (clojure.string/ends-with? dbdir "mirthdb")
            (= 0 @(:exit-code (system-test "-d" dbdir {:throw false :verbose true})))
-           (rm "-f" "-v" "--preserve-root=all" "--one-file-system" "-r" (mirth-db-dir mirth))))))
+           (rm "-f" "-v" "--preserve-root=all" "--one-file-system" "-r" dbdir)))))
 
 ;;;; A couple of helper functions to track the flow of
 ;;;; tracking the flow and outcomes
