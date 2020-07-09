@@ -1,0 +1,25 @@
+name: Clojure CI
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: lein deps
+    - name: Run tests
+      run: lein test
+    - name: Cache
+      uses: actions/cache@v2.0.0
+      with:
+        path: |
+          vendor/mirths/mirthconnect-3.8.0.b2464-unix.tar.gz
+          vendor/mirths/mirthconnect-3.9.0.b2526-unix.tar.gz
+        key: ${{ runner.os }}-mirthconnect-3.8.0.b2464-unix.tar.gz-mirthconnect-3.9.0.b2526-unix.tar.gz
