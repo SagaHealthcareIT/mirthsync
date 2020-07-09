@@ -111,14 +111,14 @@
 
     ;; wait up to 60 seconds for the server to appear
     (loop [i 0]
-      (when-not (and (try
-                     (client/head "http://localhost:8080")
-                     true
-                     (catch Exception e
-                       false))
-                   (< i 60))
+      (when-not (or (try
+                      (client/head "http://localhost:8080")
+                      true
+                      (catch Exception e
+                        false))
+                    (> i 60))
         (do
-          (prn "sleeping")
+          (println (str "waiting up to 60s for mirth to be available - " i))
           (Thread/sleep 1000)
           (recur (inc i)))))
     
