@@ -108,12 +108,13 @@
 
 (defn start-mirth [mirth]
   (let [mirth-base (mirth-base-dir mirth)
-        mcserver (sh/proc "./mcserver" :dir mirth-base)]
+        mcserver (sh/proc "./mcserver" :dir mirth-base :verbose :very :redirect-err true)]
     (future (sh/stream-to-out mcserver :out))
 
     ;; wait up to 90 seconds for the server to appear
     (loop [i 0]
-      (println (ps "-axw"))
+      ;; (println (ps "-axw"))
+      (when (= i 0) (prn mcserver))
       (sh/flush mcserver)
       (when-not (or (try
                       (client/head "http://localhost:8080")
