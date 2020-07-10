@@ -9,7 +9,7 @@
 ;;; note that these tests will only work in unix'ish environments with
 ;;; appropriate commands in the path
 
-(programs mkdir sha256sum curl tar cp rm rmdir diff) ;; sed ;; echo
+(programs mkdir sha256sum curl tar cp rm rmdir diff ps) ;; sed ;; echo
 
 ;;;; starting data and accessor fns
 (def mirths-dir "vendor/mirths")
@@ -111,17 +111,18 @@
         mcserver (sh/proc "./mcserver" :dir mirth-base)]
     (future (sh/stream-to-out mcserver :out))
 
-    ;; wait up to 60 seconds for the server to appear
+    ;; wait up to 90 seconds for the server to appear
     (loop [i 0]
+      (println (ps "-axw"))
       (sh/flush mcserver)
       (when-not (or (try
                       (client/head "http://localhost:8080")
                       true
                       (catch Exception e
                         false))
-                    (> i 60))
+                    (> i 90))
         (do
-          (println (str "waiting up to 60s for mirth to be available - " i))
+          (println (str "waiting up to 90s for mirth to be available - " i))
           (Thread/sleep 1000)
           (recur (inc i)))))
     

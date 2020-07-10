@@ -12,11 +12,22 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Install dependencies
       run: lein deps
+
+    - name: Cache local Maven repository
+      uses: actions/cache@v2
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
     - name: Run tests
       run: lein test
-    - name: Cache
+
+    - name: Cache downloaded Mirth ervers
       uses: actions/cache@v2.0.0
       with:
         path: |
