@@ -53,19 +53,19 @@
   (.exists (io/file (str mirths-dir "/" (mirth-targz mirth)))))
 
 (defn validate-mirth [mirth]
-  (sha256sum "-c" {:dir mirths-dir :in (mirth-checksum mirth) :verbose true}))
+  (sha256sum "-c" {:dir mirths-dir :in (mirth-checksum mirth)}))
 
 (defn unpack-mirth [mirth]
   (mkdir (mirth-name mirth) {:dir mirths-dir})
   (tar "-xzf" (mirth-targz mirth) (str "--directory=" (mirth-name mirth)) "--strip-components=1"
-         {:dir mirths-dir :verbose true}))
+         {:dir mirths-dir}))
 
 (defn download-mirth [mirth]
-  (curl  "-O" "-J" "-L" "--progress-bar" (mirth-url mirth) {:dir mirths-dir :verbose true}))
+  (curl  "-O" "-J" "-L" "--progress-bar" "--stderr" "-" (mirth-url mirth) {:dir mirths-dir}))
 
 (defn select-jvm-9-options [mirth]
   (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
-      {:dir (mirth-base-dir mirth) :verbose true}))
+      {:dir (mirth-base-dir mirth)}))
 
 (defn remove-mirth-db [mirth]
   (let-programs [system-test "test"]
@@ -77,7 +77,9 @@
 ;;;; A couple of helper functions to track the flow of
 ;;;; tracking the flow and outcomes
 (defn do-to-mirth [mirth mirth-fn]
-  (update mirth :what-happened? #(conj %1 (mirth-fn mirth))))
+  (let [result (mirth-fn mirth)]
+    (when result (print result))
+    (update mirth :what-happened? #(conj %1 result))))
 
 (defn run-with-mirth [mirth & actions]
   (reduce do-to-mirth mirth actions))
@@ -107,10 +109,11 @@
 (defn start-mirth [mirth]
   (let [mirth-base (mirth-base-dir mirth)
         mcserver (sh/proc "./mcserver" :dir mirth-base)]
-    (future (sh/stream-to-out mcserver))
+    (future (sh/stream-to-out mcserver :out))
 
     ;; wait up to 60 seconds for the server to appear
     (loop [i 0]
+      (sh/flush mcserver)
       (when-not (or (try
                       (client/head "http://localhost:8080")
                       true
