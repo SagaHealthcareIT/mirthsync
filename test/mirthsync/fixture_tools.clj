@@ -65,17 +65,16 @@
 
 (defn select-jvm-options [mirth]
   (java "-version" {:seq true :redirect-err true})
-  ;; (when-not (re-matches #".*version.\"8.*" (first (java "-version" {:seq true :redirect-err true})))
-  ;;   (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
-  ;;       {:dir (mirth-base-dir mirth)}))
-  )
+  (when-not (re-matches #".*version.\"(1\.)?8.*" (first (java "-version" {:seq true :redirect-err true})))
+    (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
+        {:dir (mirth-base-dir mirth)})))
 
 (defn remove-mirth-db [mirth]
   (let-programs [system-test "test"]
     (let [dbdir (mirth-db-dir mirth)]
       (and (clojure.string/ends-with? dbdir "mirthdb")
            (= 0 @(:exit-code (system-test "-d" dbdir {:throw false :verbose true})))
-           (rm "-f" "-v" "--preserve-root=all" "--one-file-system" "-r" dbdir)))))
+           (rm "-f" "-v" "--preserve-root" "--one-file-system" "-r" dbdir)))))
 
 ;;;; A couple of helper functions to track the flow of
 ;;;; tracking the flow and outcomes
