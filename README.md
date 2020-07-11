@@ -1,5 +1,7 @@
 # mirthSync
 
+![](https://github.com/SagaHealthcareIT/mirthsync/workflows/Clojure%20CI/badge.svg)
+
 mirthSync is a command line tool for synchronizing Mirth Connect code
 between servers by allowing you to push or pull channels, code
 templates, configuration map and global scripts. The tool can also be
