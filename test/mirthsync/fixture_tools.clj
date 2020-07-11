@@ -9,7 +9,7 @@
 ;;; note that these tests will only work in unix'ish environments with
 ;;; appropriate commands in the path
 
-(programs mkdir sha256sum curl tar cp rm rmdir diff ps) ;; sed ;; echo
+(programs mkdir sha256sum curl tar cp rm rmdir diff ps java) ;; sed ;; echo
 
 ;;;; starting data and accessor fns
 (def mirths-dir "vendor/mirths")
@@ -63,9 +63,10 @@
 (defn download-mirth [mirth]
   (curl  "-O" "-J" "-L" "--progress-bar" "--stderr" "-" (mirth-url mirth) {:dir mirths-dir}))
 
-(defn select-jvm-9-options [mirth]
-  (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
-      {:dir (mirth-base-dir mirth)}))
+(defn select-jvm-options [mirth]
+  (when-not (re-matches #".*version.\"8.*" (first (java "-version" {:seq true :redirect-err true})))
+    (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
+        {:dir (mirth-base-dir mirth)})))
 
 (defn remove-mirth-db [mirth]
   (let-programs [system-test "test"]
@@ -87,18 +88,18 @@
 (defn ensure-valid-mirth [mirth]
   (cond
     (mirth-unpacked? mirth) (run-with-mirth mirth
-                                            select-jvm-9-options
+                                            select-jvm-options
                                             remove-mirth-db)
     (mirth-tgz-here? mirth) (run-with-mirth mirth
                                             validate-mirth
                                             unpack-mirth
-                                            select-jvm-9-options
+                                            select-jvm-options
                                             remove-mirth-db)
     :else (run-with-mirth mirth
                           download-mirth
                           validate-mirth
                           unpack-mirth
-                          select-jvm-9-options
+                          select-jvm-options
                           remove-mirth-db)))
 
 (defn make-all-mirths-ready []
