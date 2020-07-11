@@ -64,9 +64,11 @@
   (curl  "-O" "-J" "-L" "--progress-bar" "--stderr" "-" (mirth-url mirth) {:dir mirths-dir}))
 
 (defn select-jvm-options [mirth]
-  (when-not (re-matches #".*version.\"8.*" (first (java "-version" {:seq true :redirect-err true})))
-    (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
-        {:dir (mirth-base-dir mirth)})))
+  (java "-version" {:seq true :redirect-err true})
+  ;; (when-not (re-matches #".*version.\"8.*" (first (java "-version" {:seq true :redirect-err true})))
+  ;;   (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
+  ;;       {:dir (mirth-base-dir mirth)}))
+  )
 
 (defn remove-mirth-db [mirth]
   (let-programs [system-test "test"]
