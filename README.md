@@ -22,7 +22,7 @@ Mirth Connect's REST API.
 
 ## Current release
 
-The current stable version of mirthSync is "2.0.6"
+The current stable version of mirthSync is "2.0.7"
 
 ## Changes
 
