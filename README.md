@@ -20,13 +20,16 @@ Mirth Connect's REST API.
 - Utilize Git branches to track and merge code between dev, test, and
   prod environments
 
-## Status
+## Current release
 
-The next release of mirthSync will include support for tracking
-Resources and a more comprehensive test suite for validating
-functionality across multiple versions of Mirth.
+The current stable version of mirthSync is "2.0.4"
 
 ## Changes
+
+### 2.1.x
+
+Support for syncing Resources and a more comprehensive test suite for
+validating functionality across multiple versions of Mirth.
 
 ### 2.0.3-SNAPSHOT
 
