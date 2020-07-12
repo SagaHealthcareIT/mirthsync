@@ -1,4 +1,4 @@
-(defproject com.saga-it/mirthsync "2.0.5"
+(defproject com.saga-it/mirthsync "2.0.6"
   :description "Mirthsync is a command line tool, created by Saga IT,
   for keeping a local copy of important aspects of Mirth Connect
   configuration in order to allow for the use of traditional version
@@ -76,7 +76,16 @@
                   ;; bump major
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
-                  ["shell" "sed" "-E" "-i.bak" "s/(stable version of mirthSync is) \"[0-9]+\\.[0-9]+\\.[0-9]+\"/\\\\1 \"${:version}\"/g" "README.md"]
+                  ["shell" "sed" "-E" "-i.bak" "s/(stable version of mirthSync is) \"[0-9]+\\\\.[0-9]+\\\\.[0-9]+\"/\\\\1 \"${:version}\"/g" "README.md"]
                   ["shell" "rm" "-f" "README.md.bak"]
+                  ["shell" "sed" "-E" "-i.bak" "s/[0-9]+\\\\.[0-9]+\\\\.[0-9]+/${:version}/g" "pkg/mirthsync.sh"]
+                  ["shell" "rm" "-f" "pkg/mirthsync.sh.bak"]
+                  ["shell" "sed" "-E" "-i.bak" "s/[0-9]+\\\\.[0-9]+\\\\.[0-9]+/${:version}/g" "pkg/mirthsync.bat"]
+                  ["shell" "rm" "-f" "pkg/mirthsync.bat.bak"]
                   ["vcs" "commit"]
-                  ["vcs" "tag"]])
+                  ["vcs" "tag"]
+                  ["uberjar"]
+                  ["shell" "mkdir" "-p" "target/mirthsync-${:version}/lib"]
+                  ["shell" "cp" "-a" "pkg" "target/mirthsync-${:version}/bin"]
+                  ["shell" "cp" "target/uberjar/mirthsync-${:version}-standalone.jar" "target/mirthsync-${:version}/lib"]
+                  ["shell" "tar" "-C" "target/" "-cvzf" "target/mirthsync=${:version}.tar.gz" "mirthsync-${:version}"]])
