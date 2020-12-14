@@ -143,7 +143,7 @@ Requires [Leiningen](https://leiningen.org/)
 
 ## License
 
-Copyright © 2017 Saga IT LLC
+Copyright © 2017-2021 Saga IT LLC
 
 Distributed under the Eclipse Public License either version 1.0 or any later version.
 
