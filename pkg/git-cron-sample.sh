@@ -21,12 +21,13 @@ while getopts "m:" opt; do
 done
 
 #### delete existing files before fetch to handle renames
-rm -rf '/home/test/git/channelgroups'
-rm -rf '/home/test/git/channels'
-rm -rf '/home/test/git/codeTemplates'
-rm -rf '/home/test/git/server'
+# rm -rf '/home/test/git/Channels'
+# rm -rf '/home/test/git/CodtTemplates'
+# rm -rf '/home/test/git/GlobalScripts'
+# rm -f '/home/test/git/ConfigurationMap.xml'
+# rm -f '/home/test/git/Resources.xml'
 
-java -jar mirthsync-2.0.3-SNAPSHOT-standalone.jar -s https://localhost:8443/api -u admin -p admin -t '/home/test/git' -f pull
+/home/test/bin/mirthsync.sh -s https://localhost:8443/api -u admin -p admin -t '/home/test/git' -f pull
 
 git -C '/home/test/git' add -A
 git -C '/home/test/git' commit -a -m "$message"
