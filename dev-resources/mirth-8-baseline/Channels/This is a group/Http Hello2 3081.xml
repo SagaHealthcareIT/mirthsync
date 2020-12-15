@@ -3,7 +3,7 @@
   <nextMetaDataId>2</nextMetaDataId>
   <name>Http Hello2 3081</name>
   <description/>
-  <revision>2</revision>
+  <revision>1</revision>
   <sourceConnector version="3.8.0">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>

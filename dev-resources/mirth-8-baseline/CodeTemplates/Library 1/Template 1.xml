@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?><codeTemplate version="3.8.0">
   <id>66d76711-0274-49e4-b92a-73c4690bcbe7</id>
   <name>Template 1</name>
-  <revision>1</revision>
+  <revision>2</revision>
   <lastModified>
-    <time>1593976049188</time>
-    <timezone>GMT</timezone>
+    <time>1607987644187</time>
+    <timezone>America/New_York</timezone>
   </lastModified>
   <contextSet>
     <delegate>
-      <contextType>CHANNEL_POSTPROCESSOR</contextType>
-      <contextType>GLOBAL_UNDEPLOY</contextType>
-      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+      <contextType>CHANNEL_ATTACHMENT</contextType>
       <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
       <contextType>SOURCE_RECEIVER</contextType>
-      <contextType>CHANNEL_ATTACHMENT</contextType>
-      <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
-      <contextType>CHANNEL_PREPROCESSOR</contextType>
-      <contextType>GLOBAL_POSTPROCESSOR</contextType>
-      <contextType>GLOBAL_PREPROCESSOR</contextType>
-      <contextType>CHANNEL_UNDEPLOY</contextType>
-      <contextType>GLOBAL_DEPLOY</contextType>
-      <contextType>CHANNEL_DEPLOY</contextType>
+      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
       <contextType>DESTINATION_DISPATCHER</contextType>
+      <contextType>GLOBAL_PREPROCESSOR</contextType>
+      <contextType>CHANNEL_DEPLOY</contextType>
+      <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
       <contextType>CHANNEL_BATCH</contextType>
+      <contextType>CHANNEL_PREPROCESSOR</contextType>
+      <contextType>CHANNEL_UNDEPLOY</contextType>
+      <contextType>GLOBAL_POSTPROCESSOR</contextType>
+      <contextType>GLOBAL_DEPLOY</contextType>
+      <contextType>CHANNEL_POSTPROCESSOR</contextType>
+      <contextType>GLOBAL_UNDEPLOY</contextType>
     </delegate>
   </contextSet>
   <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -34,7 +34,7 @@
 	@param {String} arg1 - arg1 description
 	@return {String} return description
 */
-function new_function1(arg1) {
+function template_1_library_1(arg1) {
 	// TODO: Enter code here
 }</code>
   </properties>

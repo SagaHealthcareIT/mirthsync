@@ -3,7 +3,7 @@
   <nextMetaDataId>2</nextMetaDataId>
   <name>Http Hello2 3081</name>
   <description/>
-  <revision>1</revision>
+  <revision>2</revision>
   <sourceConnector version="3.9.0">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
@@ -216,6 +216,13 @@ return;</undeployScript>
   <exportData>
     <metadata>
       <enabled>true</enabled>
+      <lastModified>
+        <time>1556295942216</time>
+        <timezone>America/New_York</timezone>
+      </lastModified>
+      <pruningSettings>
+        <archiveEnabled>true</archiveEnabled>
+      </pruningSettings>
     </metadata>
     <dependentIds/>
     <dependencyIds/>
