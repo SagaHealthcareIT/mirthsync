@@ -30,4 +30,17 @@
                         "-i" "-f" "pull"))))
 
   (testing "Pull diff from baseline has only inconsequential differences (ordering, etc)"
+    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir "dev-resources/mirth-9-baseline"))))
+
+  (testing "Push back from pull dir succeeds without errors"
+    (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                        "-u" "admin" "-p" "admin" "-t" repo-dir
+                        "-i" "-f" "push"))))
+
+  (testing "Pull back from Mirth after last push succeeds without errors"
+    (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                        "-u" "admin" "-p" "admin" "-t" repo-dir
+                        "-i" "-f" "pull"))))
+
+  (testing "Pull diff from baseline after multiple pushes has only inconsequential differences (ordering, etc)"
     (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir "dev-resources/mirth-9-baseline")))))
