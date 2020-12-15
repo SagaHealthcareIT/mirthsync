@@ -57,7 +57,8 @@
   ;; :pedantic? :abort
   :checksum :fail
   :global-vars {*warn-on-reflection* true}
-  :main ^:skip-aot mirthsync.core
+  :aot [mirthsync.core]
+  :main mirthsync.core
   :target-path "target/%s"
   :profiles
   {
