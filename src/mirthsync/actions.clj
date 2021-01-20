@@ -12,11 +12,11 @@
   POSTs the params to the location constructed from the base-url,
   rest-path, and id."
   [{:keys [el-loc] :as app-conf
-    {:keys [post-path push-params after-push] :as api} :api}]
-
+    {:keys [post-path push-params query-params after-push] :as api} :api}]
   (let [params (log/spyf :trace "Push params: %s" (push-params app-conf))
+        query-params (log/spyf :trace "Query params: %s" (query-params app-conf))
         result (if (post-path api)
-                 (mhttp/post-xml app-conf params)
+                 (mhttp/post-xml app-conf params query-params)
                  (mhttp/put-xml app-conf params))]
     (after-push app-conf result)))
 

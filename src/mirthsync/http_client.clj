@@ -23,9 +23,11 @@
   string."
   [{:keys [server ignore-cert-warnings]
     {:keys [post-path] :as api} :api}
-   params]
+   params
+   query-params]
   (client/post (str server (post-path api))
                {:insecure? ignore-cert-warnings
+                :query-params query-params
                 :multipart (map (fn
                                   [[k v]]
                                   {:name k
