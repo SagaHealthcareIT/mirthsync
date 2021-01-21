@@ -206,6 +206,7 @@
           :pre-node-action identity     ; transform app-conf before processing
           :after-push true-200          ; process result of item push
           :preprocess identity          ; preprocess app-conf before any other work
+          :query-params {}              ; query-params for HTTP POST 
           }
          api))
 
@@ -255,7 +256,8 @@
      :push-params codelib-push-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-codelibs :list)
      :pre-node-action (partial pre-node-action :server-codelibs :list :codeTemplateLibrary)
-     :after-push revision-success})
+     :after-push revision-success
+     :query-params override-params})
 
    (make-api
     {:rest-path (constantly "/codeTemplates")
@@ -275,7 +277,8 @@
      :post-path post-path
      :push-params group-push-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-groups :set)
-     :pre-node-action (partial pre-node-action :server-groups :set :channelGroup)})
+     :pre-node-action (partial pre-node-action :server-groups :set :channelGroup)
+     :query-params override-params})
 
    (make-api
     {:rest-path (constantly "/channels")
