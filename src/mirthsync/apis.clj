@@ -73,30 +73,56 @@
         set (zip/append-child set (zip/node el-loc))]
     (assoc app-conf set-key set)))
 
+(defn encode-path-chars
+  "Mirth is very liberal with allowing weird characters in places that can cause
+  issues with the mirthsync goal of mapping the Mirth configuration to a
+  reasonable directory structure. The 'safe-name' function asserts and fails
+  with an exception if there's any issue detected that could cause the filename
+  to have issues that could result in path traversal, etc...
+
+  Here we take an approach to handling some characters that cause issues that
+  we've seen in real world examples. This is not an exhaustive conversion list -
+  it is meant as a way to keep the code backwards compatible in terms of the
+  filesystem layout while allowing for a few exceptional cases. Slashes will be
+  replaced with their URLEncoder/encode equivalent - forward slash becomes %2F
+  and backslash becomes %5C."
+  [^String name]
+  (if name
+    (-> name
+        (str/replace "/" "%2F")
+        (str/replace "\\" "%5C"))
+    name))
+
 (defn safe-name
-  "Asserts that the string param is creatable file that doesn't span
-  paths. Fails with an exception if any issues are detected, otherwise
-  returns the unmodified string."
+  "Asserts that the string param is creatable file that doesn't span paths. Fails
+  with an exception if any issues are detected, otherwise returns the unmodified
+  string (unless there are weird characters as defined in encode-path-chars; in
+  which case the string is modified accordingly)."
   [name]
-  (log/tracef "safe-name pre: (%s)" name)
-  (when name
-    (assert
-     (and (string? name) (= name (.getName (File. ^String name))))
-     (str "Name does not appear to be safe"
-          " for file creation - " name
-          " - Check for invalid characters.")))
-  name)
+  (log/debugf "safe-name pre: (%s)" name)
+  (if-let [name (encode-path-chars name)]
+    (do
+      (assert
+       (and (string? name) (= name (.getName (File. ^String name))))
+       (str "Name does not appear to be safe"
+            " for file creation - " name
+            " - Check for invalid characters."))
+
+      (log/spyf :debug "safe-name post: (%s)" name))
+    name))
 
 (defn file-path
   "Returns a function that, when given an app conf, returns a string file
   path for the current api with path appended."
   [path]
+  (log/debugf "Received file-path: %s" path)
   (fn [{:keys [el-loc] :as app-conf
        {:keys [local-path find-name] :as api} :api}]
-    (str (local-path app-conf)
-         File/separator
-         (safe-name (find-name el-loc))
-         path)))
+    (log/spyf :debug "Constructed file path: %s"
+              (str (local-path app-conf)
+                   File/separator
+                   (safe-name (find-name el-loc))
+                   path))))
 
 (defn preprocess
   [{:as app-conf {:keys [preprocess]} :api}]
@@ -111,7 +137,7 @@
        File/separator
        (if-let [group-name (safe-name
                             (let [id (find-id el-loc)]
-                              (zx/xml1-> server-groups 
+                              (zx/xml1-> server-groups
                                          :channelGroup :channels :channel
                                          :id id
                                          zip/up zip/up zip/up

@@ -22,11 +22,21 @@ Mirth Connect's REST API.
 
 ## Current release
 
-The current stable version of mirthSync is "2.0.9"
+The current stable version of mirthSync is "2.0.10"
 
 ## Changes
 
-### 2.1.x
+### Plans for 2.0.11
+
+Support pushing and pulling arbitrary channels and/or channel groups
+
+### 2.0.10
+
+Small change that shouldn't impact the current directory layout. This change
+allows for forward and backward slashes in channel group names by encoding the
+slashes using a http url encode syntax.
+
+### 2.0.9
 
 Support for syncing Resources and a more comprehensive test suite for
 validating functionality across multiple versions of Mirth.

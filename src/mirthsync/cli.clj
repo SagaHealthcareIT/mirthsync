@@ -69,6 +69,14 @@
                  "  push     Push filesystem code to server"
                  "  pull     Pull server code to filesystem"])))
 
+(defn set-log-level
+  "Set the logging level by number"
+  [lvl]
+  (let [^ch.qos.logback.classic.Logger logger (log-impl/get-logger
+                                               (log-impl/find-factory)
+                                               "mirthsync")]
+    (.setLevel logger (nth log-levels lvl))))
+
 (defn config
   "Parse the CLI arguments and construct a map representing selected
   options and action with sensible defaults provided if
@@ -105,10 +113,6 @@
                    ;; keep config clean by removing unecessary entries
                    (dissoc :summary :arguments))]
 
-    (let [^ch.qos.logback.classic.Logger logger (log-impl/get-logger
-                                                 (log-impl/find-factory)
-                                                 "mirthsync")
-          verbosity (:verbosity config)]
-      (.setLevel logger (nth log-levels verbosity)))
-    
+    (set-log-level (:verbosity config))
+
     config))
