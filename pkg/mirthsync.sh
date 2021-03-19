@@ -3,7 +3,17 @@ set -euo pipefail
 IFS=$'\n\t'
 
 
-_dir=`dirname $(readlink -f $0)`
+## Apparently macOS readlink doesn't support the -f option. The following few
+## lines are a workaround that use 'greadlink' if it's available.
+
+_readlink=readlink
+
+if type -p greadlink; then
+    echo found greadlink in PATH
+    _readlink=greadlink
+fi
+
+_dir=`dirname $($_readlink -f $0)`
 
 ## mostly from - https://stackoverflow.com/a/7335524 goal is to detect
 ## java version and potentially disable access warnings

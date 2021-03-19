@@ -92,4 +92,5 @@
                   ["shell" "mkdir" "-p" "target/mirthsync-${:version}/lib"]
                   ["shell" "cp" "-a" "pkg" "target/mirthsync-${:version}/bin"]
                   ["shell" "cp" "target/uberjar/mirthsync-${:version}-standalone.jar" "target/mirthsync-${:version}/lib"]
-                  ["shell" "tar" "-C" "target/" "-cvzf" "target/mirthsync=${:version}.tar.gz" "mirthsync-${:version}"]])
+                  ["shell" "tar" "-C" "target/" "-cvzf" "target/mirthsync-${:version}.tar.gz" "mirthsync-${:version}"]
+                  ["shell" "gpg" "--detach-sign" "--armor" "target/mirthsync-${:version}.tar.gz"]])
