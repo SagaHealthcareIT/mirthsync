@@ -24,7 +24,7 @@
   directory to the supplied path."
   [path]
   (fn [app-conf]
-    (str (:target app-conf) File/separator path)))
+    (str (:target app-conf) (when (not= path File/separator) File/separator) path)))
 
 (defn group-push-params
   "Build params for groups post-xml."
@@ -120,7 +120,7 @@
        {:keys [local-path find-name] :as api} :api}]
     (log/spyf :debug "Constructed file path: %s"
               (str (local-path app-conf)
-                   File/separator
+                   (when (not= (local-path app-conf) File/separator) File/separator)
                    (safe-name (find-name el-loc))
                    path))))
 
@@ -244,14 +244,14 @@
 (def apis
   [(make-api
     {:rest-path (constantly "/server/configurationMap")
-     :local-path (local-path ".")
+     :local-path (local-path File/separator)
      :find-elements #(zx/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "ConfigurationMap.xml")
-     :api-files (partial mf/only-named-xml-files-seq 1 "ConfigurationMap.xml")
+     :api-files (partial mf/only-named-xml-files-seq 1 "ConfigurationMap")
      :after-push null-204})
-   
+
    (make-api
     {:rest-path (constantly "/server/globalScripts")
      :local-path (local-path "GlobalScripts")
@@ -263,12 +263,12 @@
 
    (make-api
     {:rest-path (constantly "/server/resources")
-     :local-path (local-path ".")
+     :local-path (local-path File/separator)
      :find-elements #(zx/xml-> % :list)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "Resources.xml")
-     :api-files (partial mf/only-named-xml-files-seq 1 "Resources.xml")
+     :api-files (partial mf/only-named-xml-files-seq 1 "Resources")
      :after-push null-204})
 
    (make-api
@@ -312,7 +312,8 @@
      :find-elements #(zx/xml-> % :list :channel)
      :file-path channel-file-path
      :api-files (partial mf/without-named-xml-files-seq 2 "index")
-     :push-params override-params})])
+     :push-params override-params})
+   ])
 
 (defn apis-action
   "Iterates through the apis calling action on app-conf. If an api

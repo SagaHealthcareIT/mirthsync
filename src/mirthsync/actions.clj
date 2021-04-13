@@ -37,13 +37,23 @@
 
 (defn local-locs
   "Lazy seq of local el-locs for the current api."
-  [{:as app-conf
+  [{:keys [resource-path target] :as app-conf
     {:keys [local-path api-files]} :api}]
-  (map #(mxml/to-zip
-         (do
-           (log/infof "\tFile: %s" (.toString ^File %))
-           (slurp %)))
-       (api-files (local-path app-conf))))
+  (let [required-prefix (str target File/separator resource-path)
+        filtered-api-files (filter #(let [matches (.startsWith (.toString %) required-prefix)]
+                                      (if matches
+                                        (do (log/infof "Found a match: %s" (.toString %))
+                                            true)
+                                        (do (log/infof "filtering push of '%s' since it does not start with our required prefix: %s" % required-prefix)
+                                            false)))
+                                   (api-files (local-path app-conf)))]
+    (log/debugf "required-prefix: %s" required-prefix)
+
+    (map #(mxml/to-zip
+           (do
+             (log/infof "\tFile: %s" (.toString ^File %))
+             (slurp %)))
+         filtered-api-files)))
 
 (defn remote-locs
   "Seq of remote el-locs for the current api. Could be lazy or not

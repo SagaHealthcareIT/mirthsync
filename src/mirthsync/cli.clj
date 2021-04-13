@@ -8,6 +8,7 @@
             [clojure.tools.logging.impl :as log-impl]
             )
   (:import java.net.URL
+           java.io.File
            ch.qos.logback.classic.Level
            ))
 
@@ -15,7 +16,8 @@
   "Removes one or more trailing forward or backward trailing slashes
   from the string unless the string is all slashes."
   [s]
-  (str/replace s #"(?!^)[\\/]+$" ""))
+  (when s
+    (str/replace s #"(?!^)[\\/]+$" "")))
 
 (def log-levels (concat
                  [Level/INFO
@@ -25,16 +27,16 @@
 
 (def cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
-    ;;;; Removing for safety. Server url should be explicitly specified.
-    ;; :default "https://localhost:8443/api"
+    :missing "--server is required"
+    :parse-fn strip-trailing-slashes
     :validate [#(URL. %) (str "Must be a valid URL to a mirth server api "
-                              "path (EX. https://mirth-server:8443/api)")]
-    :parse-fn strip-trailing-slashes]
+                              "path (EX. https://mirth-server:8443/api)")]]
    
-   ["-u" "--username USERNAME" "Username used for authentication"]
+   ["-u" "--username USERNAME" "Username used for authentication"
+    :missing "--username is required"]
 
    ["-p" "--password PASSWORD" "Password used for authentication"
-    :default ""]
+    :missing "--password is required"]
 
    ["-i" "--ignore-cert-warnings" "Ignore certificate warnings"
     :default false]
@@ -44,7 +46,16 @@
                         "regard for revisions during push")]
 
    ["-t" "--target TARGET_DIR" "Base directory used for pushing or pulling files"
-    :default "."
+    :missing "--target is required"
+    :parse-fn strip-trailing-slashes]
+
+   ["-r" "--resource-path TARGET_RESOURCE_PATH" "A path within the target
+   directory to limit the scope of the push/pull. This path may refer to a
+   filename specifically or a directory. In the case of a pull - only resources
+   that would end up within that path are saved to the filesystem. In the case
+   of a push - only resources within that path are pushed to the specified
+   server. *This path needs to be relative to the target directory.*"
+    :default ""
     :parse-fn strip-trailing-slashes]
 
    ["-v" nil "Verbosity level; may be specified multiple times to increase level"
@@ -77,6 +88,28 @@
                                                "mirthsync")]
     (.setLevel logger (nth log-levels lvl))))
 
+(defn get-cannonical-path
+  [path]
+  (.getCanonicalPath (File. path)))
+
+(defn is-child-path
+  "Ensures that the second param is a child of the first param with respect to
+  canonical file paths."
+  [parent child]
+  (-> (str parent File/separator child)
+      get-cannonical-path
+      (.startsWith (get-cannonical-path parent))))
+
+(defn valid-initial-config?
+  "Validate the initial config map. Returns a truth value."
+  [{:keys [arguments errors] :as config
+    {:keys [help target resource-path]} :options}]
+  (or help
+      (and (= 0 (count errors))
+           (= 1 (count arguments))
+           (#{"pull" "push"} (first arguments))
+           (is-child-path target resource-path))))
+
 (defn config
   "Parse the CLI arguments and construct a map representing selected
   options and action with sensible defaults provided if
@@ -84,9 +117,7 @@
   [args]
   (let [config (parse-opts args cli-options)
 
-        args-valid? (or (:help config)
-                        (and (= 1 (count (:arguments config)))
-                             (#{"pull" "push"} (first (:arguments config)))))
+        args-valid? (valid-initial-config? config)
         
         config (-> config
 
