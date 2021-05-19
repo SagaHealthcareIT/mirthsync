@@ -30,6 +30,16 @@ The current stable version of mirthSync is "2.0.10"
 
 Support pushing and pulling arbitrary channels and/or channel groups
 
+WHERE I LEFT OFF
+
+- resourcemap and configurationmap were not being pushed but they were being
+  pulled. Need to look at older versions of mirthsync to see if that's the case
+  in old versions.
+- the current filter is mostly working for pushes but doesn't do anything for
+  downloads. needs more testing
+- need to implement more tests, the current tests missed the fact that the
+  configurationMap and resourceMap would not push
+
 ### 2.0.10
 
 Small change that shouldn't impact the current directory layout. This change
