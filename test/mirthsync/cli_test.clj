@@ -56,10 +56,3 @@
     (is (nil? (:force (config ["pull"]))))))
 
 
-
-
-
-
-
-
-
