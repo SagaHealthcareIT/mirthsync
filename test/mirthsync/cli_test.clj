@@ -27,11 +27,12 @@
                 :verbosity 0,
                 :password "password",
                 :server "https://localhost:8443/api",
+                :push-config-map false,
                 :username "admin",
                 :action "push",
                 :target "./tmp",
                 :resource-path "",
-                :exit-msg nil
+                :exit-msg nil,
                 :ignore-cert-warnings false}]
       (is (= conf (config ["-s" "https://localhost:8443/api/" "-u" "admin" "-p" "password"  "-t" "./tmp/" "push"])))))
 
@@ -42,15 +43,23 @@
                 :verbosity 0,
                 :password "password",
                 :server "https://localhost:8443/api",
+                :push-config-map false,
                 :username "admin",
                 :action "pull",
                 :target "foo",
                 :resource-path "",
-                :exit-msg nil
+                :exit-msg nil,
                 :ignore-cert-warnings false}]
       (is (= conf (config ["-f" "-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "pull"])))))
 
   (testing "Force defaults to nil"
     (is (nil? (:force (config ["pull"]))))))
+
+
+
+
+
+
+
 
 
