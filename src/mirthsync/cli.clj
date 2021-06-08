@@ -63,6 +63,9 @@
     :default 0
     :update-fn inc]
 
+   [nil "--push-config-map" "A boolean flag to push the configuration map - default false"
+    :default false]
+
    ["-h" "--help"]])
 
 (defn usage [errors summary]

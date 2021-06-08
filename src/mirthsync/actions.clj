@@ -97,8 +97,12 @@
   [{:as app-conf
     {:keys [local-path rest-path transformer] :as api} :api}]
 
-  (process
-   app-conf
-   (str "Uploading from " (local-path app-conf) " to " (rest-path api))
-   (local-locs app-conf)
-   upload-node))
+  ;;the only time dont want to push is when
+  ;;rest-path = "/server/configurationMap" and push-config-map false
+  (if (and (= ((:rest-path api)) "/server/configurationMap") (not (:push-config-map app-conf)))
+    app-conf
+    (process
+       app-conf
+       (str "Uploading from " (local-path app-conf) " to " (rest-path api))
+       (local-locs app-conf)
+       upload-node)))
