@@ -22,7 +22,7 @@ Mirth Connect's REST API.
 
 ## Current release
 
-The current stable version of mirthSync is "2.0.10"
+The current stable version of mirthSync is "2.1.0"
 
 There is a release candidate of mirthSync "2.1.0" that supports selectively
 pushing arbitrary paths in the target directory to Mirth. This allows, for
