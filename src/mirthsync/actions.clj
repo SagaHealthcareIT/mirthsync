@@ -97,8 +97,19 @@
   [{:as app-conf
     {:keys [local-path rest-path transformer] :as api} :api}]
 
-  ;;the only time dont want to push is when
-  ;;rest-path = "/server/configurationMap" and push-config-map false
+  ;; The only time dont want to push is when
+  ;; rest-path = "/server/configurationMap" and push-config-map false.
+  ;; This is being done to preserve backward compatibility with
+  ;; versions of mirthSync prior to 2.0.11 that weren't able to
+  ;; upload the configurationmap and resources. For resources, we're
+  ;; not preserving backward compatibility and are defaulting to pushing
+  ;; them automatically in releases after 2.0.10.
+  ;;
+  ;; TODO - Consideration should be given to whether the following approach is
+  ;; the best way to decide when to push the configurationmap. It might
+  ;; be better to do this check earlier in the flow and remove the
+  ;; configurationmap api from the vector of apis in the run function
+  ;; in core.clj.
   (if (and (= ((:rest-path api)) "/server/configurationMap") (not (:push-config-map app-conf)))
     app-conf
     (process

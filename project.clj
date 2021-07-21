@@ -1,4 +1,4 @@
-(defproject com.saga-it/mirthsync "2.0.10"
+(defproject com.saga-it/mirthsync "2.1.0"
   :description "Mirthsync is a command line tool, created by Saga IT,
   for keeping a local copy of important aspects of Mirth Connect
   configuration in order to allow for the use of traditional version
@@ -70,16 +70,12 @@
    :dev {:dependencies [[clj-commons/conch "0.9.2"]]}
    }
 
-  :release-tasks [["vcs" "assert-committed"]
+  :release-tasks [;; ["vcs" "assert-committed"]
                   ["clean"]
                   ["test"]
-                  ["change" "version"
-                   "leiningen.release/bump-version" "release"]
-                  ;; bump minor
-                  ["change" "version" "leiningen.release/bump-version"]
-                  ;; bump major
-                  ["change" "version"
-                   "leiningen.release/bump-version" "release"]
+                  ;; ["change" "version" "leiningen.release/bump-version" "release"]
+                  ;; ;; bump minor
+                  ;; ["change" "version" "leiningen.release/bump-version"]
                   ["shell" "sed" "-E" "-i.bak" "s/(stable version of mirthSync is) \"[0-9]+\\\\.[0-9]+\\\\.[0-9]+\"/\\\\1 \"${:version}\"/g" "README.md"]
                   ["shell" "rm" "-f" "README.md.bak"]
                   ["shell" "sed" "-E" "-i.bak" "s/[0-9]+\\\\.[0-9]+\\\\.[0-9]+/${:version}/g" "pkg/mirthsync.sh"]
