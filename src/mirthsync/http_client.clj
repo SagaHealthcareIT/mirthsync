@@ -10,6 +10,7 @@
   [{:keys [server el-loc ignore-cert-warnings]
     {:keys [find-id rest-path] :as api} :api}
    params]
+  (log/logf :debug "putting xml to: %s" (rest-path api))
   (client/put (str server (rest-path api) "/" (find-id el-loc))
               {:insecure? ignore-cert-warnings
                :body (xml/indent-str (zip/node el-loc))
@@ -25,6 +26,7 @@
     {:keys [post-path] :as api} :api}
    params
    query-params]
+  (log/logf :debug "posting xml to: %s" (post-path api))
   (client/post (str server (post-path api))
                {:insecure? ignore-cert-warnings
                 :query-params query-params

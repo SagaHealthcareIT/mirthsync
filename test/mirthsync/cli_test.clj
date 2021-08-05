@@ -13,6 +13,8 @@
       ["-z"]
       [""]
       ["-f"]
+      ;; following is invalid due to the resource path traversal
+      ["-s" "https://localhost:8443/api/" "-u" "admin" "-p" "password"  "-t" "./tmp/" "-r" "../foo" "push"]
       nil))
 
   (testing "Verbosity increases with extra v's"
@@ -23,28 +25,32 @@
     (let [conf {:errors nil,
                 :exit-code 0,
                 :verbosity 0,
-                :password "",
+                :password "password",
                 :server "https://localhost:8443/api",
-                ;; :username "admin",
+                :push-config-map false,
+                :username "admin",
                 :action "push",
                 :target "./tmp",
-                :exit-msg nil
+                :resource-path "",
+                :exit-msg nil,
                 :ignore-cert-warnings false}]
-      (is (= conf (config ["push" "-shttps://localhost:8443/api/" "-t./tmp/"])))))
+      (is (= conf (config ["-s" "https://localhost:8443/api/" "-u" "admin" "-p" "password"  "-t" "./tmp/" "push"])))))
 
   (testing "Sensible pull defaults"
     (let [conf {:errors nil,
                 :exit-code 0,
                 :force true,
                 :verbosity 0,
-                :password "",
-                ;; :server "https://localhost:8443/api",
-                ;; :username "admin",
+                :password "password",
+                :server "https://localhost:8443/api",
+                :push-config-map false,
+                :username "admin",
                 :action "pull",
-                :target ".",
-                :exit-msg nil
+                :target "foo",
+                :resource-path "",
+                :exit-msg nil,
                 :ignore-cert-warnings false}]
-      (is (= conf (config ["-f" "pull"])))))
+      (is (= conf (config ["-f" "-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "pull"])))))
 
   (testing "Force defaults to nil"
     (is (nil? (:force (config ["pull"]))))))

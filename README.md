@@ -22,13 +22,34 @@ Mirth Connect's REST API.
 
 ## Current release
 
-The current stable version of mirthSync is "2.0.10"
+The current stable version of mirthSync is "2.1.0"
+
+There is a release candidate of mirthSync "2.1.0" that supports selectively
+pushing arbitrary paths in the target directory to Mirth. This allows, for
+instance, the ability to push only the configurationMap or a single channel or
+channel group by specifying a base path within the target directory to use as a
+starting point for find the files to push.
+
+**NOTE** 2.1.0 includes new features that break compatibility in a very minor
+way. Previously, resources weren't pushed by default but this changes in 2.1.0.
+They're now being pushed by default. Also, previous versions of mirthSync were
+not pushing the configurationMap. The ability to push the configurationMap has
+been added to this version but defaults to false to preserve backward
+compatibility. If you're trying out 2.1.0, be careful to test thoroughly in a
+dev environment in case there are undiscovered bugs in the new features.
 
 ## Changes
 
-### Plans for 2.0.11
+### Plans for 2.1.x
 
 Support pushing and pulling arbitrary channels and/or channel groups
+
+### Status
+
+- the current filter is mostly working for pushes but doesn't do anything for
+  downloads. needs more testing
+- need to implement more tests, the current tests missed the fact that the
+  configurationMap and resourceMap would not push
 
 ### 2.0.10
 
@@ -71,21 +92,30 @@ How to generate help dialogue:
 
 ### Help Dialogue:
 
-  Usage: mirthsync [options] action  
-  
-  Options:  
-    -s, --server SERVER_URL        Full HTTP(s) url of the Mirth Connect server  
-    -u, --username USERNAME        Username used for authentication  
-    -p, --password PASSWORD        Password used for authentication  
-    -i, --ignore-cert-warnings     Ignore certificate warnings  
-    -f, --force                    Overwrite existing local files during pull and always overwrite remote items without regard for revisions during push  
-    -t, --target TARGET_DIR     .  Base directory used for pushing or pulling files  
-    -v                             Verbosity level; may be specified multiple times to increase level  
-    -h, --help  
-  
-  Actions:  
-    push     Push filesystem code to server  
-    pull     Pull server code to filesystem  
+``` text
+  Usage: mirthsync [options] action
+
+  Options:
+    -s, --server SERVER_URL                     Full HTTP(s) url of the Mirth Connect server
+    -u, --username USERNAME                     Username used for authentication
+    -p, --password PASSWORD                     Password used for authentication
+    -i, --ignore-cert-warnings                  Ignore certificate warnings
+    -f, --force                                 Overwrite existing local files during pull and always overwrite remote items without regard for revisions during push
+    -t, --target TARGET_DIR                     Base directory used for pushing or pulling files
+    -r, --resource-path TARGET_RESOURCE_PATH    A path within the target
+     directory to limit the scope of the push/pull. This path may refer to a
+     filename specifically or a directory. In the case of a pull - only resources
+     that would end up within that path are saved to the filesystem. In the case
+     of a push - only resources within that path are pushed to the specified
+     server. *This path needs to be relative to the target directory.*
+    -v                                          Verbosity level; may be specified multiple times to increase level
+        --push-config-map                       A boolean flag to push the configuration map - default false
+    -h, --help
+
+  Actions:
+    push     Push filesystem code to server
+    pull     Pull server code to filesystem
+```
 
 ## Examples
 
@@ -109,6 +139,13 @@ instance that was pulled from):
 ``` shell
 $ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin push -t /home/user/
 ```
+
+Pushing a channel group and its channels to a Mirth Connect instance
+
+``` shell
+$ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin push -t /home/user/  -r "Channels/This is a group"
+```
+
 ### Cron
 
 There is a sample script (git-cron-sample.sh) packaged that can be
@@ -147,7 +184,7 @@ Requires [Leiningen](https://leiningen.org/)
 ## Todo
 
 - Add the ability to selectively push or pull any channel, group,
-  script, etc
+  script, etc (this is in progress)
 - Add granular extraction of scripts into their own files and merge
   back into XML for pushing
 

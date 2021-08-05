@@ -1,12 +1,12 @@
 <serverConfiguration version="3.8.0">
-  <date>2021-03-15 16:25:02</date>
+  <date>2021-03-24 15:34:56</date>
   <channelGroups>
     <channelGroup version="3.8.0">
       <id>630d82bd-0727-48d6-bf13-bfa86080d9f5</id>
       <name>/this\ is /a \ group/\with weird\characters/</name>
-      <revision>2</revision>
+      <revision>1</revision>
       <lastModified>
-        <time>1615839871636</time>
+        <time>1616614355096</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -20,9 +20,9 @@
     <channelGroup version="3.8.0">
       <id>2b8b91c1-0340-4e44-af3b-333aae9c7262</id>
       <name>This is a group</name>
-      <revision>2</revision>
+      <revision>1</revision>
       <lastModified>
-        <time>1615839755852</time>
+        <time>1616614355107</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description>This is the group&apos;s description</description>
@@ -1128,7 +1128,7 @@ return;</undeployScript>
       <name>Library 1</name>
       <revision>1</revision>
       <lastModified>
-        <time>1615839617238</time>
+        <time>1616614355539</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -1144,26 +1144,26 @@ return;</undeployScript>
           <name>Template 1</name>
           <revision>1</revision>
           <lastModified>
-            <time>1615839617279</time>
+            <time>1616614355564</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
-              <contextType>CHANNEL_DEPLOY</contextType>
+              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>GLOBAL_POSTPROCESSOR</contextType>
+              <contextType>CHANNEL_DEPLOY</contextType>
+              <contextType>SOURCE_RECEIVER</contextType>
+              <contextType>CHANNEL_PREPROCESSOR</contextType>
+              <contextType>DESTINATION_DISPATCHER</contextType>
+              <contextType>CHANNEL_UNDEPLOY</contextType>
+              <contextType>CHANNEL_ATTACHMENT</contextType>
+              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
               <contextType>GLOBAL_UNDEPLOY</contextType>
               <contextType>GLOBAL_DEPLOY</contextType>
-              <contextType>DESTINATION_DISPATCHER</contextType>
-              <contextType>CHANNEL_PREPROCESSOR</contextType>
+              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+              <contextType>GLOBAL_PREPROCESSOR</contextType>
               <contextType>CHANNEL_BATCH</contextType>
               <contextType>CHANNEL_POSTPROCESSOR</contextType>
-              <contextType>GLOBAL_PREPROCESSOR</contextType>
-              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
-              <contextType>CHANNEL_UNDEPLOY</contextType>
-              <contextType>SOURCE_RECEIVER</contextType>
-              <contextType>CHANNEL_ATTACHMENT</contextType>
-              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
-              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1185,16 +1185,16 @@ function template_1_library_1(arg1) {
           <name>Template 3 Library 1</name>
           <revision>1</revision>
           <lastModified>
-            <time>1615839617381</time>
+            <time>1616614355637</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
+              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
               <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>SOURCE_RECEIVER</contextType>
-              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
-              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
               <contextType>DESTINATION_DISPATCHER</contextType>
+              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1218,7 +1218,7 @@ function template_3_library_1(arg1) {
       <name>Library 2</name>
       <revision>1</revision>
       <lastModified>
-        <time>1615839617251</time>
+        <time>1616614355551</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -1234,26 +1234,26 @@ function template_3_library_1(arg1) {
           <name>Template 2</name>
           <revision>1</revision>
           <lastModified>
-            <time>1615839617456</time>
+            <time>1616614355682</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
-              <contextType>CHANNEL_DEPLOY</contextType>
+              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>GLOBAL_POSTPROCESSOR</contextType>
+              <contextType>CHANNEL_DEPLOY</contextType>
+              <contextType>SOURCE_RECEIVER</contextType>
+              <contextType>CHANNEL_PREPROCESSOR</contextType>
+              <contextType>DESTINATION_DISPATCHER</contextType>
+              <contextType>CHANNEL_UNDEPLOY</contextType>
+              <contextType>CHANNEL_ATTACHMENT</contextType>
+              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
               <contextType>GLOBAL_UNDEPLOY</contextType>
               <contextType>GLOBAL_DEPLOY</contextType>
-              <contextType>DESTINATION_DISPATCHER</contextType>
-              <contextType>CHANNEL_PREPROCESSOR</contextType>
+              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+              <contextType>GLOBAL_PREPROCESSOR</contextType>
               <contextType>CHANNEL_BATCH</contextType>
               <contextType>CHANNEL_POSTPROCESSOR</contextType>
-              <contextType>GLOBAL_PREPROCESSOR</contextType>
-              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
-              <contextType>CHANNEL_UNDEPLOY</contextType>
-              <contextType>SOURCE_RECEIVER</contextType>
-              <contextType>CHANNEL_ATTACHMENT</contextType>
-              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
-              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1394,8 +1394,28 @@ return message;</string>
         <directory>custom-lib</directory>
         <directoryRecursion>true</directoryRecursion>
       </com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties>
+      <com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties version="3.8.0">
+  <pluginPointName>Directory Resource</pluginPointName>
+        <type>Directory</type>
+        <id>2542ca8f-114a-4bd5-b239-d214e6f9d901</id>
+        <name>this is a resource directory called fakeresourcedir</name>
+        <description/>
+        <includeWithGlobalScripts>false</includeWithGlobalScripts>
+        <directory>fakeresourcedir</directory>
+        <directoryRecursion>true</directoryRecursion>
+      </com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties>
     </list>
   </resourceProperties>
   <channelDependencies/>
-  <configurationMap/>
+  <configurationMap>
+    <entry>
+      <string>This is a key</string>
+      <com.mirth.connect.util.ConfigurationProperty>
+        <value>This is a multi
+line
+value</value>
+        <comment>this is a comment</comment>
+      </com.mirth.connect.util.ConfigurationProperty>
+    </entry>
+  </configurationMap>
 </serverConfiguration>
