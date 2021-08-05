@@ -36,7 +36,7 @@ jobs:
     - name: Setup java
       uses: actions/setup-java@v2
       with:
-        distribution: '<distribution>'
+        distribution: 'adopt-hotspot'
         java-version: ${{ matrix.java }}
 
     - name: Install clojure tools
