@@ -14,15 +14,20 @@
 ;;;; starting data and accessor fns
 (def mirths-dir "vendor/mirths")
 
-(def mirths [{:version "3.9.0.b2526"
+(def mirths [{:version "3.11.0.b2609"
+              :sha256 "4df341312de34fb9a79083c5c1f8c2214cea6efd5b9d34ea0551dee4a2249286"
+              :what-happened? []}
+             {:version "3.9.0.b2526"
               :sha256 "cf4cc753a8918c601944f2f4607b07f2b008d19c685d936715fe30a64dc90343"
               :what-happened? []}
              {:version "3.8.0.b2464"
               :sha256 "e4606d0a9ea9d35263fb7937d61c98f26a7295d79b8bf83d0dab920cf875206d"
               :what-happened? []}])
 
-(def mirth-9 (first mirths))
-(def mirth-8 (second mirths))
+(def mirth-11 (nth mirths 0))
+(def mirth-9  (nth mirths 1))
+(def mirth-8  (nth mirths 2))
+
 
 (defn mirth-name [mirth]
   (str "mirthconnect-" (:version mirth) "-unix"))
@@ -145,6 +150,12 @@
 (defn mirth-9-fixture [f]
   (make-all-mirths-ready)
   (let [mirth-proc (start-mirth mirth-9)]
+    (f)
+    (stop-mirth mirth-proc)))
+
+(defn mirth-11-fixture [f]
+  (make-all-mirths-ready)
+  (let [mirth-proc (start-mirth mirth-11)]
     (f)
     (stop-mirth mirth-proc)))
 

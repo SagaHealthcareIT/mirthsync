@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><map>
+  <entry>
+    <string>Undeploy</string>
+    <string>// This script executes once for each deploy, undeploy, or redeploy task
+// if at least one channel was undeployed
+// You only have access to the globalMap here to persist data
+logger.info('Global undeploy');
+return;</string>
+  </entry>
+  <entry>
+    <string>Postprocessor</string>
+    <string>// This script executes once after a message has been processed
+// This script applies across all channels
+// Responses returned from here will be stored as "Postprocessor" in the response map
+// You have access to "response", if returned from the channel postprocessor
+logger.info('Global postprocessor');
+return;</string>
+  </entry>
+  <entry>
+    <string>Deploy</string>
+    <string>// This script executes once for each deploy or redeploy task
+// You only have access to the globalMap here to persist data
+logger.info('Global deploy');
+return;</string>
+  </entry>
+  <entry>
+    <string>Preprocessor</string>
+    <string>// Modify the message variable below to pre process data
+// This script applies across all channels
+logger.info('Global preprocessor');
+return message;</string>
+  </entry>
+</map>
