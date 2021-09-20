@@ -41,20 +41,21 @@
    ["-i" "--ignore-cert-warnings" "Ignore certificate warnings"
     :default false]
    
-   ["-f" "--force" (str "Overwrite existing local files during pull "
-                        "and always overwrite remote items without "
-                        "regard for revisions during push")]
+   ["-f" "--force" "
+        Overwrite existing local files during a pull and overwrite remote items
+        without regard for revisions during a push."]
 
    ["-t" "--target TARGET_DIR" "Base directory used for pushing or pulling files"
     :missing "--target is required"
     :parse-fn strip-trailing-slashes]
 
-   ["-r" "--resource-path TARGET_RESOURCE_PATH" "A path within the target
-   directory to limit the scope of the push/pull. This path may refer to a
-   filename specifically or a directory. In the case of a pull - only resources
-   that would end up within that path are saved to the filesystem. In the case
-   of a push - only resources within that path are pushed to the specified
-   server. *This path needs to be relative to the target directory.*"
+   ["-r" "--resource-path TARGET_RESOURCE_PATH" "
+        A path within the target directory to limit the scope of the push/pull.
+        This path may refer to a filename specifically or a directory. In the
+        case of a pull - only resources that would end up within that path are
+        saved to the filesystem. In the case of a push - only resources within
+        that path are pushed to the specified server. The TARGET_RESOURCE_PATH
+        must be specified relative to the target directory."
     :default ""
     :parse-fn strip-trailing-slashes]
 
