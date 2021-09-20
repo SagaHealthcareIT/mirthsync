@@ -74,7 +74,7 @@
     (let [dbdir (mirth-db-dir mirth)]
       (and (clojure.string/ends-with? dbdir "mirthdb")
            (= 0 @(:exit-code (system-test "-d" dbdir {:throw false :verbose true})))
-           (rm "-f" "-v" "--preserve-root" "--one-file-system" "-r" dbdir)))))
+           (rm "-f" "--preserve-root" "--one-file-system" "-r" dbdir)))))
 
 ;;;; A couple of helper functions to track the flow of
 ;;;; tracking the flow and outcomes
@@ -116,7 +116,7 @@
     ;; wait up to 90 seconds for the server to appear
     (loop [i 0]
       ;; (println (ps "-axw"))
-      (when (= i 0) (prn mcserver))
+      ;; (when (= i 0) (prn mcserver))
       (sh/flush mcserver)
       (when-not (or (try
                       (client/head "http://localhost:8080")
