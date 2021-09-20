@@ -1,4 +1,4 @@
-(defproject com.saga-it/mirthsync "2.1.0"
+(defproject com.saga-it/mirthsync "2.1.0-SNAPSHOT"
   :description "Mirthsync is a command line tool, created by Saga IT,
   for keeping a local copy of important aspects of Mirth Connect
   configuration in order to allow for the use of traditional version
@@ -70,23 +70,25 @@
    :dev {:dependencies [[clj-commons/conch "0.9.2"]]}
    }
 
-  :release-tasks [;; ["vcs" "assert-committed"]
+  :release-tasks [["vcs" "assert-committed"]
                   ["clean"]
                   ["test"]
-                  ;; ["change" "version" "leiningen.release/bump-version" "release"]
-                  ;; ;; bump minor
-                  ;; ["change" "version" "leiningen.release/bump-version"]
+                  ;; bump to release
+                  ["change" "version" "leiningen.release/bump-version" "release"]
                   ["shell" "sed" "-E" "-i.bak" "s/(stable version of mirthSync is) \"[0-9]+\\\\.[0-9]+\\\\.[0-9]+\"/\\\\1 \"${:version}\"/g" "README.md"]
                   ["shell" "rm" "-f" "README.md.bak"]
                   ["shell" "sed" "-E" "-i.bak" "s/[0-9]+\\\\.[0-9]+\\\\.[0-9]+/${:version}/g" "pkg/mirthsync.sh"]
                   ["shell" "rm" "-f" "pkg/mirthsync.sh.bak"]
                   ["shell" "sed" "-E" "-i.bak" "s/[0-9]+\\\\.[0-9]+\\\\.[0-9]+/${:version}/g" "pkg/mirthsync.bat"]
                   ["shell" "rm" "-f" "pkg/mirthsync.bat.bak"]
-                  ["vcs" "commit"]
-                  ["vcs" "tag"]
                   ["uberjar"]
                   ["shell" "mkdir" "-p" "target/mirthsync-${:version}/lib"]
                   ["shell" "cp" "-a" "pkg" "target/mirthsync-${:version}/bin"]
                   ["shell" "cp" "target/uberjar/mirthsync-${:version}-standalone.jar" "target/mirthsync-${:version}/lib"]
                   ["shell" "tar" "-C" "target/" "-cvzf" "target/mirthsync-${:version}.tar.gz" "mirthsync-${:version}"]
-                  ["shell" "gpg" "--detach-sign" "--armor" "target/mirthsync-${:version}.tar.gz"]])
+                  ["shell" "gpg" "--detach-sign" "--armor" "target/mirthsync-${:version}.tar.gz"]
+                  ["vcs" "commit"]
+                  ["vcs" "tag"]
+                  ;; bump to new minor snapshot and commit
+                  ["change" "version" "leiningen.release/bump-version"]
+                  ["vcs" "commit"]])
