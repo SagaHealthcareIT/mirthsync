@@ -20,7 +20,7 @@
                         "-i" "-f" "pull"))))
 
   (testing "Push from baseline succeeds without errors"
-    (is (= 0 (main-func "--push-config-map" "-s" "https://localhost:8443/api"
+    (is (= 0 (main-func "--include-configuration-map" "-s" "https://localhost:8443/api"
                         "-u" "admin" "-p" "admin" "-t" baseline-dir
                         "-i" "-f" "push"))))
 
@@ -33,7 +33,7 @@
     (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir "dev-resources/mirth-11-baseline"))))
 
   (testing "Push back from pull dir succeeds without errors"
-    (is (= 0 (main-func "--push-config-map" "-s" "https://localhost:8443/api"
+    (is (= 0 (main-func "--include-configuration-map" "-s" "https://localhost:8443/api"
                         "-u" "admin" "-p" "admin" "-t" repo-dir
                         "-i" "-f" "push"))))
 

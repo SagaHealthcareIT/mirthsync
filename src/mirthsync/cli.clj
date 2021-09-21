@@ -49,22 +49,25 @@
     :missing "--target is required"
     :parse-fn strip-trailing-slashes]
 
-   ["-r" "--resource-path TARGET_RESOURCE_PATH" "
-        A path within the target directory to limit the scope of the push/pull.
-        This path may refer to a filename specifically or a directory. In the
-        case of a pull - only resources that would end up within that path are
-        saved to the filesystem. In the case of a push - only resources within
-        that path are pushed to the specified server. The TARGET_RESOURCE_PATH
-        must be specified relative to the target directory."
+   ["-r" "--restrict-to-path RESTRICT_TO_PATH" "
+        A path within the target directory to limit the scope of the push. This
+        path may refer to a filename specifically or a directory. If the path
+        refers to a file - only that file will be pushed. If the path refers to
+        a directory - the push will be limited to resources contained within
+        that directory. The RESTRICT_TO_PATH must be specified relative to
+        the target directory."
     :default ""
     :parse-fn strip-trailing-slashes]
 
-   ["-v" nil "Verbosity level; may be specified multiple times to increase level"
+   ["-v" nil "Verbosity level
+        May be specified multiple times to increase level."
     :id :verbosity
     :default 0
     :update-fn inc]
 
-   [nil "--push-config-map" "A boolean flag to push the configuration map - default false"
+   [nil "--include-configuration-map" "
+        A boolean flag to include the configuration map in the push - defaults
+        to false"
     :default false]
 
    ["-h" "--help"]])
@@ -107,12 +110,12 @@
 (defn valid-initial-config?
   "Validate the initial config map. Returns a truth value."
   [{:keys [arguments errors] :as config
-    {:keys [help target resource-path]} :options}]
+    {:keys [help target restrict-to-path]} :options}]
   (or help
       (and (= 0 (count errors))
            (= 1 (count arguments))
            (#{"pull" "push"} (first arguments))
-           (is-child-path target resource-path))))
+           (is-child-path target restrict-to-path))))
 
 (defn config
   "Parse the CLI arguments and construct a map representing selected

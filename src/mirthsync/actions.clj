@@ -37,9 +37,9 @@
 
 (defn local-locs
   "Lazy seq of local el-locs for the current api."
-  [{:keys [resource-path target] :as app-conf
+  [{:keys [restrict-to-path target] :as app-conf
     {:keys [local-path api-files]} :api}]
-  (let [required-prefix (str target File/separator resource-path)
+  (let [required-prefix (str target File/separator restrict-to-path)
         filtered-api-files (filter #(let [matches (.startsWith (.toString %) required-prefix)]
                                       (if matches
                                         (do (log/infof "Found a match: %s" (.toString %))
@@ -98,7 +98,7 @@
     {:keys [local-path rest-path transformer] :as api} :api}]
 
   ;; The only time dont want to push is when
-  ;; rest-path = "/server/configurationMap" and push-config-map false.
+  ;; rest-path = "/server/configurationMap" and include-configuration-map false.
   ;; This is being done to preserve backward compatibility with
   ;; versions of mirthSync prior to 2.0.11 that weren't able to
   ;; upload the configurationmap and resources. For resources, we're
@@ -110,7 +110,7 @@
   ;; be better to do this check earlier in the flow and remove the
   ;; configurationmap api from the vector of apis in the run function
   ;; in core.clj.
-  (if (and (= ((:rest-path api)) "/server/configurationMap") (not (:push-config-map app-conf)))
+  (if (and (= ((:rest-path api)) "/server/configurationMap") (not (:include-configuration-map app-conf)))
     app-conf
     (process
        app-conf

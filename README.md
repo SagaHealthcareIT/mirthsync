@@ -22,40 +22,37 @@ Mirth Connect's REST API.
 
 ## Current release
 
-The current stable version of mirthSync is "2.1.0"
+The current stable version of mirthSync is "2.0.1"
 
 There is a release candidate of mirthSync "2.1.0" that supports selectively
 pushing arbitrary paths in the target directory to Mirth. This allows, for
-instance, the ability to push only the configurationMap or a single channel or
+instance, the ability to push only the ConfigurationMap or a single channel or
 channel group by specifying a base path within the target directory to use as a
 starting point for find the files to push.
 
-**NOTE** 2.1.0 includes new features that break compatibility in a very minor
-way. Previously, resources weren't pushed by default but this changes in 2.1.0.
-They're now being pushed by default. Also, previous versions of mirthSync were
-not pushing the configurationMap. The ability to push the configurationMap has
-been added to this version but defaults to false to preserve backward
-compatibility. If you're trying out 2.1.0, be careful to test thoroughly in a
-dev environment in case there are undiscovered bugs in the new features.
+**NOTE** 2.1.0 includes new features that break compatibility in minor ways.
+There are new command line options and new defaults for the ConfigurationMap.
+
+You must now add a flag to your command line to allow for pushing the
+ConfigurationMap - without the flag, it will not get included in the push. 
+
+Resources are now properly included in a push.
+
+If you're trying out 2.1.0, be careful to test thoroughly in a dev environment
+first.
 
 ## Changes
 
-### Plans for 2.1.x
+### 2.1.0 (Pre-Release)
 
-Support pushing and pulling arbitrary channels and/or channel groups
-
-### Status
-
-- the current filter is mostly working for pushes but doesn't do anything for
-  downloads. needs more testing
-- need to implement more tests, the current tests missed the fact that the
-  configurationMap and resourceMap would not push
+- Selective push
+- Testing against mirth 3.11
 
 ### 2.0.10
 
 Small change that shouldn't impact the current directory layout. This change
 allows for forward and backward slashes in channel group names by encoding the
-slashes using a http url encode syntax.
+slashes using an HTTP URL encode syntax.
 
 ### 2.0.9
 
@@ -70,8 +67,17 @@ You can check out the 2.0.3-SNAPSHOT release here - https://github.com/SagaHealt
 
 ### 2.0.2-SNAPSHOT
 
-The local directory structure has been changed to nest channels within
-their respective group.
+Changed the local directory structure to nest channels within their respective
+group.
+
+## Future plans
+
+### Current Plans for 2.1.1
+
+- Support filtering pulls just like we currently are able to filter pushes.
+- Addressing reported issues.
+- Implement more tests.
+
 
 ## Installation 
 
@@ -93,23 +99,36 @@ How to generate help dialogue:
 ### Help Dialogue:
 
 ``` text
+  The following errors occurred while parsing your command:
+
+  --server is required
+  --username is required
+  --password is required
+  --target is required
+
   Usage: mirthsync [options] action
 
   Options:
-    -s, --server SERVER_URL                     Full HTTP(s) url of the Mirth Connect server
-    -u, --username USERNAME                     Username used for authentication
-    -p, --password PASSWORD                     Password used for authentication
-    -i, --ignore-cert-warnings                  Ignore certificate warnings
-    -f, --force                                 Overwrite existing local files during pull and always overwrite remote items without regard for revisions during push
-    -t, --target TARGET_DIR                     Base directory used for pushing or pulling files
-    -r, --resource-path TARGET_RESOURCE_PATH    A path within the target
-     directory to limit the scope of the push/pull. This path may refer to a
-     filename specifically or a directory. In the case of a pull - only resources
-     that would end up within that path are saved to the filesystem. In the case
-     of a push - only resources within that path are pushed to the specified
-     server. *This path needs to be relative to the target directory.*
-    -v                                          Verbosity level; may be specified multiple times to increase level
-        --push-config-map                       A boolean flag to push the configuration map - default false
+    -s, --server SERVER_URL                    Full HTTP(s) url of the Mirth Connect server
+    -u, --username USERNAME                    Username used for authentication
+    -p, --password PASSWORD                    Password used for authentication
+    -i, --ignore-cert-warnings                 Ignore certificate warnings
+    -f, --force
+          Overwrite existing local files during a pull and overwrite remote items
+          without regard for revisions during a push.
+    -t, --target TARGET_DIR                    Base directory used for pushing or pulling files
+    -r, --restrict-to-path RESTRICT_TO_PATH
+          A path within the target directory to limit the scope of the push. This
+          path may refer to a filename specifically or a directory. If the path
+          refers to a file - only that file will be pushed. If the path refers to
+          a directory - the push will be limited to resources contained within
+          that directory. The RESTRICT_TO_PATH must be specified relative to
+          the target directory.
+    -v                                         Verbosity level
+          May be specified multiple times to increase level.
+        --include-configuration-map
+          A boolean flag to include the configuration map in the push - defaults
+          to false
     -h, --help
 
   Actions:
@@ -126,7 +145,7 @@ How to pull Mirth Connect code from a Mirth Connect instance:
 ``` shell
 $ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin pull -t /home/user/
 ```
-> Note that the -t paramter accepts absolute and relative paths.
+> Note that the -t parameter accepts absolute and relative paths.
 
 Pulling code from a Mirth Connect instance allowing for overwriting existing files:
 
@@ -134,7 +153,7 @@ Pulling code from a Mirth Connect instance allowing for overwriting existing fil
 $ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -f pull -t /home/user/
 ```
 Pushing code to a Mirth Connect instance (doesn't have to be the same
-instance that was pulled from):
+instance that the code was originally pulled from):
 
 ``` shell
 $ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin push -t /home/user/
