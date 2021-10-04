@@ -118,7 +118,7 @@
        {:keys [local-path find-name] :as api} :api}]
     (log/spyf :debug "Constructed file path: %s"
               (str (local-path app-conf)
-                   (when (not= (local-path app-conf) File/separator) File/separator)
+                   (when-not (.endsWith (local-path app-conf) File/separator) File/separator)
                    (safe-name (find-name el-loc))
                    path))))
 
