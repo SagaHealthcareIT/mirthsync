@@ -43,6 +43,12 @@ first.
 
 ## Changes
 
+### 2.1.1
+
+- Support for pushing/pulling Alerts
+- Fix bug related to directory/xml ordering and zip/remove
+
+
 ### 2.1.0 (Pre-Release)
 
 - Selective push
