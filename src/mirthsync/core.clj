@@ -21,8 +21,8 @@
         app-conf (http/with-authentication
                    app-conf
                    #(-> app-conf
-                        (api/apis-action api/apis api/preprocess)
-                        (api/apis-action api/apis action)))]    
+                        (api/iterate-apis api/apis api/preprocess-api)
+                        (api/iterate-apis api/apis action)))]
     (log/info "Finished!")
     (log/spy :trace app-conf)))
 

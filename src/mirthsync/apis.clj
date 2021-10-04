@@ -50,25 +50,26 @@
 ;FIXME: The logic is fine but the function could stand to have some
 ;attention to make it a little less ugly both here and in the apis
 ;that use it below.
-(defn pre-node-action
+(defn sync-api-collection
   "Returns an updated app-conf with the current api element node added to the
   relevant api list/set in app conf. If a node matching by id is found - it is
-  removed before the new element is appended. List-tag is the key used to find
-  the root grouping (list/set) tag in app-conf and root-tag is the key for the
-  root api element tag. Node-tag is the wrapper tag keyword."
-  [list-tag root-tag node-tag
+  removed before the new element is appended. Api-keyword is the key used to
+  find the api xml in app-conf and collection-keyword is typically a :list
+  or :set keyword that matches the root element. Node-element-keyword matches
+  the xml of the single item api xml."
+  [api-keyword collection-keyword node-element-keyword
    {:keys [el-loc] :as app-conf
     {:keys [find-id]} :api}]
-  (let [set (list-tag app-conf)
-        found-id-loc (zx/xml1-> set
-                                root-tag
-                                node-tag
+  (let [api-coll (api-keyword app-conf)
+        found-id-loc (zx/xml1-> api-coll
+                                collection-keyword
+                                node-element-keyword
                                 :id
                                 (zx/text= (find-id el-loc)))
-        set (if found-id-loc
-              (zip/up (zip/replace (zip/up found-id-loc) (zip/node el-loc)))
-              (zip/append-child set (zip/node el-loc)))]
-    (assoc app-conf list-tag set)))
+        api-coll (if found-id-loc
+                   (zip/up (zip/replace (zip/up found-id-loc) (zip/node el-loc)))
+                   (zip/append-child api-coll (zip/node el-loc)))]
+    (assoc app-conf api-keyword api-coll)))
 
 (defn encode-path-chars
   "Mirth is very liberal with allowing weird characters in places that can cause
@@ -121,7 +122,7 @@
                    (safe-name (find-name el-loc))
                    path))))
 
-(defn preprocess
+(defn preprocess-api
   [{:as app-conf {:keys [preprocess]} :api}]
   (preprocess app-conf))
 
@@ -287,7 +288,7 @@
      :post-path post-path
      :push-params codelib-push-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-codelibs :list)
-     :pre-node-action (partial pre-node-action :server-codelibs :list :codeTemplateLibrary)
+     :pre-node-action (partial sync-api-collection :server-codelibs :list :codeTemplateLibrary)
      :after-push revision-success
      :query-params override-params})
 
@@ -309,7 +310,7 @@
      :post-path post-path
      :push-params group-push-params
      :preprocess (partial mact/fetch-and-pre-assoc :server-groups :set)
-     :pre-node-action (partial pre-node-action :server-groups :set :channelGroup)
+     :pre-node-action (partial sync-api-collection :server-groups :set :channelGroup)
      :query-params override-params})
 
    (make-api
@@ -327,7 +328,7 @@
      :after-push null-204})
    ])
 
-(defn apis-action
+(defn iterate-apis
   "Iterates through the apis calling action on app-conf. If an api
   updates app-conf the apis processed afterward use the updated
   app-conf."

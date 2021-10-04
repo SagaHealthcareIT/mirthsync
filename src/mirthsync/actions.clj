@@ -62,7 +62,7 @@
     {:keys [find-elements] :as api} :api}]
   (mhttp/fetch-all app-conf find-elements))
 
-(defn process
+(defn process-nodes
   "Prints the message and processes the el-locs via the action."
   [{:as app-conf
     {:keys [pre-node-action]} :api} msg el-locs action]
@@ -84,7 +84,7 @@
   details about the fetched apis."
   [{:as app-conf
     {:keys [local-path transformer] :as api} :api}]
-  (process
+  (process-nodes
    app-conf
    (str "Downloading from " (mhttp/api-url app-conf) " to " (local-path app-conf))
    (remote-locs app-conf)
@@ -112,7 +112,7 @@
   ;; in core.clj.
   (if (and (= ((:rest-path api)) "/server/configurationMap") (not (:include-configuration-map app-conf)))
     app-conf
-    (process
+    (process-nodes
        app-conf
        (str "Uploading from " (local-path app-conf) " to " (rest-path api))
        (local-locs app-conf)
