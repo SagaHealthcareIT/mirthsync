@@ -22,24 +22,25 @@ Mirth Connect's REST API.
 
 ## Current release
 
-The current stable version of mirthSync is "2.1.1"
+The latest version of mirthSync is "2.1.1".
 
-There is a release candidate of mirthSync "2.1.0" that supports selectively
-pushing arbitrary paths in the target directory to Mirth. This allows, for
-instance, the ability to push only the ConfigurationMap or a single channel or
-channel group by specifying a base path within the target directory to use as a
-starting point for find the files to push.
+"2.1.x" versions of mirthSync support selectively pushing/pulling arbitrary
+paths in the target directory to Mirth. This allows, for instance, the ability
+to push/pull only the ConfigurationMap or a single channel or channel group by
+specifying a base path within the target directory to use as a starting point
+for find the files to push/pull.
 
-**NOTE** 2.1.0 includes new features that break compatibility in minor ways.
-There are new command line options and new defaults for the ConfigurationMap.
+**NOTE** 2.1.x versions include new features that break compatibility in minor
+ways from the 2.0.x versions.
 
-You must now add a flag to your command line to allow for pushing the
-ConfigurationMap - without the flag, it will not get included in the push. 
+- There are new command line options and new defaults for the ConfigurationMap.
+  You must now add a flag to your command line to allow for pushing the
+  ConfigurationMap - without the flag, it will not get included in the push.
+- Resources are now properly included in a push.
+- Alerts are supported
 
-Resources are now properly included in a push.
-
-If you're trying out 2.1.0, be careful to test thoroughly in a dev environment
-first.
+If you're trying out 2.1.x after using 2.0.x, be careful to test thoroughly in a
+dev environment first.
 
 ## Changes
 

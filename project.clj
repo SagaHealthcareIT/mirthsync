@@ -75,7 +75,7 @@
                   ["test"]
                   ;; bump to release
                   ["change" "version" "leiningen.release/bump-version" "release"]
-                  ["shell" "sed" "-E" "-i.bak" "s/(stable version of mirthSync is) \"[0-9]+\\\\.[0-9]+\\\\.[0-9]+\"/\\\\1 \"${:version}\"/g" "README.md"]
+                  ["shell" "sed" "-E" "-i.bak" "s/(version of mirthSync is) \"[0-9]+\\\\.[0-9]+\\\\.[0-9]+\"/\\\\1 \"${:version}\"/g" "README.md"]
                   ["shell" "rm" "-f" "README.md.bak"]
                   ["shell" "sed" "-E" "-i.bak" "s/[0-9]+\\\\.[0-9]+\\\\.[0-9]+/${:version}/g" "pkg/mirthsync.sh"]
                   ["shell" "rm" "-f" "pkg/mirthsync.sh.bak"]
