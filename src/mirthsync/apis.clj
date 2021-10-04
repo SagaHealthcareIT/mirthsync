@@ -51,27 +51,24 @@
 ;attention to make it a little less ugly both here and in the apis
 ;that use it below.
 (defn pre-node-action
-  "Returns an updated app-conf with the current api element node added
-  to the relevant api list/set in app conf. If node matching by id is
-  found - it is removed before the new element is appended. set-key is
-  the key used to find the root loc in app-conf and root-tag is the
-  key for the root tag. node tag is the wrapper tag keyword."
-  [set-key root-tag node-tag
+  "Returns an updated app-conf with the current api element node added to the
+  relevant api list/set in app conf. If a node matching by id is found - it is
+  removed before the new element is appended. List-tag is the key used to find
+  the root grouping (list/set) tag in app-conf and root-tag is the key for the
+  root api element tag. Node-tag is the wrapper tag keyword."
+  [list-tag root-tag node-tag
    {:keys [el-loc] :as app-conf
     {:keys [find-id]} :api}]
-  (let [set (set-key app-conf)
+  (let [set (list-tag app-conf)
         found-id-loc (zx/xml1-> set
                                 root-tag
                                 node-tag
                                 :id
                                 (zx/text= (find-id el-loc)))
-
         set (if found-id-loc
-              (zip/remove (zip/up found-id-loc))
-              set)
-
-        set (zip/append-child set (zip/node el-loc))]
-    (assoc app-conf set-key set)))
+              (zip/up (zip/replace (zip/up found-id-loc) (zip/node el-loc)))
+              (zip/append-child set (zip/node el-loc)))]
+    (assoc app-conf list-tag set)))
 
 (defn encode-path-chars
   "Mirth is very liberal with allowing weird characters in places that can cause

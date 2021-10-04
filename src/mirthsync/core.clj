@@ -45,6 +45,7 @@
                (try
                  (run conf)
                  (catch Exception e
+                   (.printStackTrace e)
                    (-> conf
                        (assoc :exit-code 1)
                        (assoc :exit-msg (.getMessage e)))))
