@@ -1,12 +1,12 @@
 <serverConfiguration version="3.8.0">
-  <date>2021-03-24 15:34:56</date>
+  <date>2021-10-03 18:14:03</date>
   <channelGroups>
     <channelGroup version="3.8.0">
       <id>630d82bd-0727-48d6-bf13-bfa86080d9f5</id>
       <name>/this\ is /a \ group/\with weird\characters/</name>
       <revision>1</revision>
       <lastModified>
-        <time>1616614355096</time>
+        <time>1633299125095</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -22,7 +22,7 @@
       <name>This is a group</name>
       <revision>1</revision>
       <lastModified>
-        <time>1616614355107</time>
+        <time>1633299124832</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description>This is the group&apos;s description</description>
@@ -428,13 +428,6 @@ return;</undeployScript>
       <exportData>
         <metadata>
           <enabled>true</enabled>
-          <lastModified>
-            <time>1556232301836</time>
-            <timezone>America/New_York</timezone>
-          </lastModified>
-          <pruningSettings>
-            <archiveEnabled>true</archiveEnabled>
-          </pruningSettings>
         </metadata>
       </exportData>
     </channel>
@@ -655,13 +648,6 @@ return;</undeployScript>
       <exportData>
         <metadata>
           <enabled>true</enabled>
-          <lastModified>
-            <time>1556295942216</time>
-            <timezone>America/New_York</timezone>
-          </lastModified>
-          <pruningSettings>
-            <archiveEnabled>true</archiveEnabled>
-          </pruningSettings>
         </metadata>
       </exportData>
     </channel>
@@ -882,13 +868,6 @@ return;</undeployScript>
       <exportData>
         <metadata>
           <enabled>true</enabled>
-          <lastModified>
-            <time>1615839678925</time>
-            <timezone>America/New_York</timezone>
-          </lastModified>
-          <pruningSettings>
-            <archiveEnabled>true</archiveEnabled>
-          </pruningSettings>
         </metadata>
       </exportData>
     </channel>
@@ -1109,26 +1088,85 @@ return;</undeployScript>
       <exportData>
         <metadata>
           <enabled>true</enabled>
-          <lastModified>
-            <time>1615839851811</time>
-            <timezone>America/New_York</timezone>
-          </lastModified>
-          <pruningSettings>
-            <archiveEnabled>true</archiveEnabled>
-          </pruningSettings>
         </metadata>
       </exportData>
     </channel>
   </channels>
   <channelTags/>
-  <alerts/>
+  <alerts>
+    <alertModel version="3.8.0">
+      <id>0081398d-6d28-4548-b77c-c67331ae4299</id>
+      <name>test alert</name>
+      <enabled>true</enabled>
+      <trigger class="defaultTrigger" version="3.8.0">
+        <alertChannels version="3.8.0">
+          <newChannelSource>true</newChannelSource>
+          <newChannelDestination>true</newChannelDestination>
+          <enabledChannels/>
+          <disabledChannels>
+            <string>fab4b87b-71a7-42dd-b00e-049d28adae64</string>
+            <string>de5a1a40-3f1e-44e1-b3cb-60d6772234ae</string>
+          </disabledChannels>
+          <partialChannels/>
+        </alertChannels>
+        <errorEventTypes>
+          <errorEventType>ANY</errorEventType>
+        </errorEventTypes>
+        <regex></regex>
+      </trigger>
+      <actionGroups>
+        <alertActionGroup version="3.8.0">
+          <actions>
+            <alertAction version="3.8.0">
+              <protocol>Email</protocol>
+              <recipient>user@localhost</recipient>
+            </alertAction>
+          </actions>
+          <subject>sample alert</subject>
+          <template>This is my alert: ${systemTime} - ${error}</template>
+        </alertActionGroup>
+      </actionGroups>
+      <properties/>
+    </alertModel>
+    <alertModel version="3.8.0">
+      <id>362f5921-ab7b-4a02-b053-f5e0afe0f42b</id>
+      <name>test alerts 2</name>
+      <enabled>false</enabled>
+      <trigger class="defaultTrigger" version="3.8.0">
+        <alertChannels version="3.8.0">
+          <newChannelSource>false</newChannelSource>
+          <newChannelDestination>false</newChannelDestination>
+          <enabledChannels/>
+          <disabledChannels/>
+          <partialChannels/>
+        </alertChannels>
+        <errorEventTypes>
+          <errorEventType>ANY</errorEventType>
+        </errorEventTypes>
+        <regex></regex>
+      </trigger>
+      <actionGroups>
+        <alertActionGroup version="3.8.0">
+          <actions>
+            <alertAction version="3.8.0">
+              <protocol>Email</protocol>
+              <recipient>foo@localhost</recipient>
+            </alertAction>
+          </actions>
+          <subject>abasdf</subject>
+          <template>this is another alert</template>
+        </alertActionGroup>
+      </actionGroups>
+      <properties/>
+    </alertModel>
+  </alerts>
   <codeTemplateLibraries>
     <codeTemplateLibrary version="3.8.0">
       <id>3e5488e0-2c95-456e-bce3-0178d365d198</id>
       <name>Library 1</name>
       <revision>1</revision>
       <lastModified>
-        <time>1616614355539</time>
+        <time>1633299123888</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -1144,26 +1182,26 @@ return;</undeployScript>
           <name>Template 1</name>
           <revision>1</revision>
           <lastModified>
-            <time>1616614355564</time>
+            <time>1633299124245</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
-              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
-              <contextType>GLOBAL_POSTPROCESSOR</contextType>
+              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
               <contextType>CHANNEL_DEPLOY</contextType>
-              <contextType>SOURCE_RECEIVER</contextType>
-              <contextType>CHANNEL_PREPROCESSOR</contextType>
-              <contextType>DESTINATION_DISPATCHER</contextType>
-              <contextType>CHANNEL_UNDEPLOY</contextType>
               <contextType>CHANNEL_ATTACHMENT</contextType>
               <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
-              <contextType>GLOBAL_UNDEPLOY</contextType>
-              <contextType>GLOBAL_DEPLOY</contextType>
-              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
               <contextType>GLOBAL_PREPROCESSOR</contextType>
+              <contextType>GLOBAL_DEPLOY</contextType>
+              <contextType>CHANNEL_UNDEPLOY</contextType>
+              <contextType>DESTINATION_DISPATCHER</contextType>
+              <contextType>GLOBAL_POSTPROCESSOR</contextType>
               <contextType>CHANNEL_BATCH</contextType>
+              <contextType>CHANNEL_PREPROCESSOR</contextType>
+              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>CHANNEL_POSTPROCESSOR</contextType>
+              <contextType>SOURCE_RECEIVER</contextType>
+              <contextType>GLOBAL_UNDEPLOY</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1185,16 +1223,16 @@ function template_1_library_1(arg1) {
           <name>Template 3 Library 1</name>
           <revision>1</revision>
           <lastModified>
-            <time>1616614355637</time>
+            <time>1633299124394</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
               <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
               <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>SOURCE_RECEIVER</contextType>
               <contextType>DESTINATION_DISPATCHER</contextType>
-              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1218,7 +1256,7 @@ function template_3_library_1(arg1) {
       <name>Library 2</name>
       <revision>1</revision>
       <lastModified>
-        <time>1616614355551</time>
+        <time>1633299124171</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -1234,26 +1272,26 @@ function template_3_library_1(arg1) {
           <name>Template 2</name>
           <revision>1</revision>
           <lastModified>
-            <time>1616614355682</time>
+            <time>1633299124509</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
-              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
-              <contextType>GLOBAL_POSTPROCESSOR</contextType>
+              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
               <contextType>CHANNEL_DEPLOY</contextType>
-              <contextType>SOURCE_RECEIVER</contextType>
-              <contextType>CHANNEL_PREPROCESSOR</contextType>
-              <contextType>DESTINATION_DISPATCHER</contextType>
-              <contextType>CHANNEL_UNDEPLOY</contextType>
               <contextType>CHANNEL_ATTACHMENT</contextType>
               <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
-              <contextType>GLOBAL_UNDEPLOY</contextType>
-              <contextType>GLOBAL_DEPLOY</contextType>
-              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
               <contextType>GLOBAL_PREPROCESSOR</contextType>
+              <contextType>GLOBAL_DEPLOY</contextType>
+              <contextType>CHANNEL_UNDEPLOY</contextType>
+              <contextType>DESTINATION_DISPATCHER</contextType>
+              <contextType>GLOBAL_POSTPROCESSOR</contextType>
               <contextType>CHANNEL_BATCH</contextType>
+              <contextType>CHANNEL_PREPROCESSOR</contextType>
+              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>CHANNEL_POSTPROCESSOR</contextType>
+              <contextType>SOURCE_RECEIVER</contextType>
+              <contextType>GLOBAL_UNDEPLOY</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1300,7 +1338,7 @@ function template_2_library_2(arg1) {
   </serverSettings>
   <updateSettings version="3.8.0">
     <statsEnabled>true</statsEnabled>
-    <lastStatsTime>1556212955018</lastStatsTime>
+    <lastStatsTime>1633298770976</lastStatsTime>
   </updateSettings>
   <globalScripts>
     <entry>
@@ -1350,7 +1388,7 @@ return message;</string>
         <property name="enabled">false</property>
         <property name="includeAttachments">&lt;boolean&gt;false&lt;/boolean&gt;</property>
         <property name="maxEventAge"></property>
-        <property name="pollingProperties">&lt;com.mirth.connect.donkey.model.channel.PollConnectorProperties version=&quot;3.7.1&quot;&gt;
+        <property name="pollingProperties">&lt;com.mirth.connect.donkey.model.channel.PollConnectorProperties version=&quot;3.8.0&quot;&gt;
   &lt;pollingType&gt;INTERVAL&lt;/pollingType&gt;
   &lt;pollOnStart&gt;false&lt;/pollOnStart&gt;
   &lt;pollingFrequency&gt;3600000&lt;/pollingFrequency&gt;

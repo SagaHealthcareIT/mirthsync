@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?><alertModel version="3.11.0">
+  <id>362f5921-ab7b-4a02-b053-f5e0afe0f42b</id>
+  <name>test alerts 2</name>
+  <enabled>false</enabled>
+  <trigger class="defaultTrigger" version="3.11.0">
+    <alertChannels version="3.11.0">
+      <newChannelSource>false</newChannelSource>
+      <newChannelDestination>false</newChannelDestination>
+      <enabledChannels/>
+      <disabledChannels/>
+      <partialChannels/>
+    </alertChannels>
+    <errorEventTypes>
+      <errorEventType>ANY</errorEventType>
+    </errorEventTypes>
+    <regex/>
+  </trigger>
+  <actionGroups>
+    <alertActionGroup version="3.11.0">
+      <actions>
+        <alertAction version="3.11.0">
+          <protocol>Email</protocol>
+          <recipient>foo@localhost</recipient>
+        </alertAction>
+      </actions>
+      <subject>abasdf</subject>
+      <template>this is another alert</template>
+    </alertActionGroup>
+  </actionGroups>
+  <properties/>
+</alertModel>

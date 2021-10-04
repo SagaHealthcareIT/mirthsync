@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?><alertModel version="3.11.0">
+  <id>0081398d-6d28-4548-b77c-c67331ae4299</id>
+  <name>test alert</name>
+  <enabled>true</enabled>
+  <trigger class="defaultTrigger" version="3.11.0">
+    <alertChannels version="3.11.0">
+      <newChannelSource>true</newChannelSource>
+      <newChannelDestination>true</newChannelDestination>
+      <enabledChannels/>
+      <disabledChannels>
+        <string>fab4b87b-71a7-42dd-b00e-049d28adae64</string>
+        <string>de5a1a40-3f1e-44e1-b3cb-60d6772234ae</string>
+      </disabledChannels>
+      <partialChannels/>
+    </alertChannels>
+    <errorEventTypes>
+      <errorEventType>ANY</errorEventType>
+    </errorEventTypes>
+    <regex/>
+  </trigger>
+  <actionGroups>
+    <alertActionGroup version="3.11.0">
+      <actions>
+        <alertAction version="3.11.0">
+          <protocol>Email</protocol>
+          <recipient>user@localhost</recipient>
+        </alertAction>
+      </actions>
+      <subject>sample alert</subject>
+      <template>This is my alert: ${systemTime} - ${error}</template>
+    </alertActionGroup>
+  </actionGroups>
+  <properties/>
+</alertModel>

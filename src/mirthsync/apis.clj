@@ -135,7 +135,7 @@
     {:keys [local-path find-name find-id] :as api} :api}]
   (str (local-path app-conf)
        File/separator
-       (if-let [group-name (safe-name
+       (when-let [group-name (safe-name
                             (let [id (find-id el-loc)]
                               (zx/xml1-> server-groups
                                          :channelGroup :channels :channel
@@ -153,7 +153,7 @@
     {:keys [local-path find-name find-id] :as api} :api}]
   (str (local-path app-conf)
        File/separator
-       (if-let [lib-name (safe-name
+       (when-let [lib-name (safe-name
                             (let [id (find-id el-loc)]
                               (zx/xml1-> server-codelibs
                                          :codeTemplateLibrary :codeTemplates :codeTemplate
@@ -161,6 +161,15 @@
                                          zip/up zip/up zip/up
                                          :name zx/text)))]
          (str lib-name File/separator))
+       (safe-name (find-name el-loc))
+       ".xml"))
+
+(defn alert-file-path
+  "Returns the alert xml path."
+  [{:keys [el-loc] :as app-conf
+    {:keys [local-path find-name]} :api}]
+  (str (local-path app-conf)
+       File/separator
        (safe-name (find-name el-loc))
        ".xml"))
 
@@ -313,6 +322,12 @@
      :file-path channel-file-path
      :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})
+   (make-api
+    {:rest-path (constantly "/alerts")
+     :local-path (local-path "Alerts")
+     :find-elements #(zx/xml-> % :list :alertModel)
+     :file-path alert-file-path
+     :after-push null-204})
    ])
 
 (defn apis-action
