@@ -4,7 +4,7 @@
             [clojure.tools.logging :as log])
   (:import java.io.File))
 
-(defn filtered-file-seq
+(defn- filtered-file-seq
   "Sequence of java.io.File including files within directories nested to
   max-depth level (defaults to 0) filtered by predicates. Each
   predicate receives a java.io.file as a parameter."
@@ -20,12 +20,12 @@
                          (mapcat #(walk % (inc depth)) (.listFiles f))))))]
      (filter (fn [f] (every? #(% f) preds)) (walk file 0)))))
 
-(defn file?
+(defn- file?
   "True if not a directory."
   [^File f]
   (not (.isDirectory f)))
 
-(defn ends-xml?
+(defn- ends-xml?
   "True if the file ends with .xml."
   [^File f] 
   (-> f
@@ -33,7 +33,7 @@
       (str/lower-case)
       (str/ends-with? ".xml")))
 
-(defn filename-matches?
+(defn- filename-matches?
   "Returns a predicate that returns true if the case-insensitive filename matches"
   [filename]
   (fn
@@ -43,7 +43,7 @@
         (str/lower-case)
         (= (str/lower-case filename)))))
 
-(defn not-filename-matches?
+(defn- not-filename-matches?
   "Complement of filename-matches?"
   [filename]
   (complement (filename-matches? filename)))

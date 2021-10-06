@@ -7,7 +7,7 @@
             [mirthsync.xml :as mxml])
   (:import java.io.File))
 
-(defn upload-node
+(defn- upload-node
   "Extracts the id from the xmlloc using the find-id predicates. PUTs or
   POSTs the params to the location constructed from the base-url,
   rest-path, and id."
@@ -27,15 +27,12 @@
   a modified app-conf with the zipper assoc'ed using the supplied
   keyword."
   [k ktag app-conf]
-  (assoc app-conf
-         k
-         (zip/xml-zip
-          (apply xml/element
-                 ktag nil (zip/children
-                           (mhttp/fetch-all app-conf
-                                            identity))))))
+  (assoc app-conf k (->> (mhttp/fetch-all app-conf identity)
+                         zip/children
+                         (apply xml/element ktag nil)
+                         zip/xml-zip)))
 
-(defn local-locs
+(defn- local-locs
   "Lazy seq of local el-locs for the current api."
   [{:keys [restrict-to-path target] :as app-conf
     {:keys [local-path api-files]} :api}]
@@ -55,14 +52,14 @@
              (slurp %)))
          filtered-api-files)))
 
-(defn remote-locs
+(defn- remote-locs
   "Seq of remote el-locs for the current api. Could be lazy or not
   depending on the implementation of find-elements."
   [{:as app-conf
     {:keys [find-elements] :as api} :api}]
   (mhttp/fetch-all app-conf find-elements))
 
-(defn process-nodes
+(defn-  process-nodes
   "Prints the message and processes the el-locs via the action."
   [{:as app-conf
     {:keys [pre-node-action]} :api} msg el-locs action]

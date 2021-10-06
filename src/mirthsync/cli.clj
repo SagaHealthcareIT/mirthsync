@@ -12,20 +12,20 @@
            ch.qos.logback.classic.Level
            ))
 
-(defn strip-trailing-slashes
+(defn- strip-trailing-slashes
   "Removes one or more trailing forward or backward trailing slashes
   from the string unless the string is all slashes."
   [s]
   (when s
     (str/replace s #"(?!^)[\\/]+$" "")))
 
-(def log-levels (concat
-                 [Level/INFO
-                  Level/DEBUG
-                  Level/TRACE]
-                 (repeat Level/ALL)))
+(def ^{:private true} log-levels (concat
+                                  [Level/INFO
+                                   Level/DEBUG
+                                   Level/TRACE]
+                                  (repeat Level/ALL)))
 
-(def cli-options
+(def ^{:private true} cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
     :missing "--server is required"
     :parse-fn strip-trailing-slashes
@@ -72,7 +72,7 @@
 
    ["-h" "--help"]])
 
-(defn usage [errors summary]
+(defn- usage [errors summary]
   (str
    (when errors (str "The following errors occurred while parsing your command:\n\n"
                      (string/join \newline errors)
@@ -87,7 +87,7 @@
                  "  push     Push filesystem code to server"
                  "  pull     Pull server code to filesystem"])))
 
-(defn set-log-level
+(defn- set-log-level
   "Set the logging level by number"
   [lvl]
   (let [^ch.qos.logback.classic.Logger logger (log-impl/get-logger
@@ -95,11 +95,11 @@
                                                "mirthsync")]
     (.setLevel logger (nth log-levels lvl))))
 
-(defn ^String get-cannonical-path
+(defn- ^String get-cannonical-path
   [^String path]
   (.getCanonicalPath (File. path)))
 
-(defn is-child-path
+(defn- is-child-path
   "Ensures that the second param is a child of the first param with respect to
   canonical file paths."
   [parent child]
@@ -107,7 +107,7 @@
       get-cannonical-path
       (.startsWith (get-cannonical-path parent))))
 
-(defn valid-initial-config?
+(defn- valid-initial-config?
   "Validate the initial config map. Returns a truth value."
   [{:keys [arguments errors] :as config
     {:keys [help target restrict-to-path]} :options}]

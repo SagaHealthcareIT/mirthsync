@@ -7,7 +7,7 @@
             [mirthsync.http-client :as http])
   (:import org.slf4j.bridge.SLF4JBridgeHandler))
 
-(defn run
+(defn- run
   "Links the action specified in the application config to the
   appropriate function, authenticates to the server, and calls the
   function for each api in the defined api/apis (in order). These calls
@@ -27,7 +27,7 @@
     (log/spy :trace app-conf)))
 
 
-(defn exit-prep
+(defn- exit-prep
   "Print message and return exit status code"
   [{:keys [exit-msg exit-code] :as conf}]
   (when exit-msg
