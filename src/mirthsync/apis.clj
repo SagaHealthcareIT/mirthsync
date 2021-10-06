@@ -1,5 +1,5 @@
 (ns mirthsync.apis
-  (:require [clojure.data.zip.xml :as zx]
+  (:require [clojure.data.zip.xml :as zip-xml]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.zip :as zip]
@@ -10,30 +10,31 @@
             [clojure.tools.logging :as log])
   (:import java.io.File))
 
-(defn zxffby
-  "Returns a fn that returns first text at preds in the loc argument."
-  [& preds]
-  (fn [loc]
-    (apply zx/xml1-> loc (conj (vec preds) zx/text))))
+(defn- api-element-id
+  "Return element ID text"
+  [zip-xml-loc]
+  (zip-xml/xml1-> zip-xml-loc :id zip-xml/text))
 
-(def by-id (zxffby :id))
-(def by-name (zxffby :name))
+(defn- api-element-name
+  "Return element name tag text"
+  [zip-xml-loc]
+  (zip-xml/xml1-> zip-xml-loc :name zip-xml/text))
 
-(defn local-path
+(defn- local-path
   "Returns a fn that takes the app-conf and prepends the target
   directory to the supplied path."
   [path]
   (fn [app-conf]
     (str (:target app-conf) (when (not= path File/separator) File/separator) path)))
 
-(defn group-push-params
+(defn- group-push-params
   "Build params for groups post-xml."
   [{:keys [server-groups force]}]
   {"channelGroups" (xml/indent-str (zip/node server-groups))
    "removedChannelGroupsIds" "<set/>"
    "override" (if force "true" "false")})
 
-(defn codelib-push-params
+(defn- codelib-push-params
   "Build params for codelib post-xml."
   [{:keys [server-codelibs force]}]
   {"libraries" (xml/indent-str (zip/node server-codelibs))
@@ -42,7 +43,7 @@
    "removedCodeTemplateIds" "<set/>"
    "override" (if force "true" "false")})
 
-(defn override-params
+(defn- override-params
   "Override if force is specified"
   [{:keys [force]}]
   {"override" (if force "true" "false")})
@@ -50,7 +51,7 @@
 ;FIXME: The logic is fine but the function could stand to have some
 ;attention to make it a little less ugly both here and in the apis
 ;that use it below.
-(defn sync-api-collection
+(defn- sync-api-collection
   "Returns an updated app-conf with the current api element node added to the
   relevant api list/set in app conf. If a node matching by id is found - it is
   removed before the new element is appended. Api-keyword is the key used to
@@ -61,17 +62,17 @@
    {:keys [el-loc] :as app-conf
     {:keys [find-id]} :api}]
   (let [api-coll (api-keyword app-conf)
-        found-id-loc (zx/xml1-> api-coll
+        found-id-loc (zip-xml/xml1-> api-coll
                                 collection-keyword
                                 node-element-keyword
                                 :id
-                                (zx/text= (find-id el-loc)))
+                                (zip-xml/text= (find-id el-loc)))
         api-coll (if found-id-loc
                    (zip/up (zip/replace (zip/up found-id-loc) (zip/node el-loc)))
                    (zip/append-child api-coll (zip/node el-loc)))]
     (assoc app-conf api-keyword api-coll)))
 
-(defn encode-path-chars
+(defn- encode-path-chars
   "Mirth is very liberal with allowing weird characters in places that can cause
   issues with the mirthsync goal of mapping the Mirth configuration to a
   reasonable directory structure. The 'safe-name' function asserts and fails
@@ -91,7 +92,7 @@
         (str/replace "\\" "%5C"))
     name))
 
-(defn safe-name
+(defn- safe-name
   "Asserts that the string param is creatable file that doesn't span paths. Fails
   with an exception if any issues are detected, otherwise returns the unmodified
   string (unless there are weird characters as defined in encode-path-chars; in
@@ -109,7 +110,7 @@
       (log/spyf :debug "safe-name post: (%s)" name))
     name))
 
-(defn file-path
+(defn- file-path
   "Returns a function that, when given an app conf, returns a string file
   path for the current api with path appended."
   [path]
@@ -128,7 +129,7 @@ find-name el-loc))
   (preprocess app-conf))
 
 ;; FIXME: dedupe codetemplate...path and channel.....path
-(defn channel-file-path
+(defn- channel-file-path
   "Returns the channel xml path accounting for group nesting."
   [{:keys [server-groups el-loc] :as app-conf
     {:keys [local-path find-name find-id] :as api} :api}]
@@ -136,17 +137,17 @@ find-name el-loc))
        File/separator
        (when-let [group-name (safe-name
                             (let [id (find-id el-loc)]
-                              (zx/xml1-> server-groups
+                              (zip-xml/xml1-> server-groups
                                          :channelGroup :channels :channel
                                          :id id
                                          zip/up zip/up zip/up
-                                         :name zx/text)))]
+                                         :name zip-xml/text)))]
          (str group-name File/separator))
        (safe-name (find-name el-loc))
        ".xml"))
 
 ;; FIXME: dedupe codetemplate...path and channel.....path
-(defn codetemplate-file-path
+(defn- codetemplate-file-path
   "Returns the codetemplate xml path accounting for lib nesting."
   [{:keys [server-codelibs el-loc] :as app-conf
     {:keys [local-path find-name find-id] :as api} :api}]
@@ -154,16 +155,16 @@ find-name el-loc))
        File/separator
        (when-let [lib-name (safe-name
                             (let [id (find-id el-loc)]
-                              (zx/xml1-> server-codelibs
+                              (zip-xml/xml1-> server-codelibs
                                          :codeTemplateLibrary :codeTemplates :codeTemplate
                                          :id id
                                          zip/up zip/up zip/up
-                                         :name zx/text)))]
+                                         :name zip-xml/text)))]
          (str lib-name File/separator))
        (safe-name (find-name el-loc))
        ".xml"))
 
-(defn alert-file-path
+(defn- alert-file-path
   "Returns the alert xml path."
   [{:keys [el-loc] :as app-conf
     {:keys [local-path find-name]} :api}]
@@ -172,12 +173,12 @@ find-name el-loc))
        (safe-name (find-name el-loc))
        ".xml"))
 
-(defn unexpected-response
+(defn- unexpected-response
   [r]
   (log/warn "An unexpected response was received from the server...")
   (log/warnf "Status: %s, Phrase: %s" (:status r) (:reason-phrase r)))
 
-(defn after-push
+(defn- after-push
   "Returns a function that takes app-conf and the result of an action
   and calls all assertions with the action result in order (short
   circuiting and logging failures). Associates the result and returns
@@ -195,10 +196,10 @@ find-name el-loc))
       (unexpected-response result))
     (assoc app-conf :result result)))
 
-(def null-204 (after-push #(= 204 (:status %))
+(def ^{:private true} null-204 (after-push #(= 204 (:status %))
                           #(nil? (:body %))))
 
-(def true-200 (after-push #(= 200 (:status %))
+(def ^{:private true} true-200 (after-push #(= 200 (:status %))
                           ;; Handle xml, json, or plain text to
                           ;; accommodate different mirth
                           ;; versions. Version 9, for instance,
@@ -208,20 +209,20 @@ find-name el-loc))
                                 (= body "{\"boolean\":true}")
                                 (= body "true")))))
 
-(def revision-success
+(def ^{:private true} revision-success
   (after-push
    (fn [{body :body}]
      (let [loc (-> body
                    xml/parse-str
                    zip/xml-zip)
-           override (zx/xml1-> loc :overrideNeeded zip/node)
-           success  (zx/xml1-> loc :librariesSuccess zip/node)]
+           override (zip-xml/xml1-> loc :overrideNeeded zip/node)
+           success  (zip-xml/xml1-> loc :librariesSuccess zip/node)]
        (and
         (= "false" (first (:content override)))
         (= "true" (first (:content success))))))))
 
 
-(defn make-api
+(defn- make-api
   "Builds an api from an api-map. rest-path, local-path and
   find-elements fns are required and the rest of the api uses sensible
   defaults if a value is not supplied."
@@ -232,8 +233,8 @@ find-name el-loc))
           :find-elements nil            ; required - find elements in the returned xml
           :file-path nil                ; required - build the xml file path
 
-          :find-id by-id                ; find the current xml loc id
-          :find-name by-name            ; find the current xml loc name
+          :find-id api-element-id                ; find the current xml loc id
+          :find-name api-element-name            ; find the current xml loc name
           :api-files (partial mf/xml-file-seq 1) ; find local api xml files for upload
           :post-path (constantly nil)   ; HTTP POST on upload path
           :push-params (constantly nil) ; params for HTTP PUT/POST
@@ -244,7 +245,7 @@ find-name el-loc))
           }
          api))
 
-(defn post-path
+(defn- post-path
   "Takes an api and builds a _bulkUpdate from the rest-path"
   [{:keys [rest-path] :as api}]
   (str (rest-path api) "/_bulkUpdate"))
@@ -253,7 +254,7 @@ find-name el-loc))
   [(make-api
     {:rest-path (constantly "/server/configurationMap")
      :local-path (local-path File/separator)
-     :find-elements #(zx/xml-> % :map)
+     :find-elements #(zip-xml/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "ConfigurationMap.xml")
@@ -263,7 +264,7 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/server/globalScripts")
      :local-path (local-path "GlobalScripts")
-     :find-elements #(zx/xml-> % :map)
+     :find-elements #(zip-xml/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "globalScripts.xml")
@@ -272,7 +273,7 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/server/resources")
      :local-path (local-path File/separator)
-     :find-elements #(zx/xml-> % :list)
+     :find-elements #(zip-xml/xml-> % :list)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "Resources.xml")
@@ -282,8 +283,8 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/codeTemplateLibraries")
      :local-path (local-path "CodeTemplates")
-     :find-elements #(or (zx/xml-> % :list :codeTemplateLibrary) ; from server
-                         (zx/xml-> % :codeTemplate)) ; from filesystem
+     :find-elements #(or (zip-xml/xml-> % :list :codeTemplateLibrary) ; from server
+                         (zip-xml/xml-> % :codeTemplate)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
      :api-files (partial mf/only-named-xml-files-seq 2 "index")
      :post-path post-path
@@ -296,7 +297,7 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/codeTemplates")
      :local-path (local-path "CodeTemplates")
-     :find-elements #(zx/xml-> % :list :codeTemplate)
+     :find-elements #(zip-xml/xml-> % :list :codeTemplate)
      :file-path codetemplate-file-path
      :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})
@@ -304,8 +305,8 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/channelgroups")
      :local-path (local-path "Channels")
-     :find-elements #(or (zx/xml-> % :list :channelGroup) ; from server
-                         (zx/xml-> % :channelGroup)) ; from filesystem
+     :find-elements #(or (zip-xml/xml-> % :list :channelGroup) ; from server
+                         (zip-xml/xml-> % :channelGroup)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
      :api-files (partial mf/only-named-xml-files-seq 2 "index")
      :post-path post-path
@@ -317,14 +318,14 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/channels")
      :local-path (local-path "Channels")
-     :find-elements #(zx/xml-> % :list :channel)
+     :find-elements #(zip-xml/xml-> % :list :channel)
      :file-path channel-file-path
      :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})
    (make-api
     {:rest-path (constantly "/alerts")
      :local-path (local-path "Alerts")
-     :find-elements #(zx/xml-> % :list :alertModel)
+     :find-elements #(zip-xml/xml-> % :list :alertModel)
      :file-path alert-file-path
      :after-push null-204})
    ])
