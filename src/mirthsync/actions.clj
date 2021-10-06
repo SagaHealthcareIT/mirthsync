@@ -39,10 +39,10 @@
   "Lazy seq of local el-locs for the current api."
   [{:keys [restrict-to-path target] :as app-conf
     {:keys [local-path api-files]} :api}]
-  (let [required-prefix (str target File/separator restrict-to-path)
-        filtered-api-files (filter #(let [matches (.startsWith (.toString %) required-prefix)]
+  (let [^String required-prefix (str target File/separator restrict-to-path)
+        filtered-api-files (filter #(let [matches (.startsWith (.toString ^File %) required-prefix)]
                                       (if matches
-                                        (do (log/infof "Found a match: %s" (.toString %))
+                                        (do (log/infof "Found a match: %s" (.toString ^String %))
                                             true)
                                         (do (log/infof "filtering push of '%s' since it does not start with our required prefix: %s" % required-prefix)
                                             false)))

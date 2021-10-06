@@ -21,7 +21,7 @@
   (let [xml-str (xml/indent-str (zip/node el-loc))
         fpath (file-path app-conf)
         required-prefix (str target File/separator restrict-to-path)]
-    (if (.startsWith fpath required-prefix)
+    (if (.startsWith ^String fpath required-prefix)
       (do
         (log/infof "Found a match: %s" fpath)
 

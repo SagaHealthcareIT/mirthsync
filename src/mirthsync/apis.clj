@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.zip :as zip]
-            [mirthsync.actions :as mact]
+            [mirthsync.actions :as actions]
             [mirthsync.cli :as cli]
             [mirthsync.files :as mf]
             [clojure.data.xml :as xml]
@@ -118,8 +118,9 @@
        {:keys [local-path find-name] :as api} :api}]
     (log/spyf :debug "Constructed file path: %s"
               (str (local-path app-conf)
-                   (when-not (.endsWith (local-path app-conf) File/separator) File/separator)
-                   (safe-name (find-name el-loc))
+                   (when-not (.endsWith ^String (local-path app-conf) File/separator) File/separator)
+                   (safe-name (
+find-name el-loc))
                    path))))
 
 (defn preprocess-api
@@ -287,7 +288,7 @@
      :api-files (partial mf/only-named-xml-files-seq 2 "index")
      :post-path post-path
      :push-params codelib-push-params
-     :preprocess (partial mact/fetch-and-pre-assoc :server-codelibs :list)
+     :preprocess (partial actions/fetch-and-pre-assoc :server-codelibs :list)
      :pre-node-action (partial sync-api-collection :server-codelibs :list :codeTemplateLibrary)
      :after-push revision-success
      :query-params override-params})
@@ -309,7 +310,7 @@
      :api-files (partial mf/only-named-xml-files-seq 2 "index")
      :post-path post-path
      :push-params group-push-params
-     :preprocess (partial mact/fetch-and-pre-assoc :server-groups :set)
+     :preprocess (partial actions/fetch-and-pre-assoc :server-groups :set)
      :pre-node-action (partial sync-api-collection :server-groups :set :channelGroup)
      :query-params override-params})
 

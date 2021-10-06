@@ -95,8 +95,8 @@
                                                "mirthsync")]
     (.setLevel logger (nth log-levels lvl))))
 
-(defn get-cannonical-path
-  [path]
+(defn ^String get-cannonical-path
+  [^String path]
   (.getCanonicalPath (File. path)))
 
 (defn is-child-path
