@@ -43,7 +43,7 @@
                                             true)
                                         (do (log/infof "filtering push of '%s' since it does not start with our required prefix: %s" % required-prefix)
                                             false)))
-                                   (api-files (local-path app-conf)))]
+                                   (api-files (local-path (:target app-conf))))]
     (log/debugf "required-prefix: %s" required-prefix)
 
     (map #(mxml/to-zip
@@ -83,7 +83,7 @@
     {:keys [local-path transformer] :as api} :api}]
   (process-nodes
    app-conf
-   (str "Downloading from " (mhttp/api-url app-conf) " to " (local-path app-conf))
+   (str "Downloading from " (mhttp/api-url app-conf) " to " (local-path (:target app-conf)))
    (remote-locs app-conf)
    mxml/serialize-node))
 
@@ -111,6 +111,6 @@
     app-conf
     (process-nodes
        app-conf
-       (str "Uploading from " (local-path app-conf) " to " (rest-path api))
+       (str "Uploading from " (local-path (:target app-conf)) " to " (rest-path api))
        (local-locs app-conf)
        upload-node)))

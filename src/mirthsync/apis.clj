@@ -20,12 +20,10 @@
   [zip-xml-loc]
   (zip-xml/xml1-> zip-xml-loc :name zip-xml/text))
 
-(defn- local-path
-  "Returns a fn that takes the app-conf and prepends the target
-  directory to the supplied path."
-  [path]
-  (fn [app-conf]
-    (str (:target app-conf) (when (not= path File/separator) File/separator) path)))
+(defn- local-path-str
+  "Prepends the target directory to the supplied path."
+  [path target]
+  (str target (when (not= path File/separator) File/separator) path))
 
 (defn- group-push-params
   "Build params for groups post-xml."
@@ -118,8 +116,8 @@
   (fn [{:keys [el-loc] :as app-conf
        {:keys [local-path find-name] :as api} :api}]
     (log/spyf :debug "Constructed file path: %s"
-              (str (local-path app-conf)
-                   (when-not (.endsWith ^String (local-path app-conf) File/separator) File/separator)
+              (str (local-path (:target app-conf))
+                   (when-not (.endsWith ^String (local-path (:target app-conf)) File/separator) File/separator)
                    (safe-name (
 find-name el-loc))
                    path))))
@@ -133,7 +131,7 @@ find-name el-loc))
   "Returns the channel xml path accounting for group nesting."
   [{:keys [server-groups el-loc] :as app-conf
     {:keys [local-path find-name find-id] :as api} :api}]
-  (str (local-path app-conf)
+  (str (local-path (:target app-conf))
        File/separator
        (when-let [group-name (safe-name
                             (let [id (find-id el-loc)]
@@ -151,7 +149,7 @@ find-name el-loc))
   "Returns the codetemplate xml path accounting for lib nesting."
   [{:keys [server-codelibs el-loc] :as app-conf
     {:keys [local-path find-name find-id] :as api} :api}]
-  (str (local-path app-conf)
+  (str (local-path (:target app-conf))
        File/separator
        (when-let [lib-name (safe-name
                             (let [id (find-id el-loc)]
@@ -168,7 +166,7 @@ find-name el-loc))
   "Returns the alert xml path."
   [{:keys [el-loc] :as app-conf
     {:keys [local-path find-name]} :api}]
-  (str (local-path app-conf)
+  (str (local-path (:target app-conf))
        File/separator
        (safe-name (find-name el-loc))
        ".xml"))
@@ -253,7 +251,7 @@ find-name el-loc))
 (def apis
   [(make-api
     {:rest-path (constantly "/server/configurationMap")
-     :local-path (local-path File/separator)
+     :local-path (partial local-path-str File/separator)
      :find-elements #(zip-xml/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
@@ -263,7 +261,7 @@ find-name el-loc))
 
    (make-api
     {:rest-path (constantly "/server/globalScripts")
-     :local-path (local-path "GlobalScripts")
+     :local-path (partial local-path-str "GlobalScripts")
      :find-elements #(zip-xml/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
@@ -272,7 +270,7 @@ find-name el-loc))
 
    (make-api
     {:rest-path (constantly "/server/resources")
-     :local-path (local-path File/separator)
+     :local-path (partial local-path-str File/separator)
      :find-elements #(zip-xml/xml-> % :list)
      :find-id (constantly nil)
      :find-name (constantly nil)
@@ -282,7 +280,7 @@ find-name el-loc))
 
    (make-api
     {:rest-path (constantly "/codeTemplateLibraries")
-     :local-path (local-path "CodeTemplates")
+     :local-path (partial local-path-str "CodeTemplates")
      :find-elements #(or (zip-xml/xml-> % :list :codeTemplateLibrary) ; from server
                          (zip-xml/xml-> % :codeTemplate)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
@@ -296,7 +294,7 @@ find-name el-loc))
 
    (make-api
     {:rest-path (constantly "/codeTemplates")
-     :local-path (local-path "CodeTemplates")
+     :local-path (partial local-path-str "CodeTemplates")
      :find-elements #(zip-xml/xml-> % :list :codeTemplate)
      :file-path codetemplate-file-path
      :api-files (partial mf/without-named-xml-files-seq 2 "index")
@@ -304,7 +302,7 @@ find-name el-loc))
 
    (make-api
     {:rest-path (constantly "/channelgroups")
-     :local-path (local-path "Channels")
+     :local-path (partial local-path-str "Channels")
      :find-elements #(or (zip-xml/xml-> % :list :channelGroup) ; from server
                          (zip-xml/xml-> % :channelGroup)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
@@ -317,14 +315,14 @@ find-name el-loc))
 
    (make-api
     {:rest-path (constantly "/channels")
-     :local-path (local-path "Channels")
+     :local-path (partial local-path-str "Channels")
      :find-elements #(zip-xml/xml-> % :list :channel)
      :file-path channel-file-path
      :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})
    (make-api
     {:rest-path (constantly "/alerts")
-     :local-path (local-path "Alerts")
+     :local-path (partial local-path-str "Alerts")
      :find-elements #(zip-xml/xml-> % :list :alertModel)
      :file-path alert-file-path
      :after-push null-204})
