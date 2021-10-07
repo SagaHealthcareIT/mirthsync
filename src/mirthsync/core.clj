@@ -17,12 +17,12 @@
   [{:keys [server username password action] :as app-conf}]
 
   (log/info (str "Authenticating to server at " server " as " username))
-  (let [action   ({"push" act/upload, "pull" act/download} action)
+  (let [action-fn   ({"push" act/upload, "pull" act/download} action)
         app-conf (http/with-authentication
                    app-conf
                    #(-> app-conf
                         (api/iterate-apis api/apis api/preprocess-api)
-                        (api/iterate-apis api/apis action)))]
+                        (api/iterate-apis api/apis action-fn)))]
     (log/info "Finished!")
     (log/spy :trace app-conf)))
 

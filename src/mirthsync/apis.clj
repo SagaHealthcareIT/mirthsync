@@ -334,11 +334,7 @@ find-name el-loc))
   app-conf."
   [app-conf apis action]
   (if-let [api (first apis)]
-    (let [app-conf (-> app-conf
-                       (assoc :api api)
-                       action)]
-      (log/trace "App config post-api:")
-      (log/trace app-conf)
-      (recur app-conf (rest apis) action))  
-
+    (recur (log/spyf "App config post-api: %s" (action (assoc app-conf :api api)))
+           (rest apis)
+           action)
     app-conf))
