@@ -1,10 +1,8 @@
 (ns mirthsync.apis
   (:require [clojure.data.zip.xml :as zip-xml]
-            [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.zip :as zip]
             [mirthsync.actions :as actions]
-            [mirthsync.cli :as cli]
             [mirthsync.files :as mf]
             [clojure.data.xml :as xml]
             [clojure.tools.logging :as log])
@@ -114,7 +112,7 @@
   [path]
   (log/debugf "Received file-path: %s" path)
   (fn [{:keys [el-loc] :as app-conf
-       {:keys [local-path find-name] :as api} :api}]
+       {:keys [local-path find-name]} :api}]
     (log/spyf :debug "Constructed file path: %s"
               (str (local-path (:target app-conf))
                    (when-not (.endsWith ^String (local-path (:target app-conf)) File/separator) File/separator)
@@ -130,7 +128,7 @@ find-name el-loc))
 (defn- channel-file-path
   "Returns the channel xml path accounting for group nesting."
   [{:keys [server-groups el-loc] :as app-conf
-    {:keys [local-path find-name find-id] :as api} :api}]
+    {:keys [local-path find-name find-id]} :api}]
   (str (local-path (:target app-conf))
        File/separator
        (when-let [group-name (safe-name
@@ -148,7 +146,7 @@ find-name el-loc))
 (defn- codetemplate-file-path
   "Returns the codetemplate xml path accounting for lib nesting."
   [{:keys [server-codelibs el-loc] :as app-conf
-    {:keys [local-path find-name find-id] :as api} :api}]
+    {:keys [local-path find-name find-id]} :api}]
   (str (local-path (:target app-conf))
        File/separator
        (when-let [lib-name (safe-name
