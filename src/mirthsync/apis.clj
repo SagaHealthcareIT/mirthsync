@@ -124,38 +124,18 @@ find-name el-loc))
   [{:as app-conf {:keys [preprocess]} :api}]
   (preprocess app-conf))
 
-;; FIXME: dedupe codetemplate...path and channel.....path
-(defn- channel-file-path
-  "Returns the channel xml path accounting for group nesting."
-  [{:keys [server-groups el-loc] :as app-conf
-    {:keys [local-path find-name find-id]} :api}]
-  (str (local-path (:target app-conf))
-       File/separator
-       (when-let [group-name (safe-name
-                            (let [id (find-id el-loc)]
-                              (zip-xml/xml1-> server-groups
-                                         :channelGroup :channels :channel
-                                         :id id
-                                         zip/up zip/up zip/up
-                                         :name zip-xml/text)))]
-         (str group-name File/separator))
-       (safe-name (find-name el-loc))
-       ".xml"))
-
-;; FIXME: dedupe codetemplate...path and channel.....path
-(defn- codetemplate-file-path
-  "Returns the codetemplate xml path accounting for lib nesting."
-  [{:keys [server-codelibs el-loc] :as app-conf
-    {:keys [local-path find-name find-id]} :api}]
-  (str (local-path (:target app-conf))
-       File/separator
+(defn nested-file-path
+  "Returns the nested xml file path for the provided api."
+  [group-xml-zip selectors target-dir el-loc {:keys [local-path find-name find-id]}]
+  (str (local-path target-dir) File/separator
        (when-let [lib-name (safe-name
                             (let [id (find-id el-loc)]
-                              (zip-xml/xml1-> server-codelibs
-                                         :codeTemplateLibrary :codeTemplates :codeTemplate
-                                         :id id
-                                         zip/up zip/up zip/up
-                                         :name zip-xml/text)))]
+                              (apply zip-xml/xml1->
+                                     group-xml-zip
+                                     (flatten [selectors
+                                               :id id
+                                               (repeat (count selectors) zip/up)
+                                               :name zip-xml/text]))))]
          (str lib-name File/separator))
        (safe-name (find-name el-loc))
        ".xml"))
@@ -294,7 +274,11 @@ find-name el-loc))
     {:rest-path (constantly "/codeTemplates")
      :local-path (partial local-path-str "CodeTemplates")
      :find-elements #(zip-xml/xml-> % :list :codeTemplate)
-     :file-path codetemplate-file-path
+     :file-path #(nested-file-path (:server-codelibs %)
+                                   [:codeTemplateLibrary :codeTemplates :codeTemplate]
+                                   (:target %)
+                                   (:el-loc %)
+                                   (:api %))
      :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})
 
@@ -315,9 +299,14 @@ find-name el-loc))
     {:rest-path (constantly "/channels")
      :local-path (partial local-path-str "Channels")
      :find-elements #(zip-xml/xml-> % :list :channel)
-     :file-path channel-file-path
+     :file-path #(nested-file-path (:server-groups %)
+                                   [:channelGroup :channels :channel]
+                                   (:target %)
+                                   (:el-loc %)
+                                   (:api %))
      :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})
+
    (make-api
     {:rest-path (constantly "/alerts")
      :local-path (partial local-path-str "Alerts")
