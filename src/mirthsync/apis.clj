@@ -1,52 +1,54 @@
 (ns mirthsync.apis
-  (:require [clojure.data.zip.xml :as zip-xml]
+  (:require [clojure.data.xml :refer [indent-str parse-str]]
+            [clojure.data.zip.xml :refer [text text= xml-> xml1->]]
             [clojure.string :as str]
-            [clojure.zip :as zip]
+            [clojure.tools.logging :as log]
+            [clojure.zip :refer [node append-child xml-zip up]]
             [mirthsync.actions :as actions]
-            [mirthsync.files :as mf]
-            [clojure.data.xml :as xml]
-            [clojure.tools.logging :as log])
+            [mirthsync.files :as files])
   (:import java.io.File))
 
 (defn- api-element-id
   "Return element ID text"
-  [zip-xml-loc]
-  (zip-xml/xml1-> zip-xml-loc :id zip-xml/text))
+  [api-element]
+  (xml1-> api-element :id text))
 
 (defn- api-element-name
   "Return element name tag text"
-  [zip-xml-loc]
-  (zip-xml/xml1-> zip-xml-loc :name zip-xml/text))
+  [api-element]
+  (xml1-> api-element :name text))
 
 (defn- local-path-str
   "Prepends the target directory to the supplied path."
   [path target]
   (str target (when (not= path File/separator) File/separator) path))
 
-(defn- group-push-params
-  "Build params for groups post-xml."
-  [{:keys [server-groups force]}]
-  {"channelGroups" (xml/indent-str (zip/node server-groups))
-   "removedChannelGroupsIds" "<set/>"
-   "override" (if force "true" "false")})
-
-(defn- codelib-push-params
-  "Build params for codelib post-xml."
-  [{:keys [server-codelibs force]}]
-  {"libraries" (xml/indent-str (zip/node server-codelibs))
-   "removedLibraryIds" "<set/>"
-   "updatedCodeTemplates" "<list/>"
-   "removedCodeTemplateIds" "<set/>"
-   "override" (if force "true" "false")})
-
 (defn- override-params
   "Override if force is specified"
-  [{:keys [force]}]
+  [force]
   {"override" (if force "true" "false")})
 
 ;FIXME: The logic is fine but the function could stand to have some
 ;attention to make it a little less ugly both here and in the apis
 ;that use it below.
+;; (defn- sync-api-collection
+;;   "Returns an updated app-conf with the current api element node added to the
+;;   relevant api list/set in app conf. If a node matching by id is found - it is
+;;   removed before the new element is appended. Api-keyword is the key used to
+;;   find the api xml in app-conf and collection-keyword is typically a :list
+;;   or :set keyword that matches the root element. Node-element-keyword matches
+;;   the xml of the single item api xml."
+;;   [api-elem-coll new-api-elem api]
+;;   (let [found-elem (xml1-> api-elem-coll
+;;                            down
+;;                            children
+;;                            :id
+;;                            (text= ((:find-id api) new-api-elem))
+;;                            up)]
+;;     (if found-elem
+;;       (up (clojure.zip/replace found-elem (node new-api-elem)))
+;;       (append-child api-elem-coll (node new-api-elem)))))
+
 (defn- sync-api-collection
   "Returns an updated app-conf with the current api element node added to the
   relevant api list/set in app conf. If a node matching by id is found - it is
@@ -58,14 +60,14 @@
    {:keys [el-loc] :as app-conf
     {:keys [find-id]} :api}]
   (let [api-coll (api-keyword app-conf)
-        found-id-loc (zip-xml/xml1-> api-coll
+        found-id-loc (xml1-> api-coll
                                 collection-keyword
                                 node-element-keyword
                                 :id
-                                (zip-xml/text= (find-id el-loc)))
+                                (text= (find-id el-loc)))
         api-coll (if found-id-loc
-                   (zip/up (zip/replace (zip/up found-id-loc) (zip/node el-loc)))
-                   (zip/append-child api-coll (zip/node el-loc)))]
+                   (up (clojure.zip/replace (up found-id-loc) (node el-loc)))
+                   (append-child api-coll (node el-loc)))]
     (assoc app-conf api-keyword api-coll)))
 
 (defn- encode-path-chars
@@ -130,12 +132,12 @@ find-name el-loc))
   (str (local-path target-dir) File/separator
        (when-let [lib-name (safe-name
                             (let [id (find-id el-loc)]
-                              (apply zip-xml/xml1->
+                              (apply xml1->
                                      group-xml-zip
                                      (flatten [selectors
                                                :id id
-                                               (repeat (count selectors) zip/up)
-                                               :name zip-xml/text]))))]
+                                               (repeat (count selectors) up)
+                                               :name text]))))]
          (str lib-name File/separator))
        (safe-name (find-name el-loc))
        ".xml"))
@@ -189,10 +191,10 @@ find-name el-loc))
   (after-push
    (fn [{body :body}]
      (let [loc (-> body
-                   xml/parse-str
-                   zip/xml-zip)
-           override (zip-xml/xml1-> loc :overrideNeeded zip/node)
-           success  (zip-xml/xml1-> loc :librariesSuccess zip/node)]
+                   parse-str
+                   xml-zip)
+           override (xml1-> loc :overrideNeeded node)
+           success  (xml1-> loc :librariesSuccess node)]
        (and
         (= "false" (first (:content override)))
         (= "true" (first (:content success))))))))
@@ -211,7 +213,7 @@ find-name el-loc))
 
           :find-id api-element-id                ; find the current xml loc id
           :find-name api-element-name            ; find the current xml loc name
-          :api-files (partial mf/xml-file-seq 1) ; find local api xml files for upload
+          :api-files (partial files/xml-file-seq 1) ; find local api xml files for upload
           :post-path (constantly nil)   ; HTTP POST on upload path
           :push-params (constantly nil) ; params for HTTP PUT/POST
           :pre-node-action identity     ; transform app-conf before processing
@@ -230,17 +232,17 @@ find-name el-loc))
   [(make-api
     {:rest-path (constantly "/server/configurationMap")
      :local-path (partial local-path-str File/separator)
-     :find-elements #(zip-xml/xml-> % :map)
+     :find-elements #(xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "ConfigurationMap.xml")
-     :api-files (partial mf/only-named-xml-files-seq 1 "ConfigurationMap")
+     :api-files (partial files/only-named-xml-files-seq 1 "ConfigurationMap")
      :after-push null-204})
 
    (make-api
     {:rest-path (constantly "/server/globalScripts")
      :local-path (partial local-path-str "GlobalScripts")
-     :find-elements #(zip-xml/xml-> % :map)
+     :find-elements #(xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "globalScripts.xml")
@@ -249,22 +251,27 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/server/resources")
      :local-path (partial local-path-str File/separator)
-     :find-elements #(zip-xml/xml-> % :list)
+     :find-elements #(xml-> % :list)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "Resources.xml")
-     :api-files (partial mf/only-named-xml-files-seq 1 "Resources")
+     :api-files (partial files/only-named-xml-files-seq 1 "Resources")
      :after-push null-204})
 
    (make-api
     {:rest-path (constantly "/codeTemplateLibraries")
      :local-path (partial local-path-str "CodeTemplates")
-     :find-elements #(or (zip-xml/xml-> % :list :codeTemplateLibrary) ; from server
-                         (zip-xml/xml-> % :codeTemplate)) ; from filesystem
+     :find-elements #(or (xml-> % :list :codeTemplateLibrary) ; from server
+                         (xml-> % :codeTemplate)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
-     :api-files (partial mf/only-named-xml-files-seq 2 "index")
+     :api-files (partial files/only-named-xml-files-seq 2 "index")
      :post-path post-path
-     :push-params codelib-push-params
+     :push-params #(let [{:keys [server-codelibs force]} %]
+                     {"libraries" (indent-str (node server-codelibs))
+                      "removedLibraryIds" "<set/>"
+                      "updatedCodeTemplates" "<list/>"
+                      "removedCodeTemplateIds" "<set/>"
+                      "override" (if force "true" "false")})
      :preprocess (partial actions/fetch-and-pre-assoc :server-codelibs :list)
      :pre-node-action (partial sync-api-collection :server-codelibs :list :codeTemplateLibrary)
      :after-push revision-success
@@ -273,24 +280,27 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/codeTemplates")
      :local-path (partial local-path-str "CodeTemplates")
-     :find-elements #(zip-xml/xml-> % :list :codeTemplate)
+     :find-elements #(xml-> % :list :codeTemplate)
      :file-path #(nested-file-path (:server-codelibs %)
                                    [:codeTemplateLibrary :codeTemplates :codeTemplate]
                                    (:target %)
                                    (:el-loc %)
                                    (:api %))
-     :api-files (partial mf/without-named-xml-files-seq 2 "index")
+     :api-files (partial files/without-named-xml-files-seq 2 "index")
      :push-params override-params})
 
    (make-api
     {:rest-path (constantly "/channelgroups")
      :local-path (partial local-path-str "Channels")
-     :find-elements #(or (zip-xml/xml-> % :list :channelGroup) ; from server
-                         (zip-xml/xml-> % :channelGroup)) ; from filesystem
+     :find-elements #(or (xml-> % :list :channelGroup) ; from server
+                         (xml-> % :channelGroup)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
-     :api-files (partial mf/only-named-xml-files-seq 2 "index")
+     :api-files (partial files/only-named-xml-files-seq 2 "index")
      :post-path post-path
-     :push-params group-push-params
+     :push-params #(let [{:keys [server-groups force]} %]
+                     {"channelGroups" (indent-str (node server-groups))
+                      "removedChannelGroupsIds" "<set/>"
+                      "override" (if force "true" "false")})
      :preprocess (partial actions/fetch-and-pre-assoc :server-groups :set)
      :pre-node-action (partial sync-api-collection :server-groups :set :channelGroup)
      :query-params override-params})
@@ -298,19 +308,19 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/channels")
      :local-path (partial local-path-str "Channels")
-     :find-elements #(zip-xml/xml-> % :list :channel)
+     :find-elements #(xml-> % :list :channel)
      :file-path #(nested-file-path (:server-groups %)
                                    [:channelGroup :channels :channel]
                                    (:target %)
                                    (:el-loc %)
                                    (:api %))
-     :api-files (partial mf/without-named-xml-files-seq 2 "index")
-     :push-params override-params})
+     :api-files (partial files/without-named-xml-files-seq 2 "index")
+     :push-params #(override-params (:force %))})
 
    (make-api
     {:rest-path (constantly "/alerts")
      :local-path (partial local-path-str "Alerts")
-     :find-elements #(zip-xml/xml-> % :list :alertModel)
+     :find-elements #(xml-> % :list :alertModel)
      :file-path alert-file-path
      :after-push null-204})
    ])

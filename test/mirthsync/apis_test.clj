@@ -1,11 +1,14 @@
 (ns mirthsync.apis-test
-  (:require [clojure.data.xml :as xml]
-            [clojure.data.zip.xml :as zip-xml]
-            [clojure.test :refer :all]
+  (:require [clojure.data.zip.xml :refer [text text= xml-> xml1->]]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [clojure.tools.logging :as log]
+            [clojure.zip :refer [node append-child xml-zip up children]]
+            [mirthsync.actions :as actions]
             [mirthsync.apis :refer :all]
-            [mirthsync.xml]
-            [mirthsync.xml :as mxml]
-            [clojure.zip :as zip]))
+            [clojure.data.xml :refer [indent-str parse-str]]
+            [mirthsync.files :as files]
+            mirthsync.xml))
 
 (def channel-groups (mirthsync.xml/to-zip "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <set>
@@ -103,23 +106,35 @@
            (nested-file-path channel-groups
                              [:set :channelGroup :channel]
                              "target"
-                             (zip/next channel-groups)
+                             (clojure.zip/next channel-groups)
                              (nth apis 6)))))
   (testing "Nested code template path is valid"
     (is (= "target/CodeTemplates/Library 1.xml"
            (nested-file-path code-template-libraries
                              [:list :codeTemplateLibrary :codeTemplate]
                              "target"
-                             (zip/next code-template-libraries)
+                             (clojure.zip/next code-template-libraries)
                              (nth apis 4))))))
 
-;; (channel-file-path {:server-groups channel-groups :el-loc (zip/next channel-groups)
-;;                     :target "target"
-;;                     :api (nth apis 6)})
-;; (codetemplate-file-path {:server-codelibs code-template-libraries :el-loc (zip/next code-template-libraries)
-;;                     :target "target"
-;;                     :api (nth apis 4)})
+;; (xml1-> channel-groups
+;;         clojure.zip/down
+;;         ;; children
+;;       ;;   :id
+;;       ;;   (text= ((:find-id (nth apis 6)) (mirthsync.xml/to-zip "<channel version=\"3.11.0\">
+;;       ;;   <id>2521ed7e-156d-47dd-b701-0705583b99ec</id>
+;;       ;;   <revision>0</revision>
+;;       ;; </channel>")))
+;;         up)
 
+(comment
+  (xml-> channel-groups children :id node)
 
-;; (deftest iterate-apis
-;;   (is (= "target/foo/blah.xm" (local-path-str "foo/blah.xml" "target"))))
+  (channel-file-path {:server-groups channel-groups :el-loc (next channel-groups)
+                      :target "target"
+                      :api (nth apis 6)})
+  (codetemplate-file-path {:server-codelibs code-template-libraries :el-loc (next code-template-libraries)
+                           :target "target"
+                           :api (nth apis 4)})
+
+  (deftest iterate-apis
+    (is (= "target/foo/blah.xm" (local-path-str "foo/blah.xml" "target")))))
