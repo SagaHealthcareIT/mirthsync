@@ -1,5 +1,5 @@
 (ns mirthsync.apis-test
-  (:require [clojure.data.xml :as cdx]
+  (:require [clojure.data :as cd]
             [clojure.data.zip.xml :as cdzx]
             [clojure.test :as ct]
             [clojure.zip :as cz]
@@ -167,19 +167,19 @@
 
 (ct/deftest test-add-update-child
   (ct/testing "Update results in identical codetemplate library xml"
-    (let [[a b] (clojure.data/diff
+    (let [[a b] (cd/diff
                  (cz/node codetemplate-libraries-loc)
                  (cz/node (ma/add-update-child codetemplate-libraries-loc codetemplate-library-loc)))]
       (ct/is (= [nil nil] [a b]))))
 
   (ct/testing "Update results in identical channel group xml"
-    (let [[a b] (clojure.data/diff
+    (let [[a b] (cd/diff
                  (cz/node channel-groups-loc)
                  (cz/node (ma/add-update-child channel-groups-loc channel-group-loc)))]
       (ct/is (= [nil nil] [a b]))))
 
   (ct/testing "Add results in addition to right side of diff and nothing on left"
-    (let [[a b] (clojure.data/diff
+    (let [[a b] (cd/diff
                  (cz/node channel-groups-loc)
                  (cz/node (ma/add-update-child channel-groups-loc updated-channel-group-loc)))]
       (ct/is (= nil a))
