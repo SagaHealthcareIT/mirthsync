@@ -25,6 +25,7 @@
                  [org.clojure/data.zip "1.0.0"]
                  [org.clojure/tools.cli "1.0.206"]
                  ;; [tolitius/xml-in "0.1.0"]
+                 ;; [com.rpl/specter "1.1.3"]
                  [org.clojure/tools.logging "1.1.0"]
                  [ch.qos.logback/logback-classic "1.2.3"]
                  [ch.qos.logback/logback-core "1.2.3"]

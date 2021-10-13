@@ -1,16 +1,20 @@
 (ns mirthsync.apis-test
-  (:require [clojure.data.zip.xml :refer [text text= xml-> xml1->]]
-            [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
-            [clojure.tools.logging :as log]
-            [clojure.zip :refer [node append-child xml-zip up children]]
-            [mirthsync.actions :as actions]
-            [mirthsync.apis :refer :all]
-            [clojure.data.xml :refer [indent-str parse-str]]
-            [mirthsync.files :as files]
-            mirthsync.xml))
+  (:require [clojure.data.xml :as cdx]
+            [clojure.data.zip.xml :as cdzx]
+            [clojure.test :as ct]
+            [clojure.zip :as cz]
+            [mirthsync.apis :as ma]
+            [mirthsync.xml :as mx]))
 
-(def channel-groups (mirthsync.xml/to-zip "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+(defn update-id [loc]
+  (-> loc
+      (cdzx/xml1-> :id)
+      cz/next
+      (cz/replace "1234b87b-71a7-42dd-b00e-049d28adae64")
+      cz/root
+      cz/xml-zip))
+
+(def channel-groups-loc (mx/to-zip "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <set>
   <channelGroup version=\"3.11.0\">
     <id>630d82bd-0727-48d6-bf13-bfa86080d9f5</id>
@@ -33,7 +37,7 @@
     <name>This is a group</name>
     <revision>1</revision>
     <lastModified>
-      <time>1633619775481</time>
+      <time>1632175112613</time>
       <timezone>America/New_York</timezone>
     </lastModified>
     <description>This is the group's description</description>
@@ -50,7 +54,18 @@
   </channelGroup>
 </set>"))
 
-(def code-template-libraries (mirthsync.xml/to-zip "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+(def channel-group-loc (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/This is a group/index.xml")))
+
+(def channel-in-group-loc
+  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/This is a group/Http Hello2 3081.xml")))
+
+(def channel-without-group-loc
+  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/Http 3080.xml")))
+
+(def updated-channel-group-loc
+  (update-id channel-group-loc))
+
+(def codetemplate-libraries-loc (mirthsync.xml/to-zip "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <list>
   <codeTemplateLibrary version=\"3.11.0\">
     <id>3e5488e0-2c95-456e-bce3-0178d365d198</id>
@@ -81,7 +96,7 @@
     <name>Library 2</name>
     <revision>1</revision>
     <lastModified>
-      <time>1633625072951</time>
+      <time>1632175113387</time>
       <timezone>America/New_York</timezone>
     </lastModified>
     <description/>
@@ -99,42 +114,77 @@
   </codeTemplateLibrary>
 </list>"))
 
+(def codetemplate-library-loc
+  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/CodeTemplates/Library 2/index.xml")))
 
-(deftest test-nested-file-path
-  (testing "Nested channel path is valid"
-    (is (= "target/Channels/%2Fthis%5C is %2Fa %5C group%2F%5Cwith weird%5Ccharacters%2F.xml"
-           (nested-file-path channel-groups
-                             [:set :channelGroup :channel]
-                             "target"
-                             (clojure.zip/next channel-groups)
-                             (nth apis 6)))))
-  (testing "Nested code template path is valid"
-    (is (= "target/CodeTemplates/Library 1.xml"
-           (nested-file-path code-template-libraries
-                             [:list :codeTemplateLibrary :codeTemplate]
-                             "target"
-                             (clojure.zip/next code-template-libraries)
-                             (nth apis 4))))))
+(def updated-codetemplate-library-loc
+  (update-id codetemplate-library-loc))
 
-;; (xml1-> channel-groups
-;;         clojure.zip/down
-;;         ;; children
-;;       ;;   :id
-;;       ;;   (text= ((:find-id (nth apis 6)) (mirthsync.xml/to-zip "<channel version=\"3.11.0\">
-;;       ;;   <id>2521ed7e-156d-47dd-b701-0705583b99ec</id>
-;;       ;;   <revision>0</revision>
-;;       ;; </channel>")))
-;;         up)
+(def codetemplate-loc
+  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/CodeTemplates/Library 2/Template 2.xml")))
+
+;;;; keeping this here for now as an alternate specter based implementation of
+;;;; our add/update function in api.clj.
+;; (defn add-update-child-specter
+;;   [root child]
+;;   (let [id-path [:content ALL (fn [t] (= (:tag t) :id)) :content FIRST]
+;;         id (select-one id-path child)
+;;         [new-root replaced] (replace-in
+;;                              [:content
+;;                               ALL
+;;                               (fn [t] (and (= (:tag t) (:tag child))
+;;                                           (= id (select-one id-path t))))]
+;;                              (fn [old] [child old])
+;;                              root)]
+;;     (if (nil? replaced)
+;;       (setval [:content AFTER-ELEM] child root)
+;;       new-root)))
+
+(ct/deftest test-nested-file-path
+  (ct/testing "Nested channel path is valid"
+    (ct/is (= "target/Channels/This is a group/Http Hello2 3081.xml"
+           (ma/nested-file-path channel-groups-loc
+                             [:channelGroup :channels :channel]
+                             "target"
+                             channel-in-group-loc
+                             (nth ma/apis 6)))))
+
+  (ct/testing "Top level channel path is valid"
+    (ct/is (= "target/Channels/Http 3080.xml"
+           (ma/nested-file-path channel-groups-loc
+                             [:channelGroup :channels :channel]
+                             "target"
+                             channel-without-group-loc
+                             (nth ma/apis 6)))))
+
+  (ct/testing "Nested code template path is valid"
+    (ct/is (= "target/CodeTemplates/Library 2/Template 2.xml"
+           (ma/nested-file-path codetemplate-libraries-loc
+                             [:codeTemplateLibrary :codeTemplates :codeTemplate]
+                             "target"
+                             codetemplate-loc
+                             (nth ma/apis 4))))))
+
+(ct/deftest test-add-update-child
+  (ct/testing "Update results in identical codetemplate library xml"
+    (let [[a b] (clojure.data/diff
+                 (cz/node codetemplate-libraries-loc)
+                 (cz/node (ma/add-update-child codetemplate-libraries-loc codetemplate-library-loc)))]
+      (ct/is (= [nil nil] [a b]))))
+
+  (ct/testing "Update results in identical channel group xml"
+    (let [[a b] (clojure.data/diff
+                 (cz/node channel-groups-loc)
+                 (cz/node (ma/add-update-child channel-groups-loc channel-group-loc)))]
+      (ct/is (= [nil nil] [a b]))))
+
+  (ct/testing "Add results in addition to right side of diff and nothing on left"
+    (let [[a b] (clojure.data/diff
+                 (cz/node channel-groups-loc)
+                 (cz/node (ma/add-update-child channel-groups-loc updated-channel-group-loc)))]
+      (ct/is (= nil a))
+      (ct/is (not= nil b)))))
 
 (comment
-  (xml-> channel-groups children :id node)
-
-  (channel-file-path {:server-groups channel-groups :el-loc (next channel-groups)
-                      :target "target"
-                      :api (nth apis 6)})
-  (codetemplate-file-path {:server-codelibs code-template-libraries :el-loc (next code-template-libraries)
-                           :target "target"
-                           :api (nth apis 4)})
-
-  (deftest iterate-apis
-    (is (= "target/foo/blah.xm" (local-path-str "foo/blah.xml" "target")))))
+  (ct/deftest iterate-apis
+    (ct/is (= "target/foo/blah.xm" (local-path-str "foo/blah.xml" "target")))))

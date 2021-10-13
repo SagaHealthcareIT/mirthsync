@@ -1,22 +1,22 @@
 (ns mirthsync.apis
-  (:require [clojure.data.xml :refer [indent-str parse-str]]
-            [clojure.data.zip.xml :refer [text text= xml-> xml1->]]
-            [clojure.string :as str]
+  (:require [clojure.data.xml :as cdx]
+            [clojure.data.zip.xml :as cdzx]
+            [clojure.string :as cs]
             [clojure.tools.logging :as log]
-            [clojure.zip :refer [node append-child xml-zip up]]
-            [mirthsync.actions :as actions]
-            [mirthsync.files :as files])
+            [clojure.zip :as cz]
+            [mirthsync.actions :as ma]
+            [mirthsync.files :as mf])
   (:import java.io.File))
 
 (defn- api-element-id
   "Return element ID text"
-  [api-element]
-  (xml1-> api-element :id text))
+  [api-loc]
+  (cdzx/xml1-> api-loc :id cdzx/text))
 
 (defn- api-element-name
   "Return element name tag text"
-  [api-element]
-  (xml1-> api-element :name text))
+  [api-loc]
+  (cdzx/xml1-> api-loc :name cdzx/text))
 
 (defn- local-path-str
   "Prepends the target directory to the supplied path."
@@ -28,47 +28,22 @@
   [force]
   {"override" (if force "true" "false")})
 
-;FIXME: The logic is fine but the function could stand to have some
-;attention to make it a little less ugly both here and in the apis
-;that use it below.
-;; (defn- sync-api-collection
-;;   "Returns an updated app-conf with the current api element node added to the
-;;   relevant api list/set in app conf. If a node matching by id is found - it is
-;;   removed before the new element is appended. Api-keyword is the key used to
-;;   find the api xml in app-conf and collection-keyword is typically a :list
-;;   or :set keyword that matches the root element. Node-element-keyword matches
-;;   the xml of the single item api xml."
-;;   [api-elem-coll new-api-elem api]
-;;   (let [found-elem (xml1-> api-elem-coll
-;;                            down
-;;                            children
-;;                            :id
-;;                            (text= ((:find-id api) new-api-elem))
-;;                            up)]
-;;     (if found-elem
-;;       (up (clojure.zip/replace found-elem (node new-api-elem)))
-;;       (append-child api-elem-coll (node new-api-elem)))))
-
-(defn- sync-api-collection
-  "Returns an updated app-conf with the current api element node added to the
-  relevant api list/set in app conf. If a node matching by id is found - it is
-  removed before the new element is appended. Api-keyword is the key used to
-  find the api xml in app-conf and collection-keyword is typically a :list
-  or :set keyword that matches the root element. Node-element-keyword matches
-  the xml of the single item api xml."
-  [api-keyword collection-keyword node-element-keyword
-   {:keys [el-loc] :as app-conf
-    {:keys [find-id]} :api}]
-  (let [api-coll (api-keyword app-conf)
-        found-id-loc (xml1-> api-coll
+(defn add-update-child
+  "Adds or updates (by ID) an child element within the supplied root. Assumes that
+  the typical mirth xml structure is present with a root collection element
+  and an ID element within the child."
+  [root-loc child-loc]
+  (let [collection-keyword (:tag (cz/node root-loc))
+        node-element-keyword (:tag (cz/node child-loc))
+        id (cdzx/xml1-> child-loc :id cdzx/text)
+        found-id-loc (cdzx/xml1-> root-loc
                                 collection-keyword
                                 node-element-keyword
                                 :id
-                                (text= (find-id el-loc)))
-        api-coll (if found-id-loc
-                   (up (clojure.zip/replace (up found-id-loc) (node el-loc)))
-                   (append-child api-coll (node el-loc)))]
-    (assoc app-conf api-keyword api-coll)))
+                                (cdzx/text= id))]
+    (if found-id-loc
+      (cz/up (cz/replace (cz/up found-id-loc) (cz/node child-loc)))
+      (cz/append-child root-loc (cz/node child-loc)))))
 
 (defn- encode-path-chars
   "Mirth is very liberal with allowing weird characters in places that can cause
@@ -86,8 +61,8 @@
   [^String name]
   (if name
     (-> name
-        (str/replace "/" "%2F")
-        (str/replace "\\" "%5C"))
+        (cs/replace "/" "%2F")
+        (cs/replace "\\" "%5C"))
     name))
 
 (defn- safe-name
@@ -132,12 +107,12 @@ find-name el-loc))
   (str (local-path target-dir) File/separator
        (when-let [lib-name (safe-name
                             (let [id (find-id el-loc)]
-                              (apply xml1->
+                              (apply cdzx/xml1->
                                      group-xml-zip
                                      (flatten [selectors
                                                :id id
-                                               (repeat (count selectors) up)
-                                               :name text]))))]
+                                               (repeat (count selectors) cz/up)
+                                               :name cdzx/text]))))]
          (str lib-name File/separator))
        (safe-name (find-name el-loc))
        ".xml"))
@@ -178,7 +153,7 @@ find-name el-loc))
                           #(nil? (:body %))))
 
 (def ^{:private true} true-200 (after-push #(= 200 (:status %))
-                          ;; Handle xml, json, or plain text to
+                          ;; Handle xml, json, or plain cdzx/text to
                           ;; accommodate different mirth
                           ;; versions. Version 9, for instance,
                           ;; returns json by default.
@@ -191,10 +166,10 @@ find-name el-loc))
   (after-push
    (fn [{body :body}]
      (let [loc (-> body
-                   parse-str
-                   xml-zip)
-           override (xml1-> loc :overrideNeeded node)
-           success  (xml1-> loc :librariesSuccess node)]
+                   cdx/parse-str
+                   cz/xml-zip)
+           override (cdzx/xml1-> loc :overrideNeeded cz/node)
+           success  (cdzx/xml1-> loc :librariesSuccess cz/node)]
        (and
         (= "false" (first (:content override)))
         (= "true" (first (:content success))))))))
@@ -213,7 +188,7 @@ find-name el-loc))
 
           :find-id api-element-id                ; find the current xml loc id
           :find-name api-element-name            ; find the current xml loc name
-          :api-files (partial files/xml-file-seq 1) ; find local api xml files for upload
+          :api-files (partial mf/xml-file-seq 1) ; find local api xml files for upload
           :post-path (constantly nil)   ; HTTP POST on upload path
           :push-params (constantly nil) ; params for HTTP PUT/POST
           :pre-node-action identity     ; transform app-conf before processing
@@ -232,17 +207,17 @@ find-name el-loc))
   [(make-api
     {:rest-path (constantly "/server/configurationMap")
      :local-path (partial local-path-str File/separator)
-     :find-elements #(xml-> % :map)
+     :find-elements #(cdzx/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "ConfigurationMap.xml")
-     :api-files (partial files/only-named-xml-files-seq 1 "ConfigurationMap")
+     :api-files (partial mf/only-named-xml-files-seq 1 "ConfigurationMap")
      :after-push null-204})
 
    (make-api
     {:rest-path (constantly "/server/globalScripts")
      :local-path (partial local-path-str "GlobalScripts")
-     :find-elements #(xml-> % :map)
+     :find-elements #(cdzx/xml-> % :map)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "globalScripts.xml")
@@ -251,76 +226,82 @@ find-name el-loc))
    (make-api
     {:rest-path (constantly "/server/resources")
      :local-path (partial local-path-str File/separator)
-     :find-elements #(xml-> % :list)
+     :find-elements #(cdzx/xml-> % :list)
      :find-id (constantly nil)
      :find-name (constantly nil)
      :file-path (file-path "Resources.xml")
-     :api-files (partial files/only-named-xml-files-seq 1 "Resources")
+     :api-files (partial mf/only-named-xml-files-seq 1 "Resources")
      :after-push null-204})
 
    (make-api
     {:rest-path (constantly "/codeTemplateLibraries")
      :local-path (partial local-path-str "CodeTemplates")
-     :find-elements #(or (xml-> % :list :codeTemplateLibrary) ; from server
-                         (xml-> % :codeTemplate)) ; from filesystem
+     :find-elements #(or (cdzx/xml-> % :list :codeTemplateLibrary) ; from server
+                         (cdzx/xml-> % :codeTemplate)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
-     :api-files (partial files/only-named-xml-files-seq 2 "index")
+     :api-files (partial mf/only-named-xml-files-seq 2 "index")
      :post-path post-path
      :push-params #(let [{:keys [server-codelibs force]} %]
-                     {"libraries" (indent-str (node server-codelibs))
+                     {"libraries" (cdx/indent-str (cz/node server-codelibs))
                       "removedLibraryIds" "<set/>"
                       "updatedCodeTemplates" "<list/>"
                       "removedCodeTemplateIds" "<set/>"
                       "override" (if force "true" "false")})
-     :preprocess (partial actions/fetch-and-pre-assoc :server-codelibs :list)
-     :pre-node-action (partial sync-api-collection :server-codelibs :list :codeTemplateLibrary)
+     :preprocess (partial ma/fetch-and-pre-assoc :server-codelibs :list)
+     :pre-node-action (fn [app-conf]
+                        (assoc app-conf
+                               :server-codelibs
+                               (add-update-child (:server-codelibs app-conf) (:el-loc app-conf))))
      :after-push revision-success
      :query-params override-params})
 
    (make-api
     {:rest-path (constantly "/codeTemplates")
      :local-path (partial local-path-str "CodeTemplates")
-     :find-elements #(xml-> % :list :codeTemplate)
+     :find-elements #(cdzx/xml-> % :list :codeTemplate)
      :file-path #(nested-file-path (:server-codelibs %)
                                    [:codeTemplateLibrary :codeTemplates :codeTemplate]
                                    (:target %)
                                    (:el-loc %)
                                    (:api %))
-     :api-files (partial files/without-named-xml-files-seq 2 "index")
+     :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params override-params})
 
    (make-api
     {:rest-path (constantly "/channelgroups")
      :local-path (partial local-path-str "Channels")
-     :find-elements #(or (xml-> % :list :channelGroup) ; from server
-                         (xml-> % :channelGroup)) ; from filesystem
+     :find-elements #(or (cdzx/xml-> % :list :channelGroup) ; from server
+                         (cdzx/xml-> % :channelGroup)) ; from filesystem
      :file-path (file-path (str File/separator "index.xml"))
-     :api-files (partial files/only-named-xml-files-seq 2 "index")
+     :api-files (partial mf/only-named-xml-files-seq 2 "index")
      :post-path post-path
      :push-params #(let [{:keys [server-groups force]} %]
-                     {"channelGroups" (indent-str (node server-groups))
+                     {"channelGroups" (cdx/indent-str (cz/node server-groups))
                       "removedChannelGroupsIds" "<set/>"
                       "override" (if force "true" "false")})
-     :preprocess (partial actions/fetch-and-pre-assoc :server-groups :set)
-     :pre-node-action (partial sync-api-collection :server-groups :set :channelGroup)
+     :preprocess (partial ma/fetch-and-pre-assoc :server-groups :set)
+     :pre-node-action (fn [app-conf]
+                        (assoc app-conf
+                               :server-groups
+                               (add-update-child (:server-groups app-conf) (:el-loc app-conf))))
      :query-params override-params})
 
    (make-api
     {:rest-path (constantly "/channels")
      :local-path (partial local-path-str "Channels")
-     :find-elements #(xml-> % :list :channel)
+     :find-elements #(cdzx/xml-> % :list :channel)
      :file-path #(nested-file-path (:server-groups %)
                                    [:channelGroup :channels :channel]
                                    (:target %)
                                    (:el-loc %)
                                    (:api %))
-     :api-files (partial files/without-named-xml-files-seq 2 "index")
+     :api-files (partial mf/without-named-xml-files-seq 2 "index")
      :push-params #(override-params (:force %))})
 
    (make-api
     {:rest-path (constantly "/alerts")
      :local-path (partial local-path-str "Alerts")
-     :find-elements #(xml-> % :list :alertModel)
+     :find-elements #(cdzx/xml-> % :list :alertModel)
      :file-path alert-file-path
      :after-push null-204})
    ])
