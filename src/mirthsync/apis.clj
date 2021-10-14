@@ -65,7 +65,7 @@
         (cs/replace "\\" "%5C"))
     name))
 
-(defn- safe-name
+(defn safe-name
   "Asserts that the string param is creatable file that doesn't span paths. Fails
   with an exception if any issues are detected, otherwise returns the unmodified
   string (unless there are weird characters as defined in encode-path-chars; in

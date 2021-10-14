@@ -185,6 +185,13 @@
       (ct/is (= nil a))
       (ct/is (not= nil b)))))
 
+(ct/deftest test-safe-file-paths
+  (ct/testing "File names don't traverse paths"
+    (ct/are [x y] (= x y)
+      "foo.xml" (ma/safe-name "foo.xml")
+      "%2Fpath chars in%2F%5C%5C%2F%5C%2F name.ext%2F" (ma/safe-name "/path chars in/\\\\/\\/ name.ext/")
+      "!@#$%^&*()_+-=[]{}||;:'\",<.>%2F?.xml" (ma/safe-name "!@#$%^&*()_+-=[]{}||;:'\",<.>/?.xml"))))
+
 (comment
   (ct/deftest iterate-apis
     (ct/is (= "target/foo/blah.xm" (local-path-str "foo/blah.xml" "target")))))
