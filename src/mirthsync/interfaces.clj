@@ -1,0 +1,17 @@
+(ns mirthsync.interfaces)
+
+(defn- first-param [x & _] x)
+
+(defmulti find-name "Find the current xml loc name" first-param)
+(defmulti after-push "Process result of item push" first-param)
+(defmulti preprocess "Preprocess app-conf before any other work" first-param)
+(defmulti query-params "query-params to use for HTTP Post" first-param)
+(defmulti push-params "params for HTTP PUT/POST" first-param)
+(defmulti pre-node-action "Transform app-conf before processing" first-param)
+(defmulti post-path "HTTP Post on upload path" first-param)
+(defmulti api-files "Find local API XML files for upload" first-param)
+(defmulti find-id "Find the current xml loc Id" first-param)
+(defmulti find-elements "Find elements in the returned XML" first-param)
+(defmulti file-path "Build the XML file path" first-param)
+(defmulti local-path "Base dir for saving files" first-param)
+(defmulti rest-path "Server API path for GET/PUT" first-param)

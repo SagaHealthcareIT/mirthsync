@@ -5,7 +5,8 @@
             [clojure.tools.logging :as log]
             [clojure.zip :as cz]
             [mirthsync.actions :as ma]
-            [mirthsync.files :as mf])
+            [mirthsync.files :as mf]
+            [mirthsync.interfaces :as mi])
   (:import java.io.File))
 
 (defn- api-element-id
@@ -84,29 +85,25 @@
     name))
 
 (defn- file-path
-  "Returns a function that, when given an app conf, returns a string file
-  path for the current api with path appended."
-  [path]
+  "Returns a string file path for the current api with path appended."
+  [path {:keys [api el-loc] :as app-conf}]
   (log/debugf "Received file-path: %s" path)
-  (fn [{:keys [el-loc] :as app-conf
-       {:keys [local-path find-name]} :api}]
-    (log/spyf :debug "Constructed file path: %s"
-              (str (local-path (:target app-conf))
-                   (when-not (.endsWith ^String (local-path (:target app-conf)) File/separator) File/separator)
-                   (safe-name (
-find-name el-loc))
-                   path))))
+  (log/spyf :debug "Constructed file path: %s"
+              (str (mi/local-path api (:target app-conf))
+                   (when-not (.endsWith ^String (mi/local-path api (:target app-conf)) File/separator) File/separator)
+                   (safe-name (mi/find-name api el-loc))
+                   path)))
 
 (defn preprocess-api
-  [{:as app-conf {:keys [preprocess]} :api}]
-  (preprocess app-conf))
+  [{:as app-conf {:as api} :api}]
+  (mi/preprocess api app-conf))
 
 (defn nested-file-path
   "Returns the nested xml file path for the provided api."
-  [group-xml-zip selectors target-dir el-loc {:keys [local-path find-name find-id]}]
-  (str (local-path target-dir) File/separator
+  [group-xml-zip selectors target-dir el-loc api]
+  (str (mi/local-path api target-dir) File/separator
        (when-let [lib-name (safe-name
-                            (let [id (find-id el-loc)]
+                            (let [id (mi/find-id api el-loc)]
                               (apply cdzx/xml1->
                                      group-xml-zip
                                      (flatten [selectors
@@ -114,16 +111,15 @@ find-name el-loc))
                                                (repeat (count selectors) cz/up)
                                                :name cdzx/text]))))]
          (str lib-name File/separator))
-       (safe-name (find-name el-loc))
+       (safe-name (mi/find-name api el-loc))
        ".xml"))
 
 (defn- alert-file-path
   "Returns the alert xml path."
-  [{:keys [el-loc] :as app-conf
-    {:keys [local-path find-name]} :api}]
-  (str (local-path (:target app-conf))
+  [{:keys [api el-loc] :as app-conf}]
+  (str (mi/local-path api (:target app-conf))
        File/separator
-       (safe-name (find-name el-loc))
+       (safe-name (mi/find-name api el-loc))
        ".xml"))
 
 (defn- unexpected-response
@@ -131,39 +127,42 @@ find-name el-loc))
   (log/warn "An unexpected response was received from the server...")
   (log/warnf "Status: %s, Phrase: %s" (:status r) (:reason-phrase r)))
 
-(defn- after-push
-  "Returns a function that takes app-conf and the result of an action
-  and calls all assertions with the action result in order (short
-  circuiting and logging failures). Associates the result and returns
-  app-conf."
-  [& preds]
-  (fn [app-conf result]
-    (if (log/enabled? :trace)
-      (log/trace result)
-      (log/debugf "status: %s, phrase: %s, body: %s"
-                  (:status result)
-                  (:reason-phrase result)
-                  (:body result)))
+(defn- check-results
+  "Ensures the result satisfies the predicates. If not, an warning is logged."
+  [result & preds]
+  (log/trace result)
+  (log/debugf "status: %s, phrase: %s, body: %s"
+              (:status result)
+              (:reason-phrase result)
+              (:body result))
 
-    (when-not ((apply every-pred preds) result)
-      (unexpected-response result))
-    (assoc app-conf :result result)))
+  (when-not ((apply every-pred preds) result)
+    (unexpected-response result)))
 
-(def ^{:private true} null-204 (after-push #(= 204 (:status %))
-                          #(nil? (:body %))))
+(defn- null-204
+  "Result needs a 204 status and a nil body"
+  [result]
+  (check-results result #(= 204 (:status %)) #(nil? (:body %))))
 
-(def ^{:private true} true-200 (after-push #(= 200 (:status %))
-                          ;; Handle xml, json, or plain cdzx/text to
-                          ;; accommodate different mirth
-                          ;; versions. Version 9, for instance,
-                          ;; returns json by default.
-                          (fn [{body :body}]
-                            (or (= body "<boolean>true</boolean>")
-                                (= body "{\"boolean\":true}")
-                                (= body "true")))))
+(defn- true-200
+  "Result needs a 200 status and a 'truthy' body"
+  [result]
+  (check-results result
+   #(= 200 (:status %))
+   ;; Handle xml, json, or plain cdzx/text to
+   ;; accommodate different mirth
+   ;; versions. Version 9, for instance,
+   ;; returns json by default.
+   (fn [{body :body}]
+     (or (= body "<boolean>true</boolean>")
+         (= body "{\"boolean\":true}")
+         (= body "true")))))
 
-(def ^{:private true} revision-success
-  (after-push
+(defn- revision-success
+  "Parses the result body to determine success and whether an override (version
+  issue) is needed"
+  [result]
+  (check-results result
    (fn [{body :body}]
      (let [loc (-> body
                    cdx/parse-str
@@ -174,137 +173,15 @@ find-name el-loc))
         (= "false" (first (:content override)))
         (= "true" (first (:content success))))))))
 
-
-(defn- make-api
-  "Builds an api from an api-map. rest-path, local-path and
-  find-elements fns are required and the rest of the api uses sensible
-  defaults if a value is not supplied."
-  [api]
-  (merge {
-          :rest-path nil                ; required - server api path for GET/PUT
-          :local-path nil               ; required - base dir for saving files
-          :find-elements nil            ; required - find elements in the returned xml
-          :file-path nil                ; required - build the xml file path
-
-          :find-id api-element-id                ; find the current xml loc id
-          :find-name api-element-name            ; find the current xml loc name
-          :api-files (partial mf/xml-file-seq 1) ; find local api xml files for upload
-          :post-path (constantly nil)   ; HTTP POST on upload path
-          :push-params (constantly nil) ; params for HTTP PUT/POST
-          :pre-node-action identity     ; transform app-conf before processing
-          :after-push true-200          ; process result of item push
-          :preprocess identity          ; preprocess app-conf before any other work
-          :query-params {}              ; query-params for HTTP POST 
-          }
-         api))
+(defn pre-node-action [keyword app-conf]
+  (assoc app-conf
+         keyword
+         (add-update-child (keyword app-conf) (:el-loc app-conf))))
 
 (defn- post-path
   "Takes an api and builds a _bulkUpdate from the rest-path"
-  [{:keys [rest-path] :as api}]
-  (str (rest-path api) "/_bulkUpdate"))
-
-(def apis
-  [(make-api
-    {:rest-path (constantly "/server/configurationMap")
-     :local-path (partial local-path-str File/separator)
-     :find-elements #(cdzx/xml-> % :map)
-     :find-id (constantly nil)
-     :find-name (constantly nil)
-     :file-path (file-path "ConfigurationMap.xml")
-     :api-files (partial mf/only-named-xml-files-seq 1 "ConfigurationMap")
-     :after-push null-204})
-
-   (make-api
-    {:rest-path (constantly "/server/globalScripts")
-     :local-path (partial local-path-str "GlobalScripts")
-     :find-elements #(cdzx/xml-> % :map)
-     :find-id (constantly nil)
-     :find-name (constantly nil)
-     :file-path (file-path "globalScripts.xml")
-     :after-push null-204})
-
-   (make-api
-    {:rest-path (constantly "/server/resources")
-     :local-path (partial local-path-str File/separator)
-     :find-elements #(cdzx/xml-> % :list)
-     :find-id (constantly nil)
-     :find-name (constantly nil)
-     :file-path (file-path "Resources.xml")
-     :api-files (partial mf/only-named-xml-files-seq 1 "Resources")
-     :after-push null-204})
-
-   (make-api
-    {:rest-path (constantly "/codeTemplateLibraries")
-     :local-path (partial local-path-str "CodeTemplates")
-     :find-elements #(or (cdzx/xml-> % :list :codeTemplateLibrary) ; from server
-                         (cdzx/xml-> % :codeTemplate)) ; from filesystem
-     :file-path (file-path (str File/separator "index.xml"))
-     :api-files (partial mf/only-named-xml-files-seq 2 "index")
-     :post-path post-path
-     :push-params #(let [{:keys [server-codelibs force]} %]
-                     {"libraries" (cdx/indent-str (cz/node server-codelibs))
-                      "removedLibraryIds" "<set/>"
-                      "updatedCodeTemplates" "<list/>"
-                      "removedCodeTemplateIds" "<set/>"
-                      "override" (if force "true" "false")})
-     :preprocess (partial ma/fetch-and-pre-assoc :server-codelibs :list)
-     :pre-node-action (fn [app-conf]
-                        (assoc app-conf
-                               :server-codelibs
-                               (add-update-child (:server-codelibs app-conf) (:el-loc app-conf))))
-     :after-push revision-success
-     :query-params override-params})
-
-   (make-api
-    {:rest-path (constantly "/codeTemplates")
-     :local-path (partial local-path-str "CodeTemplates")
-     :find-elements #(cdzx/xml-> % :list :codeTemplate)
-     :file-path #(nested-file-path (:server-codelibs %)
-                                   [:codeTemplateLibrary :codeTemplates :codeTemplate]
-                                   (:target %)
-                                   (:el-loc %)
-                                   (:api %))
-     :api-files (partial mf/without-named-xml-files-seq 2 "index")
-     :push-params override-params})
-
-   (make-api
-    {:rest-path (constantly "/channelgroups")
-     :local-path (partial local-path-str "Channels")
-     :find-elements #(or (cdzx/xml-> % :list :channelGroup) ; from server
-                         (cdzx/xml-> % :channelGroup)) ; from filesystem
-     :file-path (file-path (str File/separator "index.xml"))
-     :api-files (partial mf/only-named-xml-files-seq 2 "index")
-     :post-path post-path
-     :push-params #(let [{:keys [server-groups force]} %]
-                     {"channelGroups" (cdx/indent-str (cz/node server-groups))
-                      "removedChannelGroupsIds" "<set/>"
-                      "override" (if force "true" "false")})
-     :preprocess (partial ma/fetch-and-pre-assoc :server-groups :set)
-     :pre-node-action (fn [app-conf]
-                        (assoc app-conf
-                               :server-groups
-                               (add-update-child (:server-groups app-conf) (:el-loc app-conf))))
-     :query-params override-params})
-
-   (make-api
-    {:rest-path (constantly "/channels")
-     :local-path (partial local-path-str "Channels")
-     :find-elements #(cdzx/xml-> % :list :channel)
-     :file-path #(nested-file-path (:server-groups %)
-                                   [:channelGroup :channels :channel]
-                                   (:target %)
-                                   (:el-loc %)
-                                   (:api %))
-     :api-files (partial mf/without-named-xml-files-seq 2 "index")
-     :push-params #(override-params (:force %))})
-
-   (make-api
-    {:rest-path (constantly "/alerts")
-     :local-path (partial local-path-str "Alerts")
-     :find-elements #(cdzx/xml-> % :list :alertModel)
-     :file-path alert-file-path
-     :after-push null-204})
-   ])
+  [api]
+  (str (mi/rest-path api) "/_bulkUpdate"))
 
 (defn iterate-apis
   "Iterates through the apis calling action on app-conf. If an api
@@ -316,3 +193,147 @@ find-name el-loc))
            (rest apis)
            action)
     app-conf))
+
+(def apis
+  [:configuration-map
+   :global-scripts
+   :resources
+   :code-template-libraries
+   :code-templates
+   :channel-groups
+   :channels
+   :alerts])
+
+(defmethod mi/find-name :default [_ api-loc] (api-element-name api-loc))
+(defmethod mi/find-name :configuration-map [_ _] nil)
+(defmethod mi/find-name :global-scripts [_ _] nil)
+(defmethod mi/find-name :resources [_ _] nil)
+
+(defmethod mi/query-params :default [_ _] nil)
+(defmethod mi/query-params :code-template-libraries [_ app-conf] (override-params (:force app-conf)))
+(defmethod mi/query-params :channel-groups [_ app-conf] (override-params (:force app-conf)))
+
+(defmethod mi/push-params :default [_ _] nil)
+(defmethod mi/push-params :code-template-libraries [_ app-conf]
+    {"libraries" (cdx/indent-str (cz/node (:server-codelibs app-conf)))
+     "removedLibraryIds" "<set/>"
+     "updatedCodeTemplates" "<list/>"
+     "removedCodeTemplateIds" "<set/>"
+     "override" (if (:force app-conf) "true" "false")})
+(defmethod mi/push-params :code-templates [_ app-conf] (override-params (:force app-conf)))
+(defmethod mi/push-params :channel-groups [_ app-conf]
+  {"channelGroups" (cdx/indent-str (cz/node (:server-groups app-conf)))
+   "removedChannelGroupsIds" "<set/>"
+   "override" (if (:force app-conf) "true" "false")})
+(defmethod mi/push-params :channels [_ app-conf] (override-params (:force app-conf)))
+
+(defmethod mi/preprocess :default [_ app-conf] app-conf)
+(defmethod mi/preprocess :code-template-libraries [_ app-conf]
+  (ma/fetch-and-pre-assoc :server-codelibs :list app-conf))
+(defmethod mi/preprocess :channel-groups [_ app-conf]
+  (ma/fetch-and-pre-assoc :server-groups :set app-conf))
+
+;; (defmethod mi/after-push :default [_ result] (true-200 result))
+(defmethod mi/after-push :configuration-map [_ result] (null-204 result))
+(defmethod mi/after-push :global-scripts [_ result] (null-204 result))
+(defmethod mi/after-push :resources [_ result] (null-204 result))
+(defmethod mi/after-push :code-template-libraries [_ result] (revision-success result))
+(defmethod mi/after-push :code-templates [_ result] (true-200 result))
+(defmethod mi/after-push :channel-groups [_ result] (true-200 result))
+(defmethod mi/after-push :channels [_ result] (true-200 result))
+(defmethod mi/after-push :alerts [_ result] (null-204 result))
+
+(defmethod mi/pre-node-action :default [_ app-conf] app-conf)
+(defmethod mi/pre-node-action :code-template-libraries [_ app-conf]
+  (pre-node-action :server-codelibs app-conf))
+(defmethod mi/pre-node-action :channel-groups [_ app-conf]
+  (pre-node-action :server-groups app-conf))
+
+(defmethod mi/post-path :default [_] nil)
+(defmethod mi/post-path :code-template-libraries [api] (post-path api))
+(defmethod mi/post-path :channel-groups [api] (post-path api))
+
+(defmethod mi/api-files :default [_  directory]
+  (mf/xml-file-seq 1 directory))
+(defmethod mi/api-files :configuration-map [_  directory]
+  (mf/only-named-xml-files-seq 1 "ConfigurationMap" directory))
+(defmethod mi/api-files :resources [_  directory]
+  (mf/only-named-xml-files-seq 1 "Resources" directory))
+(defmethod mi/api-files :code-template-libraries [_  directory]
+  (mf/only-named-xml-files-seq 2 "index" directory))
+(defmethod mi/api-files :code-templates     [_  directory]
+  (mf/without-named-xml-files-seq 2 "index" directory))
+(defmethod mi/api-files :channel-groups [_  directory]
+  (mf/only-named-xml-files-seq 2 "index" directory))
+(defmethod mi/api-files :channels [_  directory]
+  (mf/without-named-xml-files-seq 2 "index" directory))
+
+(defmethod mi/find-id :default [_  el-loc]
+  (api-element-id el-loc))
+(defmethod mi/find-id :configuration-map [_ _] nil)
+(defmethod mi/find-id :global-scripts [_ _] nil)
+(defmethod mi/find-id :resources [_ _] nil)
+
+(defmethod mi/find-elements :configuration-map [_ el-loc] (cdzx/xml-> el-loc :map))
+(defmethod mi/find-elements :global-scripts [_ el-loc] (cdzx/xml-> el-loc :map))
+(defmethod mi/find-elements :resources [_ el-loc] (cdzx/xml-> el-loc :list))
+(defmethod mi/find-elements :code-template-libraries [_ el-loc]
+  (or (cdzx/xml-> el-loc :list :codeTemplateLibrary) ; from server
+      (cdzx/xml-> el-loc :codeTemplate))) ; from filesystem
+(defmethod mi/find-elements :code-templates [_ el-loc] (cdzx/xml-> el-loc :list :codeTemplate))
+(defmethod mi/find-elements :channel-groups [_ el-loc]
+  (or (cdzx/xml-> el-loc :list :channelGroup) ; from server
+      (cdzx/xml-> el-loc :channelGroup))) ; from filesystem
+(defmethod mi/find-elements :channels [_ el-loc] (cdzx/xml-> el-loc :list :channel))
+(defmethod mi/find-elements :alerts [_ el-loc] (cdzx/xml-> el-loc :list :alertModel))
+
+(defmethod mi/file-path :configuration-map [_ app-conf]
+  (file-path "ConfigurationMap.xml" app-conf))
+(defmethod mi/file-path :global-scripts [_ app-conf]
+  (file-path "globalScripts.xml" app-conf))
+(defmethod mi/file-path :resources [_ app-conf]
+  (file-path "Resources.xml" app-conf))
+(defmethod mi/file-path :code-template-libraries [_ app-conf]
+  (file-path (str File/separator "index.xml") app-conf))
+(defmethod mi/file-path :code-templates [_ app-conf]
+  (nested-file-path (:server-codelibs app-conf)
+                    [:codeTemplateLibrary :codeTemplates :codeTemplate]
+                    (:target app-conf)
+                    (:el-loc app-conf)
+                    (:api app-conf)))
+(defmethod mi/file-path :channel-groups [_ app-conf]
+  (file-path (str File/separator "index.xml") app-conf))
+(defmethod mi/file-path :channels [_ app-conf]
+  (nested-file-path (:server-groups app-conf)
+                    [:channelGroup :channels :channel]
+                    (:target app-conf)
+                    (:el-loc app-conf)
+                    (:api app-conf)))
+(defmethod mi/file-path :alerts [_ app-conf]
+  (alert-file-path app-conf))
+
+(defmethod mi/local-path :configuration-map [_ target]
+  (local-path-str File/separator target))
+(defmethod mi/local-path :global-scripts [_ target]
+  (local-path-str "GlobalScripts" target))
+(defmethod mi/local-path :resources [_ target]
+  (local-path-str File/separator target))
+(defmethod mi/local-path :code-template-libraries [_ target]
+  (local-path-str "CodeTemplates" target))
+(defmethod mi/local-path :code-templates [_ target]
+  (local-path-str "CodeTemplates" target))
+(defmethod mi/local-path :channel-groups [_ target]
+  (local-path-str "Channels" target))
+(defmethod mi/local-path :channels [_ target]
+  (local-path-str "Channels" target))
+(defmethod mi/local-path :alerts [_ target]
+  (local-path-str "Alerts" target))
+
+(defmethod mi/rest-path :configuration-map [_] "/server/configurationMap")
+(defmethod mi/rest-path :global-scripts [_] "/server/globalScripts")
+(defmethod mi/rest-path :resources [_] "/server/resources")
+(defmethod mi/rest-path :code-template-libraries [_] "/codeTemplateLibraries")
+(defmethod mi/rest-path :code-templates [_] "/codeTemplates")
+(defmethod mi/rest-path :channel-groups [_] "/channelgroups")
+(defmethod mi/rest-path :channels [_] "/channels")
+(defmethod mi/rest-path :alerts [_] "/alerts")

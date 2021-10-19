@@ -1,8 +1,8 @@
 (ns mirthsync.actions
-  (:require [clojure.data.xml :as xml]
+  (:require [clojure.data.xml :as cdx]
             [clojure.tools.logging :as log]
-            [clojure.zip :as zip]
-            [mirthsync.cli :as cli]
+            [clojure.zip :as cz]
+            [mirthsync.interfaces :as mi]
             [mirthsync.http-client :as mhttp]
             [mirthsync.xml :as mxml])
   (:import java.io.File))
@@ -11,15 +11,14 @@
   "Extracts the id from the xmlloc using the find-id predicates. PUTs or
   POSTs the params to the location constructed from the base-url,
   rest-path, and id."
-  [{:keys [el-loc] :as app-conf
-    {:keys [post-path push-params query-params after-push] :as api} :api}]
-  (let [params (log/spyf :trace "Push params: %s" (push-params app-conf))
-        query-params (log/spyf :trace "Query params: %s" (query-params app-conf))
-        result (if (post-path api)
+  [{:keys [force api] :as app-conf}]
+  (let [params (log/spyf :trace "Push params: %s" (mi/push-params api app-conf))
+        query-params (log/spyf :trace "Query params: %s" (mi/query-params api force))
+        result (if (mi/post-path api)
                  (mhttp/post-xml app-conf params query-params)
                  (mhttp/put-xml app-conf params))]
-    (after-push app-conf result)))
-
+    (mi/after-push api result)
+    app-conf))
 
 (defn fetch-and-pre-assoc
   "Fetches the children of the current api from the server. Wraps the
@@ -28,14 +27,13 @@
   keyword."
   [k ktag app-conf]
   (assoc app-conf k (->> (mhttp/fetch-all app-conf identity)
-                         zip/children
-                         (apply xml/element ktag nil)
-                         zip/xml-zip)))
+                         cz/children
+                         (apply cdx/element ktag nil)
+                         cz/xml-zip)))
 
 (defn- local-locs
   "Lazy seq of local el-locs for the current api."
-  [{:keys [restrict-to-path target] :as app-conf
-    {:keys [local-path api-files]} :api}]
+  [{:keys [api restrict-to-path target api] :as app-conf}]
   (let [^String required-prefix (str target File/separator restrict-to-path)
         filtered-api-files (filter #(let [matches (.startsWith (.toString ^File %) required-prefix)]
                                       (if matches
@@ -43,7 +41,7 @@
                                             true)
                                         (do (log/infof "filtering push of '%s' since it does not start with our required prefix: %s" % required-prefix)
                                             false)))
-                                   (api-files (local-path (:target app-conf))))]
+                                   (mi/api-files api (mi/local-path api (:target app-conf))))]
     (log/debugf "required-prefix: %s" required-prefix)
 
     (map #(mxml/to-zip
@@ -55,23 +53,20 @@
 (defn- remote-locs
   "Seq of remote el-locs for the current api. Could be lazy or not
   depending on the implementation of find-elements."
-  [{:as app-conf
-    {:keys [find-elements] :as api} :api}]
-  (mhttp/fetch-all app-conf find-elements))
+  [{:keys [api] :as app-conf}]
+  (mhttp/fetch-all app-conf (partial mi/find-elements api)))
 
 (defn-  process-nodes
   "Prints the message and processes the el-locs via the action."
-  [{:as app-conf
-    {:keys [pre-node-action]} :api} msg el-locs action]
+  [{:keys [api] :as app-conf} msg el-locs action]
   (log/info msg)
   (loop [app-conf app-conf
          el-locs el-locs]
     (if-let [el-loc (first el-locs)]
       (recur
-       (-> app-conf
-           (assoc :el-loc el-loc)
-           (pre-node-action)
-           action)
+       (->> (assoc app-conf :el-loc el-loc)
+            (mi/pre-node-action api)
+            action)
        (rest el-locs))
       app-conf)))
 
@@ -79,11 +74,10 @@
   "Serializes all xml found at the api rest-path to the filesystem using the
   supplied config. Returns a (potentially) updated app-conf with
   details about the fetched apis."
-  [{:as app-conf
-    {:keys [local-path transformer] :as api} :api}]
+  [{:keys [api] :as app-conf}]
   (process-nodes
    app-conf
-   (str "Downloading from " (mhttp/api-url app-conf) " to " (local-path (:target app-conf)))
+   (str "Downloading from " (mhttp/api-url app-conf) " to " (mi/local-path api (:target app-conf)))
    (remote-locs app-conf)
    mxml/serialize-node))
 
@@ -91,8 +85,7 @@
   "Takes the current app-conf with the current api and finds associated
   files within the target directory. The files in the specified path
   directory are each read and handed to upload-node to push to Mirth."
-  [{:as app-conf
-    {:keys [local-path rest-path transformer] :as api} :api}]
+  [{:keys [api] :as app-conf}]
 
   ;; The only time dont want to push is when
   ;; rest-path = "/server/configurationMap" and include-configuration-map false.
@@ -107,10 +100,10 @@
   ;; be better to do this check earlier in the flow and remove the
   ;; configurationmap api from the vector of apis in the run function
   ;; in core.clj.
-  (if (and (= ((:rest-path api)) "/server/configurationMap") (not (:include-configuration-map app-conf)))
+  (if (and (= (mi/rest-path api) "/server/configurationMap") (not (:include-configuration-map app-conf)))
     app-conf
     (process-nodes
        app-conf
-       (str "Uploading from " (local-path (:target app-conf)) " to " (rest-path api))
+       (str "Uploading from " (mi/local-path api (:target app-conf)) " to " (mi/rest-path api))
        (local-locs app-conf)
        upload-node)))

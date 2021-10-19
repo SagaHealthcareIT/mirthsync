@@ -2,8 +2,8 @@
   (:require [clojure.data.xml :as xml]
             [clojure.java.io :as io]
             [clojure.zip :as zip]
-            [mirthsync.cli :as cli]
-            [clojure.tools.logging :as log])
+            [clojure.tools.logging :as log]
+            [mirthsync.interfaces :as mi])
   (:import java.io.File))
 
 (defn to-zip
@@ -15,11 +15,10 @@
   "Take an xml location and write to the filesystem with a meaningful
   name and path. If the file exists it is not overwritten unless the
   -f option is set. Returns app-conf."
-  [{:keys [el-loc restrict-to-path target] :as app-conf
-    {:keys [file-path]} :api}]
+  [{:keys [api el-loc restrict-to-path target] :as app-conf}]
 
   (let [xml-str (xml/indent-str (zip/node el-loc))
-        fpath (file-path app-conf)
+        fpath (mi/file-path api app-conf)
         required-prefix (str target File/separator restrict-to-path)]
     (if (.startsWith ^String fpath required-prefix)
       (do

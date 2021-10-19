@@ -1,17 +1,17 @@
 (ns mirthsync.http-client
   (:require [clj-http.client :as client]
-            [mirthsync.xml :as mxml]
             [clojure.data.xml :as xml]
+            [clojure.tools.logging :as log]
             [clojure.zip :as zip]
-            [clojure.tools.logging :as log]))
+            [mirthsync.interfaces :as mi]
+            [mirthsync.xml :as mxml]))
 
 (defn put-xml
   "HTTP PUTs the current api and el-loc to the server."
-  [{:keys [server el-loc ignore-cert-warnings]
-    {:keys [find-id rest-path] :as api} :api}
+  [{:keys [server el-loc ignore-cert-warnings api]}
    params]
-  (log/logf :debug "putting xml to: %s" (rest-path api))
-  (client/put (str server (rest-path api) "/" (find-id el-loc))
+  (log/logf :debug "putting xml to: %s" (mi/rest-path api))
+  (client/put (str server (mi/rest-path api) "/" (mi/find-id api el-loc))
               {:insecure? ignore-cert-warnings
                :body (xml/indent-str (zip/node el-loc))
                :query-params params
@@ -22,12 +22,11 @@
   params are supported and should be passed as one or more [name
   value] vectors. Name should be a string and value should be an xml
   string."
-  [{:keys [server ignore-cert-warnings]
-    {:keys [post-path] :as api} :api}
+  [{:keys [server ignore-cert-warnings api]}
    params
    query-params]
-  (log/logf :debug "posting xml to: %s" (post-path api))
-  (client/post (str server (post-path api))
+  (log/logf :debug "posting xml to: %s" (mi/post-path api))
+  (client/post (str server (mi/post-path api))
                {:insecure? ignore-cert-warnings
                 :query-params query-params
                 :multipart (map (fn
@@ -54,9 +53,8 @@
 
 (defn api-url
   "Returns the constructed api url."
-  [{:keys [server]
-    {:keys [rest-path find-elements] :as api} :api}]
-  (str server (rest-path api)))
+  [{:keys [server api]}]
+  (str server (mi/rest-path api)))
 
 (defn fetch-all
   "Fetch everything at url from remote server and return a sequence of
@@ -68,7 +66,6 @@
    find-elements]
   (-> (api-url app-conf)
       (client/get {:insecure? ignore-cert-warnings})
-      (:body)
-      (mxml/to-zip)
-      (find-elements)))
-
+      :body
+      mxml/to-zip
+      find-elements))
