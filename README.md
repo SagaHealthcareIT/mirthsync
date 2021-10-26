@@ -6,7 +6,7 @@ mirthSync is a command line tool for synchronizing Mirth Connect code
 between servers by allowing you to push or pull channels, code
 templates, configuration map and global scripts. The tool can also be
 integrated with Git or other version control systems for the purpose
-of tracking changes to Mirth Connect code and configuration. 
+of tracking changes to Mirth Connect code and configuration.
 
 The only requirements are having credentials for the server that is
 being synced and the server also needs to support and allow access to
@@ -19,6 +19,10 @@ Mirth Connect's REST API.
 - Pull and push changes between Mirth Connect servers
 - Utilize Git branches to track and merge code between dev, test, and
   prod environments
+- Use mirthSync as part of your CI/CD workflow
+  - Please see our
+    [mirthsync-ci](https://github.com/SagaHealthcareIT/mirthsync-ci) repository
+    for an example that works with Github Actions
 
 ## Current release
 

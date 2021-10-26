@@ -128,7 +128,7 @@
   (log/warnf "Status: %s, Phrase: %s" (:status r) (:reason-phrase r)))
 
 (defn- check-results
-  "Ensures the result satisfies the predicates. If not, an warning is logged."
+  "Ensures the result satisfies the predicates. If not, a warning is logged."
   [result & preds]
   (log/trace result)
   (log/debugf "status: %s, phrase: %s, body: %s"
@@ -240,6 +240,12 @@
 (defmethod mi/after-push :code-template-libraries [_ result] (revision-success result))
 (defmethod mi/after-push :code-templates [_ result] (true-200 result))
 (defmethod mi/after-push :channel-groups [_ result] (true-200 result))
+;; TODO - If the body of the result is false but it's a 200 http code it means
+;; that there's a chance that it wasn't updated because the override parameter
+;; needs to be set. The current error message is just a warning about an
+;; unexpected result. This warning should be enhanced to include a sensible
+;; message about what happened and possible solutions (Override param). This
+;; applies to channels and some other entities as well.
 (defmethod mi/after-push :channels [_ result] (true-200 result))
 (defmethod mi/after-push :alerts [_ result] (null-204 result))
 
