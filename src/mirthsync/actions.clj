@@ -2,6 +2,7 @@
   (:require [clojure.data.xml :as cdx]
             [clojure.tools.logging :as log]
             [clojure.zip :as cz]
+            [mirthsync.files :as mf]
             [mirthsync.interfaces :as mi]
             [mirthsync.http-client :as mhttp]
             [mirthsync.xml :as mxml])
@@ -31,6 +32,24 @@
                          (apply cdx/element ktag nil)
                          cz/xml-zip)))
 
+(defn expand-filerefs
+  "Expands fileref elements found within the passed xml zip and returns the
+  expanded modified xml (zip)"
+  [file-dir el-loc]
+  (loop [el-loc el-loc]
+    (if (cz/end? el-loc)
+      (cz/xml-zip (cz/root el-loc))
+      (let [node (cz/node el-loc)
+            tag (:tag node)
+            next-el-loc (if-let
+                            [fileref (when tag (:msync-fileref (:attrs node)))]
+                          (let [file-text (slurp (.toString (File. file-dir (mf/safe-name fileref))))]
+                            (cz/next (cz/edit el-loc (fn [node]
+                                                       (assoc (assoc node :content (list file-text)) :attrs (dissoc (:attrs node) :msync-fileref))))))
+                          (cz/next el-loc))]
+
+        (recur next-el-loc)))))
+
 (defn- local-locs
   "Lazy seq of local el-locs for the current api."
   [{:keys [api restrict-to-path target api] :as app-conf}]
@@ -44,10 +63,11 @@
                                    (mi/api-files api (mi/local-path api (:target app-conf))))]
     (log/debugf "required-prefix: %s" required-prefix)
 
-    (map #(mxml/to-zip
-           (do
-             (log/infof "\tFile: %s" (.toString ^File %))
-             (slurp %)))
+    (map #(expand-filerefs (.getParent ^File %)
+                           (mxml/to-zip
+                            (do
+                              (log/infof "\tFile: %s" (.toString ^File %))
+                              (slurp %))))
          filtered-api-files)))
 
 (defn- remote-locs
@@ -64,7 +84,11 @@
          el-locs el-locs]
     (if-let [el-loc (first el-locs)]
       (recur
-       (->> (assoc app-conf :el-loc el-loc)
+                                    ; We need to re-zip our node since it's part
+                                    ; of a larger doc and the called code
+                                    ; shouldn't be exposed to that. cz/root for instance
+                                    ; would return something unexpected.
+       (->> (assoc app-conf :el-loc (cz/xml-zip (cz/node el-loc)))
             (mi/pre-node-action api)
             action)
        (rest el-locs))

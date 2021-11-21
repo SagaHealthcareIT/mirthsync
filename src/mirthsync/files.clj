@@ -1,6 +1,6 @@
 (ns mirthsync.files
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+            [clojure.string :as cs]
             [clojure.tools.logging :as log])
   (:import java.io.File))
 
@@ -30,8 +30,8 @@
   [^File f] 
   (-> f
       (.getName)
-      (str/lower-case)
-      (str/ends-with? ".xml")))
+      (cs/lower-case)
+      (cs/ends-with? ".xml")))
 
 (defn- filename-matches?
   "Returns a predicate that returns true if the case-insensitive filename matches"
@@ -40,8 +40,8 @@
     [^File f]
     (-> f
         (.getName)
-        (str/lower-case)
-        (= (str/lower-case filename)))))
+        (cs/lower-case)
+        (= (cs/lower-case filename)))))
 
 (defn- not-filename-matches?
   "Complement of filename-matches?"
@@ -64,3 +64,41 @@
   target dir and subdirectories up to depth."
   [depth name dir]
   (filtered-file-seq depth [file? ends-xml? (filename-matches? (str name ".xml"))] dir))
+
+(defn- encode-path-chars
+  "Mirth is very liberal with allowing weird characters in places that can cause
+  issues with the mirthsync goal of mapping the Mirth configuration to a
+  reasonable directory structure. The 'safe-name' function asserts and fails
+  with an exception if there's any issue detected that could cause the filename
+  to have issues that could result in path traversal, etc...
+
+  Here we take an approach to handling some characters that cause issues that
+  we've seen in real world examples. This is not an exhaustive conversion list -
+  it is meant as a way to keep the code backwards compatible in terms of the
+  filesystem layout while allowing for a few exceptional cases. Slashes will be
+  replaced with their URLEncoder/encode equivalent - forward slash becomes %2F
+  and backslash becomes %5C."
+  [^String name]
+  (if name
+    (-> name
+        (cs/replace "/" "%2F")
+        (cs/replace "\\" "%5C"))
+    name))
+
+(defn safe-name
+  "Asserts that the string param is creatable file that doesn't span paths. Fails
+  with an exception if any issues are detected, otherwise returns the unmodified
+  string (unless there are weird characters as defined in encode-path-chars; in
+  which case the string is modified accordingly)."
+  [name]
+  (log/debugf "safe-name pre: (%s)" name)
+  (if-let [name (encode-path-chars name)]
+    (do
+      (assert
+       (and (string? name) (= name (.getName (File. ^String name))))
+       (str "Name does not appear to be safe"
+            " for file creation - " name
+            " - Check for invalid characters."))
+
+      (log/spyf :debug "safe-name post: (%s)" name))
+    name))

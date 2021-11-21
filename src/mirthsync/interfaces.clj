@@ -15,3 +15,4 @@
 (defmulti file-path "Build the XML file path" first-param)
 (defmulti local-path "Base dir for saving files" first-param)
 (defmulti rest-path "Server API path for GET/PUT" first-param)
+(defmulti deconstruct-node "Explode XML node into file/content pairs" first-param)

@@ -6,7 +6,8 @@
             [clojure.zip :as cz]
             [mirthsync.actions :as ma]
             [mirthsync.files :as mf]
-            [mirthsync.interfaces :as mi])
+            [mirthsync.interfaces :as mi]
+            [clojure.data.xml :as xml])
   (:import java.io.File))
 
 (defn- api-element-id
@@ -46,53 +47,16 @@
       (cz/up (cz/replace (cz/up found-id-loc) (cz/node child-loc)))
       (cz/append-child root-loc (cz/node child-loc)))))
 
-(defn- encode-path-chars
-  "Mirth is very liberal with allowing weird characters in places that can cause
-  issues with the mirthsync goal of mapping the Mirth configuration to a
-  reasonable directory structure. The 'safe-name' function asserts and fails
-  with an exception if there's any issue detected that could cause the filename
-  to have issues that could result in path traversal, etc...
-
-  Here we take an approach to handling some characters that cause issues that
-  we've seen in real world examples. This is not an exhaustive conversion list -
-  it is meant as a way to keep the code backwards compatible in terms of the
-  filesystem layout while allowing for a few exceptional cases. Slashes will be
-  replaced with their URLEncoder/encode equivalent - forward slash becomes %2F
-  and backslash becomes %5C."
-  [^String name]
-  (if name
-    (-> name
-        (cs/replace "/" "%2F")
-        (cs/replace "\\" "%5C"))
-    name))
-
-(defn safe-name
-  "Asserts that the string param is creatable file that doesn't span paths. Fails
-  with an exception if any issues are detected, otherwise returns the unmodified
-  string (unless there are weird characters as defined in encode-path-chars; in
-  which case the string is modified accordingly)."
-  [name]
-  (log/debugf "safe-name pre: (%s)" name)
-  (if-let [name (encode-path-chars name)]
-    (do
-      (assert
-       (and (string? name) (= name (.getName (File. ^String name))))
-       (str "Name does not appear to be safe"
-            " for file creation - " name
-            " - Check for invalid characters."))
-
-      (log/spyf :debug "safe-name post: (%s)" name))
-    name))
-
 (defn- file-path
   "Returns a string file path for the current api with path appended."
   [path {:keys [api el-loc] :as app-conf}]
   (log/debugf "Received file-path: %s" path)
   (log/spyf :debug "Constructed file path: %s"
-              (str (mi/local-path api (:target app-conf))
-                   (when-not (.endsWith ^String (mi/local-path api (:target app-conf)) File/separator) File/separator)
-                   (safe-name (mi/find-name api el-loc))
-                   path)))
+            (let [local-path (mi/local-path api (:target app-conf))]
+              (str local-path
+                   (when-not (.endsWith ^String local-path File/separator) File/separator)
+                   (mf/safe-name (mi/find-name api el-loc))
+                   path))))
 
 (defn preprocess-api
   [{:as app-conf {:as api} :api}]
@@ -102,7 +66,7 @@
   "Returns the nested xml file path for the provided api."
   [group-xml-zip selectors target-dir el-loc api]
   (str (mi/local-path api target-dir) File/separator
-       (when-let [lib-name (safe-name
+       (when-let [lib-name (mf/safe-name
                             (let [id (mi/find-id api el-loc)]
                               (apply cdzx/xml1->
                                      group-xml-zip
@@ -111,7 +75,7 @@
                                                (repeat (count selectors) cz/up)
                                                :name cdzx/text]))))]
          (str lib-name File/separator))
-       (safe-name (mi/find-name api el-loc))
+       (mf/safe-name (mi/find-name api el-loc))
        ".xml"))
 
 (defn- alert-file-path
@@ -119,7 +83,7 @@
   [{:keys [api el-loc] :as app-conf}]
   (str (mi/local-path api (:target app-conf))
        File/separator
-       (safe-name (mi/find-name api el-loc))
+       (mf/safe-name (mi/find-name api el-loc))
        ".xml"))
 
 (defn- unexpected-response
@@ -343,3 +307,92 @@
 (defmethod mi/rest-path :channel-groups [_] "/channelgroups")
 (defmethod mi/rest-path :channels [_] "/channels")
 (defmethod mi/rest-path :alerts [_] "/alerts")
+
+(defn deconstruct-node
+  "Takes an xml node representing one of our major api elements and returns one or
+  more deconstructed parts with filenames and a zip loc for the content."
+  [file-path el-loc]
+  (let [parent-dir (.getParent (File. ^String file-path))]
+    (loop [el-loc el-loc
+           deconstruction []]
+      (if-let [name-loc (cdzx/xml1-> el-loc :entry :string)]
+        (let [name-text (str (mf/safe-name (cdzx/text name-loc)) ".js")
+              val-loc (cz/right name-loc)
+              val-text (cdzx/text val-loc)
+              val-loc (->> (cz/edit val-loc (fn [node]
+                                              (assoc
+                                               (assoc-in node [:attrs :msync-fileref] name-text)
+                                               :content
+                                               (lazy-seq))))
+                           cz/next)
+              next-el-loc (cz/right (cz/up val-loc))
+              deconstruction (conj deconstruction
+                                   [(str parent-dir File/separator (mf/safe-name name-text)) val-text])]
+          (if next-el-loc
+            (recur next-el-loc deconstruction)
+            (conj deconstruction [file-path (cdx/indent-str (cz/root val-loc))])))
+        (conj deconstruction [file-path (cdx/indent-str (cz/node el-loc))])))))
+
+(defn generic
+  ""
+  [file-path el-loc]
+  [[file-path (cdx/indent-str (cz/node el-loc))]])
+
+(defmethod mi/deconstruct-node :default [_ file-path el-loc]
+  (generic file-path el-loc))
+(defmethod mi/deconstruct-node :global-scripts [_ file-path el-loc]
+  (deconstruct-node file-path el-loc))
+(defmethod mi/deconstruct-node :channels [_ file-path el-loc]
+  (let [parent-dir (.getParent (File. ^String file-path))]
+    (loop [el-loc el-loc
+           deconstruction []]
+      (if (cz/end? el-loc)
+        (conj deconstruction [file-path (cdx/indent-str (cz/root el-loc))])
+        (let [script-name (cdzx/xml1-> el-loc :connector :name)
+              script (cdzx/xml1-> el-loc :connector :properties :script)
+              [next-el-loc deconstruction] (if script
+                                             (let [script-name (str (mf/safe-name (cdzx/text script-name)) ".js")]
+                                               [(->> (cz/edit script (fn [node]
+                                                                       (assoc
+                                                                        (assoc-in node [:attrs :msync-fileref] script-name)
+                                                                        :content
+                                                                        (lazy-seq))))
+                                                     cz/next)
+                                                (conj deconstruction [(str parent-dir File/separator script-name) (cdzx/text script)])])
+                                             [(cz/next el-loc) deconstruction])]
+
+          (recur next-el-loc deconstruction))))))
+
+
+(comment
+  (deconstruct-node (mi/file-path :global-scripts mirthsync.xml/app-conf1)
+                    (:el-loc mirthsync.xml/app-conf1))
+
+  (deconstruct-node (mi/file-path mirthsync.xml/api1 mirthsync.xml/app-conf1)
+                    mirthsync.xml/el-loc1)
+
+  (loop [el-loc mirthsync.xml/el-loc1]
+    (if (cz/end? el-loc)
+      (cz/root el-loc)
+      (let [script-name (cdzx/xml1-> el-loc :connector :name)
+            script (cdzx/xml1-> el-loc :connector :properties :script)
+            ]
+        ;; (log/infof "script-name: %s" script-name)
+        ;; (log/infof "script: %s" script)
+        (println (type script))
+        (when script
+          (printf "Found a script named %s\n" (cdzx/text script-name)))
+        (recur (cz/next el-loc))))
+    )
+
+  (def all-locs (take-while (complement cz/end?) (iterate cz/next mirthsync.xml/el-loc1)))
+  (def all-branches (filter cz/branch? all-locs))
+  (map #(:tag (cz/node %)) all-locs)
+
+  (reduce (fn [result el-loc]
+            (let [script-name (cdzx/xml1-> el-loc :connector :name)
+                  script (cdzx/xml1-> el-loc :connector :properties :script)]
+              (if script
+                (conj result [(cdzx/text script-name) (cdzx/text script) (:tag (cz/node el-loc))] )
+                result))) [] all-locs)
+)
