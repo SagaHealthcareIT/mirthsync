@@ -35,7 +35,7 @@
 (defn expand-filerefs
   "Expands fileref elements found within the passed xml zip and returns the
   expanded modified xml (zip)"
-  [file-dir el-loc]
+  [main-file el-loc]
   (loop [el-loc el-loc]
     (if (cz/end? el-loc)
       (cz/xml-zip (cz/root el-loc))
@@ -43,7 +43,7 @@
             tag (:tag node)
             next-el-loc (if-let
                             [fileref (when tag (:msync-fileref (:attrs node)))]
-                          (let [file-text (slurp (.toString (File. file-dir (mf/safe-name fileref))))]
+                          (let [file-text (slurp (str (mf/remove-extension (.toString ^File main-file)) File/separator (mf/safe-name fileref)))]
                             (cz/next (cz/edit el-loc (fn [node]
                                                        (assoc (assoc node :content (list file-text)) :attrs (dissoc (:attrs node) :msync-fileref))))))
                           (cz/next el-loc))]
@@ -63,7 +63,7 @@
                                    (mi/api-files api (mi/local-path api (:target app-conf))))]
     (log/debugf "required-prefix: %s" required-prefix)
 
-    (map #(expand-filerefs (.getParent ^File %)
+    (map #(expand-filerefs %
                            (mxml/to-zip
                             (do
                               (log/infof "\tFile: %s" (.toString ^File %))

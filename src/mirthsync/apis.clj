@@ -1,5 +1,6 @@
 (ns mirthsync.apis
   (:require [clojure.data.xml :as cdx]
+            [clojure.data.zip :as cdz]
             [clojure.data.zip.xml :as cdzx]
             [clojure.string :as cs]
             [clojure.tools.logging :as log]
@@ -308,61 +309,77 @@
 (defmethod mi/rest-path :channels [_] "/channels")
 (defmethod mi/rest-path :alerts [_] "/alerts")
 
+(defn- script-node->fileref
+  [script script-name]
+  (cz/edit script (fn [node]
+                    (assoc
+                     (assoc-in node [:attrs :msync-fileref] script-name)
+                     :content
+                     (lazy-seq)))))
+
+(defn- loc-text
+  "Clojure.data.zip.xml/text replaces various whitespace characters. This
+  retrieves the contents of text nodes unaltered."
+  [el-loc]
+  (apply str (cdzx/xml-> el-loc cdz/descendants cz/node string?)))
+
 (defn deconstruct-node
   "Takes an xml node representing one of our major api elements and returns one or
   more deconstructed parts with filenames and a zip loc for the content."
-  [file-path el-loc]
-  (let [parent-dir (.getParent (File. ^String file-path))]
-    (loop [el-loc el-loc
-           deconstruction []]
-      (if-let [name-loc (cdzx/xml1-> el-loc :entry :string)]
-        (let [name-text (str (mf/safe-name (cdzx/text name-loc)) ".js")
-              val-loc (cz/right name-loc)
-              val-text (cdzx/text val-loc)
-              val-loc (->> (cz/edit val-loc (fn [node]
-                                              (assoc
-                                               (assoc-in node [:attrs :msync-fileref] name-text)
-                                               :content
-                                               (lazy-seq))))
-                           cz/next)
-              next-el-loc (cz/right (cz/up val-loc))
-              deconstruction (conj deconstruction
-                                   [(str parent-dir File/separator (mf/safe-name name-text)) val-text])]
-          (if next-el-loc
-            (recur next-el-loc deconstruction)
-            (conj deconstruction [file-path (cdx/indent-str (cz/root val-loc))])))
-        (conj deconstruction [file-path (cdx/indent-str (cz/node el-loc))])))))
-
-(defn generic
-  ""
-  [file-path el-loc]
-  [[file-path (cdx/indent-str (cz/node el-loc))]])
-
-(defmethod mi/deconstruct-node :default [_ file-path el-loc]
-  (generic file-path el-loc))
-(defmethod mi/deconstruct-node :global-scripts [_ file-path el-loc]
-  (deconstruct-node file-path el-loc))
-(defmethod mi/deconstruct-node :channels [_ file-path el-loc]
-  (let [parent-dir (.getParent (File. ^String file-path))]
+  [file-path el-loc find-name-val]
+  (let [base-path (mf/remove-extension file-path)]
     (loop [el-loc el-loc
            deconstruction []]
       (if (cz/end? el-loc)
         (conj deconstruction [file-path (cdx/indent-str (cz/root el-loc))])
-        (let [script-name (cdzx/xml1-> el-loc :connector :name)
-              script (cdzx/xml1-> el-loc :connector :properties :script)
+        (let [[script-name script] (find-name-val el-loc)
               [next-el-loc deconstruction] (if script
-                                             (let [script-name (str (mf/safe-name (cdzx/text script-name)) ".js")]
-                                               [(->> (cz/edit script (fn [node]
-                                                                       (assoc
-                                                                        (assoc-in node [:attrs :msync-fileref] script-name)
-                                                                        :content
-                                                                        (lazy-seq))))
-                                                     cz/next)
-                                                (conj deconstruction [(str parent-dir File/separator script-name) (cdzx/text script)])])
+                                             (let [script-name (str (mf/safe-name script-name) ".js")]
+                                               [(cz/next (script-node->fileref script script-name))
+                                                (conj deconstruction [(str base-path File/separator script-name) (loc-text script)])])
                                              [(cz/next el-loc) deconstruction])]
 
           (recur next-el-loc deconstruction))))))
 
+(defn whole-node
+  "No deconstruction performed"
+  [file-path el-loc]
+  [[file-path (cdx/indent-str (cz/node el-loc))]])
+
+(defmethod mi/deconstruct-node :default [_ file-path el-loc]
+  (whole-node file-path el-loc))
+
+(defmethod mi/deconstruct-node :global-scripts [_ file-path el-loc]
+  (deconstruct-node
+   file-path
+   el-loc
+   (fn [el-loc]
+     (when-let [name-loc (cdzx/xml1-> el-loc :entry :string)]
+       [(cdzx/text name-loc) (cz/right name-loc)]))))
+
+(def channel-deconstructors
+  [[#(cdzx/xml1-> % :connector :name cdzx/text)
+    #(cdzx/xml1-> % :connector :properties :script)]
+   [#(cdzx/xml1-> % :sourceConnector :name cdzx/text)
+    #(cdzx/xml1-> % :sourceConnector :properties :script)]
+   [(fn [_] "PreprocessingScript")
+    #(cdzx/xml1-> % :preprocessingScript)]
+   [(fn [_] "PostprocessingScript")
+    #(cdzx/xml1-> % :postprocessingScript)]
+   [(fn [_] "DeployScript")
+    #(cdzx/xml1-> % :deployScript)]
+   [(fn [_] "UndeployScript")
+    #(cdzx/xml1-> % :undeployScript)]])
+
+(defmethod mi/deconstruct-node :channels [_ file-path el-loc]
+  (deconstruct-node
+   file-path
+   el-loc
+   (fn [el-loc]
+     (some (fn [[name script]]
+             (when-let [script-loc (script el-loc)]
+               [(name el-loc) script-loc]))
+           channel-deconstructors))))
 
 (comment
   (deconstruct-node (mi/file-path :global-scripts mirthsync.xml/app-conf1)

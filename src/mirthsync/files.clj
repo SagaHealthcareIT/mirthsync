@@ -102,3 +102,9 @@
 
       (log/spyf :debug "safe-name post: (%s)" name))
     name))
+
+(defn remove-extension
+  [file-path]
+  (if-let [lastdot (cs/last-index-of file-path ".")]
+                          (subs file-path 0 lastdot)
+                          file-path))
