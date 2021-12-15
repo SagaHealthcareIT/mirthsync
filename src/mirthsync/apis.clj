@@ -2,13 +2,12 @@
   (:require [clojure.data.xml :as cdx]
             [clojure.data.zip :as cdz]
             [clojure.data.zip.xml :as cdzx]
-            [clojure.string :as cs]
             [clojure.tools.logging :as log]
             [clojure.zip :as cz]
             [mirthsync.actions :as ma]
             [mirthsync.files :as mf]
             [mirthsync.interfaces :as mi]
-            [clojure.data.xml :as xml])
+            [clojure.string :as cs])
   (:import java.io.File))
 
 (defn- api-element-id
@@ -330,6 +329,7 @@
   (let [base-path (mf/remove-extension file-path)]
     (loop [el-loc el-loc
            deconstruction []]
+      ;; (log/info (str "tag: " (:tag (cz/node el-loc))))
       (if (cz/end? el-loc)
         (conj deconstruction [file-path (cdx/indent-str (cz/root el-loc))])
         (let [[script-name script] (find-name-val el-loc)
@@ -341,13 +341,8 @@
 
           (recur next-el-loc deconstruction))))))
 
-(defn whole-node
-  "No deconstruction performed"
-  [file-path el-loc]
-  [[file-path (cdx/indent-str (cz/node el-loc))]])
-
 (defmethod mi/deconstruct-node :default [_ file-path el-loc]
-  (whole-node file-path el-loc))
+  [[file-path (cdx/indent-str (cz/node el-loc))]]) ;; just return whole node
 
 (defmethod mi/deconstruct-node :global-scripts [_ file-path el-loc]
   (deconstruct-node
@@ -357,19 +352,79 @@
      (when-let [name-loc (cdzx/xml1-> el-loc :entry :string)]
        [(cdzx/text name-loc) (cz/right name-loc)]))))
 
+(defn name-script-sequence
+  "Take a script loc to find and build the script name."
+  [prefix loc]
+  (str prefix
+       (cdzx/xml1-> loc cz/up :sequenceNumber cdzx/text)
+       (cdzx/xml1-> loc cz/up :name cdzx/text (fn [x]
+                                                (if (= x "")
+                                                  nil
+                                                  (str "-" x))))))
+
+(defn this-tag=
+  "Returns a query predicate that matches if the current exact node is a tag named
+  tagname."
+  [tagname]
+  (fn [loc]
+    (when (= tagname (:tag (cz/node loc)))
+      loc)))
+
 (def channel-deconstructors
-  [[#(cdzx/xml1-> % :connector :name cdzx/text)
-    #(cdzx/xml1-> % :connector :properties :script)]
-   [#(cdzx/xml1-> % :sourceConnector :name cdzx/text)
-    #(cdzx/xml1-> % :sourceConnector :properties :script)]
+  [[(partial name-script-sequence "destinationConnector-filter-step-")
+    #(cdzx/xml1-> %
+                  (this-tag= :com.mirth.connect.plugins.javascriptrule.JavaScriptRule)
+                  :script
+                  [cz/up cz/up cz/up :filter cz/up :destinationConnectors])]
+
+   [(fn [loc] (let [destname (apply cdzx/xml1-> loc (flatten [(repeat 4 cz/up) :name cdzx/text]))]
+                (str "destinationConnector-" destname "-" (name-script-sequence "transformer-step-" loc))))
+    #(cdzx/xml1-> %
+                  (this-tag= :com.mirth.connect.plugins.javascriptstep.JavaScriptStep)
+                  :script
+                  [cz/up cz/up cz/up :transformer cz/up :connector cz/up :destinationConnectors])]
+
+   [(fn [loc] (let [destname (apply cdzx/xml1-> loc (flatten [(repeat 4 cz/up) :name cdzx/text]))]
+                (str "destinationConnector-" destname "-" (name-script-sequence "responseTransformer-step-" loc))))
+    #(cdzx/xml1-> %
+                  (this-tag= :com.mirth.connect.plugins.javascriptstep.JavaScriptStep)
+                  :script
+                  [cz/up cz/up cz/up :responseTransformer cz/up :connector cz/up :destinationConnectors])]
+
+   [(partial name-script-sequence "sourceConnector-transformer-step-")
+    #(cdzx/xml1-> %
+                  (this-tag= :com.mirth.connect.plugins.javascriptstep.JavaScriptStep)
+                  :script
+                  [cz/up cz/up cz/up :transformer cz/up :sourceConnector])]
+
+   [(partial name-script-sequence "sourceConnector-filter-step-")
+    #(cdzx/xml1-> %
+                  (this-tag= :com.mirth.connect.plugins.javascriptrule.JavaScriptRule)
+                  :script
+                  [cz/up cz/up cz/up :filter cz/up :sourceConnector])]
+
+   [(fn [loc] (let [name (cdzx/xml1-> loc cz/up cz/up :name cdzx/text)]
+                (str "sourceConnector" (when-not (cs/blank? name)
+                                         (str "-" name)))))
+    #(cdzx/xml1-> % (this-tag= :script) [cz/up :properties cz/up :sourceConnector])]
+
+   [(fn [loc] (let [name (cdzx/xml1-> loc cz/up cz/up :name cdzx/text)]
+                (str "connector" (when-not (cs/blank? name)
+                                         (str "-" name)))))
+    #(cdzx/xml1-> % (this-tag= :script) [cz/up :properties cz/up :connector])]
+
    [(fn [_] "PreprocessingScript")
-    #(cdzx/xml1-> % :preprocessingScript)]
+    #(cdzx/xml1-> % (this-tag= :preprocessingScript))]
+
    [(fn [_] "PostprocessingScript")
-    #(cdzx/xml1-> % :postprocessingScript)]
+    #(cdzx/xml1-> % (this-tag= :postprocessingScript))]
+
    [(fn [_] "DeployScript")
-    #(cdzx/xml1-> % :deployScript)]
+    #(cdzx/xml1-> % (this-tag= :deployScript))]
+
    [(fn [_] "UndeployScript")
-    #(cdzx/xml1-> % :undeployScript)]])
+    #(cdzx/xml1-> % (this-tag= :undeployScript))]])
+
 
 (defmethod mi/deconstruct-node :channels [_ file-path el-loc]
   (deconstruct-node
@@ -378,38 +433,28 @@
    (fn [el-loc]
      (some (fn [[name script]]
              (when-let [script-loc (script el-loc)]
-               [(name el-loc) script-loc]))
+               [(name script-loc) script-loc]))
            channel-deconstructors))))
 
 (comment
-  (deconstruct-node (mi/file-path :global-scripts mirthsync.xml/app-conf1)
-                    (:el-loc mirthsync.xml/app-conf1))
 
-  (deconstruct-node (mi/file-path mirthsync.xml/api1 mirthsync.xml/app-conf1)
-                    mirthsync.xml/el-loc1)
+  ;; pull
+  (mirthsync.core/main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" "target/tmp"
+                            "-i" "-f" "pull")
 
-  (loop [el-loc mirthsync.xml/el-loc1]
-    (if (cz/end? el-loc)
-      (cz/root el-loc)
-      (let [script-name (cdzx/xml1-> el-loc :connector :name)
-            script (cdzx/xml1-> el-loc :connector :properties :script)
-            ]
-        ;; (log/infof "script-name: %s" script-name)
-        ;; (log/infof "script: %s" script)
-        (println (type script))
-        (when script
-          (printf "Found a script named %s\n" (cdzx/text script-name)))
-        (recur (cz/next el-loc))))
-    )
+  ;; load a channel for repl work
+  (def el-loc2 (cz/xml-zip (cdx/parse-str (slurp "target/tmp/Channels/This is a group/Hello DB Writer.xml"))))
 
-  (def all-locs (take-while (complement cz/end?) (iterate cz/next mirthsync.xml/el-loc1)))
-  (def all-branches (filter cz/branch? all-locs))
-  (map #(:tag (cz/node %)) all-locs)
+  ;; select first transformer elements
+  (cdzx/xml1-> el-loc2 :sourceConnector :transformer :elements cz/node)
 
-  (reduce (fn [result el-loc]
-            (let [script-name (cdzx/xml1-> el-loc :connector :name)
-                  script (cdzx/xml1-> el-loc :connector :properties :script)]
-              (if script
-                (conj result [(cdzx/text script-name) (cdzx/text script) (:tag (cz/node el-loc))] )
-                result))) [] all-locs)
+  (def first-transformer-jscript-step
+    (cdzx/xml1-> el-loc2
+                 :sourceConnector
+                 :transformer
+                 :elements
+                 :com.mirth.connect.plugins.javascriptstep.JavaScriptStep
+                 :script
+                 [cz/up cz/up cz/up :transformer cz/up :sourceConnector]))
 )
