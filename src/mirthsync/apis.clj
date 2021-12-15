@@ -371,7 +371,41 @@
       loc)))
 
 (def channel-deconstructors
-  [[(partial name-script-sequence "destinationConnector-filter-step-")
+  [[(fn [_] "PreprocessingScript")
+    #(cdzx/xml1-> % (this-tag= :preprocessingScript))]
+
+   [(fn [_] "PostprocessingScript")
+    #(cdzx/xml1-> % (this-tag= :postprocessingScript))]
+
+   [(fn [_] "DeployScript")
+    #(cdzx/xml1-> % (this-tag= :deployScript))]
+
+   [(fn [_] "UndeployScript")
+    #(cdzx/xml1-> % (this-tag= :undeployScript))]
+
+   [(fn [loc] (let [name (cdzx/xml1-> loc cz/up cz/up :name cdzx/text)]
+                (str "destinationConnector" (when-not (cs/blank? name)
+                                              (str "-" name)))))
+    #(cdzx/xml1-> % (this-tag= :script) [cz/up :properties cz/up :connector])]
+
+   [(fn [loc] (let [name (cdzx/xml1-> loc cz/up cz/up :name cdzx/text)]
+                (str "sourceConnector" (when-not (cs/blank? name)
+                                         (str "-" name)))))
+    #(cdzx/xml1-> % (this-tag= :script) [cz/up :properties cz/up :sourceConnector])]
+
+   [(partial name-script-sequence "sourceConnector-filter-step-")
+    #(cdzx/xml1-> %
+                  (this-tag= :com.mirth.connect.plugins.javascriptrule.JavaScriptRule)
+                  :script
+                  [cz/up cz/up cz/up :filter cz/up :sourceConnector])]
+
+   [(partial name-script-sequence "sourceConnector-transformer-step-")
+    #(cdzx/xml1-> %
+                  (this-tag= :com.mirth.connect.plugins.javascriptstep.JavaScriptStep)
+                  :script
+                  [cz/up cz/up cz/up :transformer cz/up :sourceConnector])]
+
+   [(partial name-script-sequence "destinationConnector-filter-step-")
     #(cdzx/xml1-> %
                   (this-tag= :com.mirth.connect.plugins.javascriptrule.JavaScriptRule)
                   :script
@@ -389,41 +423,7 @@
     #(cdzx/xml1-> %
                   (this-tag= :com.mirth.connect.plugins.javascriptstep.JavaScriptStep)
                   :script
-                  [cz/up cz/up cz/up :responseTransformer cz/up :connector cz/up :destinationConnectors])]
-
-   [(partial name-script-sequence "sourceConnector-transformer-step-")
-    #(cdzx/xml1-> %
-                  (this-tag= :com.mirth.connect.plugins.javascriptstep.JavaScriptStep)
-                  :script
-                  [cz/up cz/up cz/up :transformer cz/up :sourceConnector])]
-
-   [(partial name-script-sequence "sourceConnector-filter-step-")
-    #(cdzx/xml1-> %
-                  (this-tag= :com.mirth.connect.plugins.javascriptrule.JavaScriptRule)
-                  :script
-                  [cz/up cz/up cz/up :filter cz/up :sourceConnector])]
-
-   [(fn [loc] (let [name (cdzx/xml1-> loc cz/up cz/up :name cdzx/text)]
-                (str "sourceConnector" (when-not (cs/blank? name)
-                                         (str "-" name)))))
-    #(cdzx/xml1-> % (this-tag= :script) [cz/up :properties cz/up :sourceConnector])]
-
-   [(fn [loc] (let [name (cdzx/xml1-> loc cz/up cz/up :name cdzx/text)]
-                (str "connector" (when-not (cs/blank? name)
-                                         (str "-" name)))))
-    #(cdzx/xml1-> % (this-tag= :script) [cz/up :properties cz/up :connector])]
-
-   [(fn [_] "PreprocessingScript")
-    #(cdzx/xml1-> % (this-tag= :preprocessingScript))]
-
-   [(fn [_] "PostprocessingScript")
-    #(cdzx/xml1-> % (this-tag= :postprocessingScript))]
-
-   [(fn [_] "DeployScript")
-    #(cdzx/xml1-> % (this-tag= :deployScript))]
-
-   [(fn [_] "UndeployScript")
-    #(cdzx/xml1-> % (this-tag= :undeployScript))]])
+                  [cz/up cz/up cz/up :responseTransformer cz/up :connector cz/up :destinationConnectors])]])
 
 
 (defmethod mi/deconstruct-node :channels [_ file-path el-loc]
