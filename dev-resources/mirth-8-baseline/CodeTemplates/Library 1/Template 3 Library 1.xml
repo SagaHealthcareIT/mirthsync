@@ -3,15 +3,15 @@
   <name>Template 3 Library 1</name>
   <revision>1</revision>
   <lastModified>
-    <time>1618330314819</time>
+    <time>1640205630614</time>
     <timezone>America/New_York</timezone>
   </lastModified>
   <contextSet>
     <delegate>
-      <contextType>SOURCE_RECEIVER</contextType>
-      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
       <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
       <contextType>DESTINATION_DISPATCHER</contextType>
+      <contextType>SOURCE_RECEIVER</contextType>
+      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
       <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
     </delegate>
   </contextSet>

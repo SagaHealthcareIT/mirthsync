@@ -9,14 +9,4 @@
     <directory>custom-lib</directory>
     <directoryRecursion>true</directoryRecursion>
   </com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties>
-  <com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties version="3.8.0">
-    <pluginPointName>Directory Resource</pluginPointName>
-    <type>Directory</type>
-    <id>2542ca8f-114a-4bd5-b239-d214e6f9d901</id>
-    <name>this is a resource directory called fakeresourcedir</name>
-    <description/>
-    <includeWithGlobalScripts>false</includeWithGlobalScripts>
-    <directory>fakeresourcedir</directory>
-    <directoryRecursion>true</directoryRecursion>
-  </com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties>
 </list>

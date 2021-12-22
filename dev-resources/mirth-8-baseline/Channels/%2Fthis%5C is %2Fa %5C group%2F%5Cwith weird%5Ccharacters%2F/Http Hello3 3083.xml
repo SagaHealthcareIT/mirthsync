@@ -3,7 +3,7 @@
   <nextMetaDataId>2</nextMetaDataId>
   <name>Http Hello3 3083</name>
   <description/>
-  <revision>2</revision>
+  <revision>1</revision>
   <sourceConnector version="3.8.0">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
@@ -40,6 +40,7 @@
       <responseDataTypeBinary>false</responseDataTypeBinary>
       <responseStatusCode/>
       <responseHeaders class="linked-hash-map"/>
+      <useResponseHeadersVariable>false</useResponseHeadersVariable>
       <charset>UTF-8</charset>
       <contextPath/>
       <timeout>30000</timeout>
@@ -96,14 +97,14 @@
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <script>return "Hello world2";</script>
+        <script msync-fileref="destinationConnector-Hello world 2.js"/>
       </properties>
       <transformer version="3.8.0">
         <elements>
           <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="3.8.0">
             <sequenceNumber>0</sequenceNumber>
             <enabled>true</enabled>
-            <script>var foo = null;</script>
+            <script msync-fileref="destinationConnector-Hello world 2-transformer-step-0.js"/>
           </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
         </elements>
         <inboundTemplate encoding="base64"/>
@@ -129,7 +130,7 @@
             <name>response transformer</name>
             <sequenceNumber>0</sequenceNumber>
             <enabled>true</enabled>
-            <script>var foo2 = null;</script>
+            <script msync-fileref="destinationConnector-Hello world 2-responseTransformer-step-0-response transformer.js"/>
           </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
         </elements>
         <inboundTemplate encoding="base64"/>
@@ -155,7 +156,7 @@
             <name>true</name>
             <sequenceNumber>0</sequenceNumber>
             <enabled>true</enabled>
-            <script>return true;</script>
+            <script msync-fileref="destinationConnector-Hello world 2-filter-step-0-true.js"/>
           </com.mirth.connect.plugins.javascriptrule.JavaScriptRule>
         </elements>
       </filter>
@@ -165,21 +166,10 @@
       <waitForPrevious>true</waitForPrevious>
     </connector>
   </destinationConnectors>
-  <preprocessingScript>// Modify the message variable below to pre process data
-logger.info('http hello2 preprocessor');
-return message;</preprocessingScript>
-  <postprocessingScript>// This script executes once after a message has been processed
-// Responses returned from here will be stored as "Postprocessor" in the response map
-logger.info('http hello2 postprocessor');
-return;</postprocessingScript>
-  <deployScript>// This script executes once when the channel is deployed
-// You only have access to the globalMap and globalChannelMap here to persist data
-logger.info('http hello2 deploy');
-return;</deployScript>
-  <undeployScript>// This script executes once when the channel is undeployed
-// You only have access to the globalMap and globalChannelMap here to persist data
-logger.info('http hello2 udeploy');
-return;</undeployScript>
+  <preprocessingScript msync-fileref="PreprocessingScript.js"/>
+  <postprocessingScript msync-fileref="PostprocessingScript.js"/>
+  <deployScript msync-fileref="DeployScript.js"/>
+  <undeployScript msync-fileref="UndeployScript.js"/>
   <properties version="3.8.0">
     <clearGlobalChannelMap>true</clearGlobalChannelMap>
     <messageStorageMode>DEVELOPMENT</messageStorageMode>
@@ -212,4 +202,16 @@ return;</undeployScript>
       </entry>
     </resourceIds>
   </properties>
+  <exportData>
+    <metadata>
+      <enabled>true</enabled>
+      <lastModified>
+        <time>1615839851811</time>
+        <timezone>America/New_York</timezone>
+      </lastModified>
+      <pruningSettings>
+        <archiveEnabled>true</archiveEnabled>
+      </pruningSettings>
+    </metadata>
+  </exportData>
 </channel>

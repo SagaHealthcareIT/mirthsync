@@ -4,6 +4,7 @@
             [clojure.test :as ct]
             [clojure.zip :as cz]
             [mirthsync.apis :as ma]
+            [mirthsync.files :as mf]
             [mirthsync.xml :as mx]))
 
 (defn update-id [loc]
@@ -21,7 +22,7 @@
     <name>/this\\ is /a \\ group/\\with weird\\characters/</name>
     <revision>1</revision>
     <lastModified>
-      <time>1633619775310</time>
+      <time>1637283923123</time>
       <timezone>America/New_York</timezone>
     </lastModified>
     <description/>
@@ -37,7 +38,7 @@
     <name>This is a group</name>
     <revision>1</revision>
     <lastModified>
-      <time>1632175112613</time>
+      <time>1637283923236</time>
       <timezone>America/New_York</timezone>
     </lastModified>
     <description>This is the group's description</description>
@@ -72,7 +73,7 @@
     <name>Library 1</name>
     <revision>1</revision>
     <lastModified>
-      <time>1633625072821</time>
+      <time>1637709878140</time>
       <timezone>America/New_York</timezone>
     </lastModified>
     <description/>
@@ -96,7 +97,7 @@
     <name>Library 2</name>
     <revision>1</revision>
     <lastModified>
-      <time>1632175113387</time>
+      <time>1637709878192</time>
       <timezone>America/New_York</timezone>
     </lastModified>
     <description/>
@@ -188,9 +189,9 @@
 (ct/deftest test-safe-file-paths
   (ct/testing "File names don't traverse paths"
     (ct/are [x y] (= x y)
-      "foo.xml" (ma/safe-name "foo.xml")
-      "%2Fpath chars in%2F%5C%5C%2F%5C%2F name.ext%2F" (ma/safe-name "/path chars in/\\\\/\\/ name.ext/")
-      "!@#$%^&*()_+-=[]{}||;:'\",<.>%2F?.xml" (ma/safe-name "!@#$%^&*()_+-=[]{}||;:'\",<.>/?.xml"))))
+      "foo.xml" (mf/safe-name "foo.xml")
+      "%2Fpath chars in%2F%5C%5C%2F%5C%2F name.ext%2F" (mf/safe-name "/path chars in/\\\\/\\/ name.ext/")
+      "!@#$%^&*()_+-=[]{}||;:'\",<.>%2F?.xml" (mf/safe-name "!@#$%^&*()_+-=[]{}||;:'\",<.>/?.xml"))))
 
 (comment
   (ct/deftest iterate-apis

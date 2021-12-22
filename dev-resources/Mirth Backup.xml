@@ -1,12 +1,12 @@
 <serverConfiguration version="3.8.0">
-  <date>2021-10-03 18:14:03</date>
+  <date>2021-12-22 15:15:48</date>
   <channelGroups>
     <channelGroup version="3.8.0">
       <id>630d82bd-0727-48d6-bf13-bfa86080d9f5</id>
       <name>/this\ is /a \ group/\with weird\characters/</name>
       <revision>1</revision>
       <lastModified>
-        <time>1633299125095</time>
+        <time>1637283923123</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -22,7 +22,7 @@
       <name>This is a group</name>
       <revision>1</revision>
       <lastModified>
-        <time>1633299124832</time>
+        <time>1637283923236</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description>This is the group&apos;s description</description>
@@ -40,11 +40,394 @@
   </channelGroups>
   <channels>
     <channel version="3.8.0">
+      <id>fab4b87b-71a7-42dd-b00e-049d28adae64</id>
+      <nextMetaDataId>3</nextMetaDataId>
+      <name>Hello DB Writer</name>
+      <description></description>
+      <revision>17</revision>
+      <sourceConnector version="3.8.0">
+        <metaDataId>0</metaDataId>
+        <name>sourceConnector</name>
+        <properties class="com.mirth.connect.connectors.js.JavaScriptReceiverProperties" version="3.8.0">
+          <pluginProperties/>
+          <pollConnectorProperties version="3.8.0">
+            <pollingType>INTERVAL</pollingType>
+            <pollOnStart>false</pollOnStart>
+            <pollingFrequency>5000</pollingFrequency>
+            <pollingHour>0</pollingHour>
+            <pollingMinute>0</pollingMinute>
+            <cronJobs/>
+            <pollConnectorPropertiesAdvanced>
+              <weekly>true</weekly>
+              <inactiveDays>
+                <boolean>false</boolean>
+                <boolean>false</boolean>
+                <boolean>false</boolean>
+                <boolean>false</boolean>
+                <boolean>false</boolean>
+                <boolean>false</boolean>
+                <boolean>false</boolean>
+                <boolean>false</boolean>
+              </inactiveDays>
+              <dayOfMonth>1</dayOfMonth>
+              <allDay>true</allDay>
+              <startingHour>8</startingHour>
+              <startingMinute>0</startingMinute>
+              <endingHour>17</endingHour>
+              <endingMinute>0</endingMinute>
+            </pollConnectorPropertiesAdvanced>
+          </pollConnectorProperties>
+          <sourceConnectorProperties version="3.8.0">
+            <responseVariable>None</responseVariable>
+            <respondAfterProcessing>true</respondAfterProcessing>
+            <processBatch>false</processBatch>
+            <firstResponse>false</firstResponse>
+            <processingThreads>1</processingThreads>
+            <resourceIds class="linked-hash-map">
+              <entry>
+                <string>Default Resource</string>
+                <string>[Default Resource]</string>
+              </entry>
+            </resourceIds>
+            <queueBufferSize>1000</queueBufferSize>
+          </sourceConnectorProperties>
+          <script>var foo=&apos;foo&apos;;
+
+// this is a javascript reader source js area
+
+var foo2=&apos;foo2&apos;;</script>
+        </properties>
+        <transformer version="3.8.0">
+          <elements>
+            <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="3.8.0">
+              <name></name>
+              <sequenceNumber>0</sequenceNumber>
+              <enabled>true</enabled>
+              <script>var unnamedsourcetransformer=1;
+
+// foo</script>
+            </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
+            <com.mirth.connect.plugins.mapper.MapperStep version="3.8.0">
+              <name>thisisamapperstep2</name>
+              <sequenceNumber>1</sequenceNumber>
+              <enabled>true</enabled>
+              <variable>thisisamapperstep2</variable>
+              <mapping>channelName</mapping>
+              <defaultValue></defaultValue>
+              <replacements/>
+              <scope>CHANNEL</scope>
+            </com.mirth.connect.plugins.mapper.MapperStep>
+            <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="3.8.0">
+              <name>this is a javascript step 3</name>
+              <sequenceNumber>2</sequenceNumber>
+              <enabled>true</enabled>
+              <script>var foo=&apos;step3&apos;;</script>
+            </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
+          </elements>
+          <inboundTemplate encoding="base64"></inboundTemplate>
+          <outboundTemplate encoding="base64"></outboundTemplate>
+          <inboundDataType>RAW</inboundDataType>
+          <outboundDataType>RAW</outboundDataType>
+          <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+            <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+              <splitType>JavaScript</splitType>
+              <batchScript></batchScript>
+            </batchProperties>
+          </inboundProperties>
+          <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+            <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+              <splitType>JavaScript</splitType>
+              <batchScript></batchScript>
+            </batchProperties>
+          </outboundProperties>
+        </transformer>
+        <filter version="3.8.0">
+          <elements>
+            <com.mirth.connect.plugins.javascriptrule.JavaScriptRule version="3.8.0">
+              <sequenceNumber>0</sequenceNumber>
+              <enabled>true</enabled>
+              <script>var foo=&apos;this is step 1&apos;;
+// step 1 in the source filter</script>
+            </com.mirth.connect.plugins.javascriptrule.JavaScriptRule>
+            <com.mirth.connect.plugins.javascriptrule.JavaScriptRule version="3.8.0">
+              <name>this is the name of step 2 in the source filter</name>
+              <sequenceNumber>1</sequenceNumber>
+              <enabled>true</enabled>
+              <operator>AND</operator>
+              <script>// this is step 2
+var foo=&apos;hello there&apos;;</script>
+            </com.mirth.connect.plugins.javascriptrule.JavaScriptRule>
+          </elements>
+        </filter>
+        <transportName>JavaScript Reader</transportName>
+        <mode>SOURCE</mode>
+        <enabled>true</enabled>
+        <waitForPrevious>true</waitForPrevious>
+      </sourceConnector>
+      <destinationConnectors>
+        <connector version="3.8.0">
+          <metaDataId>1</metaDataId>
+          <name>Hello Database Writer</name>
+          <properties class="com.mirth.connect.connectors.jdbc.DatabaseDispatcherProperties" version="3.8.0">
+            <pluginProperties/>
+            <destinationConnectorProperties version="3.8.0">
+              <queueEnabled>false</queueEnabled>
+              <sendFirst>false</sendFirst>
+              <retryIntervalMillis>10000</retryIntervalMillis>
+              <regenerateTemplate>false</regenerateTemplate>
+              <retryCount>0</retryCount>
+              <rotate>false</rotate>
+              <includeFilterTransformer>false</includeFilterTransformer>
+              <threadCount>1</threadCount>
+              <threadAssignmentVariable></threadAssignmentVariable>
+              <validateResponse>false</validateResponse>
+              <resourceIds class="linked-hash-map">
+                <entry>
+                  <string>Default Resource</string>
+                  <string>[Default Resource]</string>
+                </entry>
+              </resourceIds>
+              <queueBufferSize>1000</queueBufferSize>
+              <reattachAttachments>true</reattachAttachments>
+            </destinationConnectorProperties>
+            <driver>com.mysql.cj.jdbc.Driver</driver>
+            <url>jdbc:mysql://localhost:3306/dhs</url>
+            <username>test</username>
+            <password>test</password>
+            <query>INSERT INTO mdl_assignment (course, name, intro)
+VALUES (, , )
+
+SELECT * from mdl_assignment
+
+</query>
+            <useScript>false</useScript>
+          </properties>
+          <transformer version="3.8.0">
+            <elements>
+              <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="3.8.0">
+                <name>step1</name>
+                <sequenceNumber>0</sequenceNumber>
+                <enabled>true</enabled>
+                <script>var foo = null;</script>
+              </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
+              <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="3.8.0">
+                <name>step2</name>
+                <sequenceNumber>1</sequenceNumber>
+                <enabled>true</enabled>
+                <script>var step2=&apos;foo&apos;;</script>
+              </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
+            </elements>
+            <inboundTemplate encoding="base64"></inboundTemplate>
+            <outboundTemplate encoding="base64"></outboundTemplate>
+            <inboundDataType>RAW</inboundDataType>
+            <outboundDataType>RAW</outboundDataType>
+            <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+                <splitType>JavaScript</splitType>
+                <batchScript></batchScript>
+              </batchProperties>
+            </inboundProperties>
+            <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+                <splitType>JavaScript</splitType>
+                <batchScript></batchScript>
+              </batchProperties>
+            </outboundProperties>
+          </transformer>
+          <responseTransformer version="3.8.0">
+            <elements>
+              <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="3.8.0">
+                <name>response transformer</name>
+                <sequenceNumber>0</sequenceNumber>
+                <enabled>true</enabled>
+                <script>var foo = null;</script>
+              </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
+            </elements>
+            <inboundTemplate encoding="base64"></inboundTemplate>
+            <outboundTemplate encoding="base64"></outboundTemplate>
+            <inboundDataType>RAW</inboundDataType>
+            <outboundDataType>RAW</outboundDataType>
+            <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+                <splitType>JavaScript</splitType>
+                <batchScript></batchScript>
+              </batchProperties>
+            </inboundProperties>
+            <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+                <splitType>JavaScript</splitType>
+                <batchScript></batchScript>
+              </batchProperties>
+            </outboundProperties>
+          </responseTransformer>
+          <filter version="3.8.0">
+            <elements>
+              <com.mirth.connect.plugins.javascriptrule.JavaScriptRule version="3.8.0">
+                <name>my filter name</name>
+                <sequenceNumber>0</sequenceNumber>
+                <enabled>true</enabled>
+                <script>return true; // foo</script>
+              </com.mirth.connect.plugins.javascriptrule.JavaScriptRule>
+            </elements>
+          </filter>
+          <transportName>Database Writer</transportName>
+          <mode>DESTINATION</mode>
+          <enabled>true</enabled>
+          <waitForPrevious>true</waitForPrevious>
+        </connector>
+        <connector version="3.8.0">
+          <metaDataId>2</metaDataId>
+          <name></name>
+          <properties class="com.mirth.connect.connectors.js.JavaScriptDispatcherProperties" version="3.8.0">
+            <pluginProperties/>
+            <destinationConnectorProperties version="3.8.0">
+              <queueEnabled>false</queueEnabled>
+              <sendFirst>false</sendFirst>
+              <retryIntervalMillis>10000</retryIntervalMillis>
+              <regenerateTemplate>false</regenerateTemplate>
+              <retryCount>0</retryCount>
+              <rotate>false</rotate>
+              <includeFilterTransformer>false</includeFilterTransformer>
+              <threadCount>1</threadCount>
+              <threadAssignmentVariable></threadAssignmentVariable>
+              <validateResponse>false</validateResponse>
+              <resourceIds class="linked-hash-map">
+                <entry>
+                  <string>Default Resource</string>
+                  <string>[Default Resource]</string>
+                </entry>
+              </resourceIds>
+              <queueBufferSize>1000</queueBufferSize>
+              <reattachAttachments>true</reattachAttachments>
+            </destinationConnectorProperties>
+            <script>// this is my unnamed javascript writer destination setting area
+var foo=null;</script>
+          </properties>
+          <transformer version="3.8.0">
+            <elements/>
+            <inboundTemplate encoding="base64"></inboundTemplate>
+            <inboundDataType>RAW</inboundDataType>
+            <outboundDataType>RAW</outboundDataType>
+            <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+                <splitType>JavaScript</splitType>
+                <batchScript></batchScript>
+              </batchProperties>
+            </inboundProperties>
+            <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+                <splitType>JavaScript</splitType>
+                <batchScript></batchScript>
+              </batchProperties>
+            </outboundProperties>
+          </transformer>
+          <responseTransformer version="3.8.0">
+            <elements/>
+            <inboundDataType>RAW</inboundDataType>
+            <outboundDataType>RAW</outboundDataType>
+            <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+                <splitType>JavaScript</splitType>
+                <batchScript></batchScript>
+              </batchProperties>
+            </inboundProperties>
+            <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
+              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
+                <splitType>JavaScript</splitType>
+                <batchScript></batchScript>
+              </batchProperties>
+            </outboundProperties>
+          </responseTransformer>
+          <filter version="3.8.0">
+            <elements>
+              <com.mirth.connect.plugins.javascriptrule.JavaScriptRule version="3.8.0">
+                <sequenceNumber>0</sequenceNumber>
+                <enabled>true</enabled>
+                <script>// this is an unnamed script step
+var foo=null;</script>
+              </com.mirth.connect.plugins.javascriptrule.JavaScriptRule>
+              <com.mirth.connect.plugins.javascriptrule.JavaScriptRule version="3.8.0">
+                <name>this is a named step</name>
+                <sequenceNumber>1</sequenceNumber>
+                <enabled>true</enabled>
+                <operator>AND</operator>
+                <script>// named step
+var foo=null;</script>
+              </com.mirth.connect.plugins.javascriptrule.JavaScriptRule>
+            </elements>
+          </filter>
+          <transportName>JavaScript Writer</transportName>
+          <mode>DESTINATION</mode>
+          <enabled>true</enabled>
+          <waitForPrevious>true</waitForPrevious>
+        </connector>
+      </destinationConnectors>
+      <preprocessingScript>// Modify the message variable below to pre process data
+logger.info(&apos;hello db writer preprocessor&apos;);
+return message;</preprocessingScript>
+      <postprocessingScript>// This script executes once after a message has been processed
+// Responses returned from here will be stored as &quot;Postprocessor&quot; in the response map
+logger.info(&apos;hello db writer postprocessor&apos;);
+return;</postprocessingScript>
+      <deployScript>// This script executes once when the channel is deployed
+// You only have access to the globalMap and globalChannelMap here to persist data
+logger.info(&apos;Hello db writer deploy&apos;);
+return;</deployScript>
+      <undeployScript>// This script executes once when the channel is undeployed
+// You only have access to the globalMap and globalChannelMap here to persist data
+logger.info(&apos;hello db writer undeploy&apos;);
+return;</undeployScript>
+      <properties version="3.8.0">
+        <clearGlobalChannelMap>true</clearGlobalChannelMap>
+        <messageStorageMode>DEVELOPMENT</messageStorageMode>
+        <encryptData>false</encryptData>
+        <removeContentOnCompletion>false</removeContentOnCompletion>
+        <removeOnlyFilteredOnCompletion>false</removeOnlyFilteredOnCompletion>
+        <removeAttachmentsOnCompletion>false</removeAttachmentsOnCompletion>
+        <initialState>STARTED</initialState>
+        <storeAttachments>true</storeAttachments>
+        <metaDataColumns>
+          <metaDataColumn>
+            <name>SOURCE</name>
+            <type>STRING</type>
+            <mappingName>mirth_source</mappingName>
+          </metaDataColumn>
+          <metaDataColumn>
+            <name>TYPE</name>
+            <type>STRING</type>
+            <mappingName>mirth_type</mappingName>
+          </metaDataColumn>
+        </metaDataColumns>
+        <attachmentProperties version="3.8.0">
+          <type>None</type>
+          <properties/>
+        </attachmentProperties>
+        <resourceIds class="linked-hash-map">
+          <entry>
+            <string>Default Resource</string>
+            <string>[Default Resource]</string>
+          </entry>
+        </resourceIds>
+      </properties>
+      <exportData>
+        <metadata>
+          <enabled>true</enabled>
+          <lastModified>
+            <time>1640204139099</time>
+            <timezone>America/New_York</timezone>
+          </lastModified>
+          <pruningSettings>
+            <archiveEnabled>true</archiveEnabled>
+          </pruningSettings>
+        </metadata>
+      </exportData>
+    </channel>
+    <channel version="3.8.0">
       <id>51a75675-33cc-4d87-87c6-2a337dedff67</id>
       <nextMetaDataId>2</nextMetaDataId>
       <name>Http 3080</name>
       <description></description>
-      <revision>1</revision>
+      <revision>7</revision>
       <sourceConnector version="3.8.0">
         <metaDataId>0</metaDataId>
         <name>sourceConnector</name>
@@ -81,6 +464,7 @@
           <responseDataTypeBinary>false</responseDataTypeBinary>
           <responseStatusCode></responseStatusCode>
           <responseHeaders class="linked-hash-map"/>
+          <useResponseHeadersVariable>false</useResponseHeadersVariable>
           <charset>UTF-8</charset>
           <contextPath></contextPath>
           <timeout>30000</timeout>
@@ -386,7 +770,9 @@
 return message;</preprocessingScript>
       <postprocessingScript>// This script executes once after a message has been processed
 // Responses returned from here will be stored as &quot;Postprocessor&quot; in the response map
-return;</postprocessingScript>
+var blah = &apos;this is a test&apos;;
+return;
+</postprocessingScript>
       <deployScript>// This script executes once when the channel is deployed
 // You only have access to the globalMap and globalChannelMap here to persist data
 return;</deployScript>
@@ -428,6 +814,13 @@ return;</undeployScript>
       <exportData>
         <metadata>
           <enabled>true</enabled>
+          <lastModified>
+            <time>1556232301836</time>
+            <timezone>America/New_York</timezone>
+          </lastModified>
+          <pruningSettings>
+            <archiveEnabled>true</archiveEnabled>
+          </pruningSettings>
         </metadata>
       </exportData>
     </channel>
@@ -436,7 +829,7 @@ return;</undeployScript>
       <nextMetaDataId>2</nextMetaDataId>
       <name>Http Hello2 3081</name>
       <description></description>
-      <revision>1</revision>
+      <revision>8</revision>
       <sourceConnector version="3.8.0">
         <metaDataId>0</metaDataId>
         <name>sourceConnector</name>
@@ -473,6 +866,8 @@ return;</undeployScript>
           <responseDataTypeBinary>false</responseDataTypeBinary>
           <responseStatusCode></responseStatusCode>
           <responseHeaders class="linked-hash-map"/>
+          <responseHeadersVariable></responseHeadersVariable>
+          <useResponseHeadersVariable>false</useResponseHeadersVariable>
           <charset>UTF-8</charset>
           <contextPath></contextPath>
           <timeout>30000</timeout>
@@ -529,7 +924,9 @@ return;</undeployScript>
               <queueBufferSize>1000</queueBufferSize>
               <reattachAttachments>true</reattachAttachments>
             </destinationConnectorProperties>
-            <script>return &quot;Hello world2&quot;;</script>
+            <script>var foo=1;
+// hello there
+return &quot;Hello world2&quot;;</script>
           </properties>
           <transformer version="3.8.0">
             <elements>
@@ -648,226 +1045,13 @@ return;</undeployScript>
       <exportData>
         <metadata>
           <enabled>true</enabled>
-        </metadata>
-      </exportData>
-    </channel>
-    <channel version="3.8.0">
-      <id>fab4b87b-71a7-42dd-b00e-049d28adae64</id>
-      <nextMetaDataId>2</nextMetaDataId>
-      <name>Http Hello3 3082</name>
-      <description></description>
-      <revision>1</revision>
-      <sourceConnector version="3.8.0">
-        <metaDataId>0</metaDataId>
-        <name>sourceConnector</name>
-        <properties class="com.mirth.connect.connectors.http.HttpReceiverProperties" version="3.8.0">
-          <pluginProperties>
-            <com.mirth.connect.plugins.httpauth.NoneHttpAuthProperties version="3.8.0">
-  <authType>NONE</authType>
-            </com.mirth.connect.plugins.httpauth.NoneHttpAuthProperties>
-          </pluginProperties>
-          <listenerConnectorProperties version="3.8.0">
-            <host>0.0.0.0</host>
-            <port>3082</port>
-          </listenerConnectorProperties>
-          <sourceConnectorProperties version="3.8.0">
-            <responseVariable>d1</responseVariable>
-            <respondAfterProcessing>true</respondAfterProcessing>
-            <processBatch>false</processBatch>
-            <firstResponse>false</firstResponse>
-            <processingThreads>1</processingThreads>
-            <resourceIds class="linked-hash-map">
-              <entry>
-                <string>Default Resource</string>
-                <string>[Default Resource]</string>
-              </entry>
-            </resourceIds>
-            <queueBufferSize>1000</queueBufferSize>
-          </sourceConnectorProperties>
-          <xmlBody>false</xmlBody>
-          <parseMultipart>true</parseMultipart>
-          <includeMetadata>false</includeMetadata>
-          <binaryMimeTypes>application/.*(?&lt;!json|xml)$|image/.*|video/.*|audio/.*</binaryMimeTypes>
-          <binaryMimeTypesRegex>true</binaryMimeTypesRegex>
-          <responseContentType>text/plain</responseContentType>
-          <responseDataTypeBinary>false</responseDataTypeBinary>
-          <responseStatusCode></responseStatusCode>
-          <responseHeaders class="linked-hash-map"/>
-          <charset>UTF-8</charset>
-          <contextPath></contextPath>
-          <timeout>30000</timeout>
-          <staticResources/>
-        </properties>
-        <transformer version="3.8.0">
-          <elements/>
-          <inboundDataType>RAW</inboundDataType>
-          <outboundDataType>RAW</outboundDataType>
-          <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
-            <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
-              <splitType>JavaScript</splitType>
-              <batchScript></batchScript>
-            </batchProperties>
-          </inboundProperties>
-          <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
-            <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
-              <splitType>JavaScript</splitType>
-              <batchScript></batchScript>
-            </batchProperties>
-          </outboundProperties>
-        </transformer>
-        <filter version="3.8.0">
-          <elements/>
-        </filter>
-        <transportName>HTTP Listener</transportName>
-        <mode>SOURCE</mode>
-        <enabled>true</enabled>
-        <waitForPrevious>true</waitForPrevious>
-      </sourceConnector>
-      <destinationConnectors>
-        <connector version="3.8.0">
-          <metaDataId>1</metaDataId>
-          <name>Hello world 2</name>
-          <properties class="com.mirth.connect.connectors.js.JavaScriptDispatcherProperties" version="3.8.0">
-            <pluginProperties/>
-            <destinationConnectorProperties version="3.8.0">
-              <queueEnabled>false</queueEnabled>
-              <sendFirst>false</sendFirst>
-              <retryIntervalMillis>10000</retryIntervalMillis>
-              <regenerateTemplate>false</regenerateTemplate>
-              <retryCount>0</retryCount>
-              <rotate>false</rotate>
-              <includeFilterTransformer>false</includeFilterTransformer>
-              <threadCount>1</threadCount>
-              <threadAssignmentVariable></threadAssignmentVariable>
-              <validateResponse>false</validateResponse>
-              <resourceIds class="linked-hash-map">
-                <entry>
-                  <string>Default Resource</string>
-                  <string>[Default Resource]</string>
-                </entry>
-              </resourceIds>
-              <queueBufferSize>1000</queueBufferSize>
-              <reattachAttachments>true</reattachAttachments>
-            </destinationConnectorProperties>
-            <script>return &quot;Hello world2&quot;;</script>
-          </properties>
-          <transformer version="3.8.0">
-            <elements>
-              <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="3.8.0">
-                <sequenceNumber>0</sequenceNumber>
-                <enabled>true</enabled>
-                <script>var foo = null;</script>
-              </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
-            </elements>
-            <inboundTemplate encoding="base64"></inboundTemplate>
-            <outboundTemplate encoding="base64"></outboundTemplate>
-            <inboundDataType>RAW</inboundDataType>
-            <outboundDataType>RAW</outboundDataType>
-            <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
-              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
-                <splitType>JavaScript</splitType>
-                <batchScript></batchScript>
-              </batchProperties>
-            </inboundProperties>
-            <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
-              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
-                <splitType>JavaScript</splitType>
-                <batchScript></batchScript>
-              </batchProperties>
-            </outboundProperties>
-          </transformer>
-          <responseTransformer version="3.8.0">
-            <elements>
-              <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="3.8.0">
-                <name>response transformer</name>
-                <sequenceNumber>0</sequenceNumber>
-                <enabled>true</enabled>
-                <script>var foo2 = null;</script>
-              </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
-            </elements>
-            <inboundTemplate encoding="base64"></inboundTemplate>
-            <outboundTemplate encoding="base64"></outboundTemplate>
-            <inboundDataType>RAW</inboundDataType>
-            <outboundDataType>RAW</outboundDataType>
-            <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
-              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
-                <splitType>JavaScript</splitType>
-                <batchScript></batchScript>
-              </batchProperties>
-            </inboundProperties>
-            <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.8.0">
-              <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.8.0">
-                <splitType>JavaScript</splitType>
-                <batchScript></batchScript>
-              </batchProperties>
-            </outboundProperties>
-          </responseTransformer>
-          <filter version="3.8.0">
-            <elements>
-              <com.mirth.connect.plugins.javascriptrule.JavaScriptRule version="3.8.0">
-                <name>true</name>
-                <sequenceNumber>0</sequenceNumber>
-                <enabled>true</enabled>
-                <script>return true;</script>
-              </com.mirth.connect.plugins.javascriptrule.JavaScriptRule>
-            </elements>
-          </filter>
-          <transportName>JavaScript Writer</transportName>
-          <mode>DESTINATION</mode>
-          <enabled>true</enabled>
-          <waitForPrevious>true</waitForPrevious>
-        </connector>
-      </destinationConnectors>
-      <preprocessingScript>// Modify the message variable below to pre process data
-logger.info(&apos;http hello2 preprocessor&apos;);
-return message;</preprocessingScript>
-      <postprocessingScript>// This script executes once after a message has been processed
-// Responses returned from here will be stored as &quot;Postprocessor&quot; in the response map
-logger.info(&apos;http hello2 postprocessor&apos;);
-return;</postprocessingScript>
-      <deployScript>// This script executes once when the channel is deployed
-// You only have access to the globalMap and globalChannelMap here to persist data
-logger.info(&apos;http hello2 deploy&apos;);
-return;</deployScript>
-      <undeployScript>// This script executes once when the channel is undeployed
-// You only have access to the globalMap and globalChannelMap here to persist data
-logger.info(&apos;http hello2 udeploy&apos;);
-return;</undeployScript>
-      <properties version="3.8.0">
-        <clearGlobalChannelMap>true</clearGlobalChannelMap>
-        <messageStorageMode>DEVELOPMENT</messageStorageMode>
-        <encryptData>false</encryptData>
-        <removeContentOnCompletion>false</removeContentOnCompletion>
-        <removeOnlyFilteredOnCompletion>false</removeOnlyFilteredOnCompletion>
-        <removeAttachmentsOnCompletion>false</removeAttachmentsOnCompletion>
-        <initialState>STARTED</initialState>
-        <storeAttachments>true</storeAttachments>
-        <metaDataColumns>
-          <metaDataColumn>
-            <name>SOURCE</name>
-            <type>STRING</type>
-            <mappingName>mirth_source</mappingName>
-          </metaDataColumn>
-          <metaDataColumn>
-            <name>TYPE</name>
-            <type>STRING</type>
-            <mappingName>mirth_type</mappingName>
-          </metaDataColumn>
-        </metaDataColumns>
-        <attachmentProperties version="3.8.0">
-          <type>None</type>
-          <properties/>
-        </attachmentProperties>
-        <resourceIds class="linked-hash-map">
-          <entry>
-            <string>Default Resource</string>
-            <string>[Default Resource]</string>
-          </entry>
-        </resourceIds>
-      </properties>
-      <exportData>
-        <metadata>
-          <enabled>true</enabled>
+          <lastModified>
+            <time>1637680959799</time>
+            <timezone>America/New_York</timezone>
+          </lastModified>
+          <pruningSettings>
+            <archiveEnabled>true</archiveEnabled>
+          </pruningSettings>
         </metadata>
       </exportData>
     </channel>
@@ -876,7 +1060,7 @@ return;</undeployScript>
       <nextMetaDataId>2</nextMetaDataId>
       <name>Http Hello3 3083</name>
       <description></description>
-      <revision>1</revision>
+      <revision>7</revision>
       <sourceConnector version="3.8.0">
         <metaDataId>0</metaDataId>
         <name>sourceConnector</name>
@@ -913,6 +1097,7 @@ return;</undeployScript>
           <responseDataTypeBinary>false</responseDataTypeBinary>
           <responseStatusCode></responseStatusCode>
           <responseHeaders class="linked-hash-map"/>
+          <useResponseHeadersVariable>false</useResponseHeadersVariable>
           <charset>UTF-8</charset>
           <contextPath></contextPath>
           <timeout>30000</timeout>
@@ -1088,6 +1273,13 @@ return;</undeployScript>
       <exportData>
         <metadata>
           <enabled>true</enabled>
+          <lastModified>
+            <time>1615839851811</time>
+            <timezone>America/New_York</timezone>
+          </lastModified>
+          <pruningSettings>
+            <archiveEnabled>true</archiveEnabled>
+          </pruningSettings>
         </metadata>
       </exportData>
     </channel>
@@ -1166,7 +1358,7 @@ return;</undeployScript>
       <name>Library 1</name>
       <revision>1</revision>
       <lastModified>
-        <time>1633299123888</time>
+        <time>1637709878140</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -1182,26 +1374,26 @@ return;</undeployScript>
           <name>Template 1</name>
           <revision>1</revision>
           <lastModified>
-            <time>1633299124245</time>
+            <time>1637709878216</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
-              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
-              <contextType>CHANNEL_DEPLOY</contextType>
-              <contextType>CHANNEL_ATTACHMENT</contextType>
-              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
-              <contextType>GLOBAL_PREPROCESSOR</contextType>
-              <contextType>GLOBAL_DEPLOY</contextType>
-              <contextType>CHANNEL_UNDEPLOY</contextType>
-              <contextType>DESTINATION_DISPATCHER</contextType>
-              <contextType>GLOBAL_POSTPROCESSOR</contextType>
-              <contextType>CHANNEL_BATCH</contextType>
-              <contextType>CHANNEL_PREPROCESSOR</contextType>
-              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>CHANNEL_POSTPROCESSOR</contextType>
               <contextType>SOURCE_RECEIVER</contextType>
+              <contextType>CHANNEL_UNDEPLOY</contextType>
+              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
+              <contextType>CHANNEL_BATCH</contextType>
+              <contextType>GLOBAL_POSTPROCESSOR</contextType>
+              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>GLOBAL_UNDEPLOY</contextType>
+              <contextType>CHANNEL_ATTACHMENT</contextType>
+              <contextType>GLOBAL_DEPLOY</contextType>
+              <contextType>GLOBAL_PREPROCESSOR</contextType>
+              <contextType>CHANNEL_PREPROCESSOR</contextType>
+              <contextType>DESTINATION_DISPATCHER</contextType>
+              <contextType>CHANNEL_DEPLOY</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1223,16 +1415,16 @@ function template_1_library_1(arg1) {
           <name>Template 3 Library 1</name>
           <revision>1</revision>
           <lastModified>
-            <time>1633299124394</time>
+            <time>1637709878241</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
+              <contextType>SOURCE_RECEIVER</contextType>
               <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
               <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
-              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
-              <contextType>SOURCE_RECEIVER</contextType>
               <contextType>DESTINATION_DISPATCHER</contextType>
+              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1256,7 +1448,7 @@ function template_3_library_1(arg1) {
       <name>Library 2</name>
       <revision>1</revision>
       <lastModified>
-        <time>1633299124171</time>
+        <time>1637709878192</time>
         <timezone>America/New_York</timezone>
       </lastModified>
       <description></description>
@@ -1272,26 +1464,26 @@ function template_3_library_1(arg1) {
           <name>Template 2</name>
           <revision>1</revision>
           <lastModified>
-            <time>1633299124509</time>
+            <time>1637709878264</time>
             <timezone>America/New_York</timezone>
           </lastModified>
           <contextSet>
             <delegate>
-              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
-              <contextType>CHANNEL_DEPLOY</contextType>
-              <contextType>CHANNEL_ATTACHMENT</contextType>
-              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
-              <contextType>GLOBAL_PREPROCESSOR</contextType>
-              <contextType>GLOBAL_DEPLOY</contextType>
-              <contextType>CHANNEL_UNDEPLOY</contextType>
-              <contextType>DESTINATION_DISPATCHER</contextType>
-              <contextType>GLOBAL_POSTPROCESSOR</contextType>
-              <contextType>CHANNEL_BATCH</contextType>
-              <contextType>CHANNEL_PREPROCESSOR</contextType>
-              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>CHANNEL_POSTPROCESSOR</contextType>
               <contextType>SOURCE_RECEIVER</contextType>
+              <contextType>CHANNEL_UNDEPLOY</contextType>
+              <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+              <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
+              <contextType>CHANNEL_BATCH</contextType>
+              <contextType>GLOBAL_POSTPROCESSOR</contextType>
+              <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               <contextType>GLOBAL_UNDEPLOY</contextType>
+              <contextType>CHANNEL_ATTACHMENT</contextType>
+              <contextType>GLOBAL_DEPLOY</contextType>
+              <contextType>GLOBAL_PREPROCESSOR</contextType>
+              <contextType>CHANNEL_PREPROCESSOR</contextType>
+              <contextType>DESTINATION_DISPATCHER</contextType>
+              <contextType>CHANNEL_DEPLOY</contextType>
             </delegate>
           </contextSet>
           <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
@@ -1338,7 +1530,7 @@ function template_2_library_2(arg1) {
   </serverSettings>
   <updateSettings version="3.8.0">
     <statsEnabled>true</statsEnabled>
-    <lastStatsTime>1633298770976</lastStatsTime>
+    <lastStatsTime>1640128042845</lastStatsTime>
   </updateSettings>
   <globalScripts>
     <entry>
@@ -1346,7 +1538,6 @@ function template_2_library_2(arg1) {
       <string>// This script executes once for each deploy, undeploy, or redeploy task
 // if at least one channel was undeployed
 // You only have access to the globalMap here to persist data
-logger.info(&apos;Global undeploy&apos;);
 return;</string>
     </entry>
     <entry>
@@ -1355,21 +1546,18 @@ return;</string>
 // This script applies across all channels
 // Responses returned from here will be stored as &quot;Postprocessor&quot; in the response map
 // You have access to &quot;response&quot;, if returned from the channel postprocessor
-logger.info(&apos;Global postprocessor&apos;);
 return;</string>
     </entry>
     <entry>
       <string>Deploy</string>
       <string>// This script executes once for each deploy or redeploy task
 // You only have access to the globalMap here to persist data
-logger.info(&apos;Global deploy&apos;);
 return;</string>
     </entry>
     <entry>
       <string>Preprocessor</string>
       <string>// Modify the message variable below to pre process data
 // This script applies across all channels
-logger.info(&apos;Global preprocessor&apos;);
 return message;</string>
     </entry>
   </globalScripts>
@@ -1430,16 +1618,6 @@ return message;</string>
         <description>Loads libraries from the custom-lib folder in the Mirth Connect home directory.</description>
         <includeWithGlobalScripts>true</includeWithGlobalScripts>
         <directory>custom-lib</directory>
-        <directoryRecursion>true</directoryRecursion>
-      </com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties>
-      <com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties version="3.8.0">
-  <pluginPointName>Directory Resource</pluginPointName>
-        <type>Directory</type>
-        <id>2542ca8f-114a-4bd5-b239-d214e6f9d901</id>
-        <name>this is a resource directory called fakeresourcedir</name>
-        <description/>
-        <includeWithGlobalScripts>false</includeWithGlobalScripts>
-        <directory>fakeresourcedir</directory>
         <directoryRecursion>true</directoryRecursion>
       </com.mirth.connect.plugins.directoryresource.DirectoryResourceProperties>
     </list>

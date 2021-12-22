@@ -3,7 +3,7 @@
   <nextMetaDataId>2</nextMetaDataId>
   <name>Http 3080</name>
   <description/>
-  <revision>2</revision>
+  <revision>1</revision>
   <sourceConnector version="3.8.0">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
@@ -40,6 +40,7 @@
       <responseDataTypeBinary>false</responseDataTypeBinary>
       <responseStatusCode/>
       <responseHeaders class="linked-hash-map"/>
+      <useResponseHeadersVariable>false</useResponseHeadersVariable>
       <charset>UTF-8</charset>
       <contextPath/>
       <timeout>30000</timeout>
@@ -162,7 +163,7 @@
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <script>return "hello world";</script>
+        <script msync-fileref="destinationConnector-Destination Hello.js"/>
       </properties>
       <transformer version="3.8.0">
         <elements/>
@@ -341,17 +342,10 @@
       <waitForPrevious>true</waitForPrevious>
     </connector>
   </destinationConnectors>
-  <preprocessingScript>// Modify the message variable below to pre process data
-return message;</preprocessingScript>
-  <postprocessingScript>// This script executes once after a message has been processed
-// Responses returned from here will be stored as "Postprocessor" in the response map
-return;</postprocessingScript>
-  <deployScript>// This script executes once when the channel is deployed
-// You only have access to the globalMap and globalChannelMap here to persist data
-return;</deployScript>
-  <undeployScript>// This script executes once when the channel is undeployed
-// You only have access to the globalMap and globalChannelMap here to persist data
-return;</undeployScript>
+  <preprocessingScript msync-fileref="PreprocessingScript.js"/>
+  <postprocessingScript msync-fileref="PostprocessingScript.js"/>
+  <deployScript msync-fileref="DeployScript.js"/>
+  <undeployScript msync-fileref="UndeployScript.js"/>
   <properties version="3.8.0">
     <clearGlobalChannelMap>true</clearGlobalChannelMap>
     <messageStorageMode>DEVELOPMENT</messageStorageMode>
@@ -384,4 +378,16 @@ return;</undeployScript>
       </entry>
     </resourceIds>
   </properties>
+  <exportData>
+    <metadata>
+      <enabled>true</enabled>
+      <lastModified>
+        <time>1556232301836</time>
+        <timezone>America/New_York</timezone>
+      </lastModified>
+      <pruningSettings>
+        <archiveEnabled>true</archiveEnabled>
+      </pruningSettings>
+    </metadata>
+  </exportData>
 </channel>
