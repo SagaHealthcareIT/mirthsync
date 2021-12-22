@@ -405,21 +405,28 @@
                   :script
                   [cz/up cz/up cz/up :transformer cz/up :sourceConnector])]
 
-   [(partial name-script-sequence "destinationConnector-filter-step-")
+   [(fn [loc] (let [destname (apply cdzx/xml1-> loc (flatten [(repeat 4 cz/up) :name cdzx/text]))]
+                (str "destinationConnector" (when-not (cs/blank? destname)
+                                              (str "-" destname))
+                     "-" (name-script-sequence "filter-step-" loc))))
     #(cdzx/xml1-> %
                   (this-tag= :com.mirth.connect.plugins.javascriptrule.JavaScriptRule)
                   :script
-                  [cz/up cz/up cz/up :filter cz/up :destinationConnectors])]
+                  [cz/up cz/up cz/up :filter cz/up :connector cz/up :destinationConnectors])]
 
    [(fn [loc] (let [destname (apply cdzx/xml1-> loc (flatten [(repeat 4 cz/up) :name cdzx/text]))]
-                (str "destinationConnector-" destname "-" (name-script-sequence "transformer-step-" loc))))
+                (str "destinationConnector" (when-not (cs/blank? destname)
+                                              (str "-" destname))
+                     "-" (name-script-sequence "transformer-step-" loc))))
     #(cdzx/xml1-> %
                   (this-tag= :com.mirth.connect.plugins.javascriptstep.JavaScriptStep)
                   :script
                   [cz/up cz/up cz/up :transformer cz/up :connector cz/up :destinationConnectors])]
 
    [(fn [loc] (let [destname (apply cdzx/xml1-> loc (flatten [(repeat 4 cz/up) :name cdzx/text]))]
-                (str "destinationConnector-" destname "-" (name-script-sequence "responseTransformer-step-" loc))))
+                (str "destinationConnector" (when-not (cs/blank? destname)
+                                              (str "-" destname))
+                     "-" (name-script-sequence "responseTransformer-step-" loc))))
     #(cdzx/xml1-> %
                   (this-tag= :com.mirth.connect.plugins.javascriptstep.JavaScriptStep)
                   :script
