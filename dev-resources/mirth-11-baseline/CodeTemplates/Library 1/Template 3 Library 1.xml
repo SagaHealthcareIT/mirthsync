@@ -3,29 +3,20 @@
   <name>Template 3 Library 1</name>
   <revision>1</revision>
   <lastModified>
-    <time>1637709878241</time>
+    <time>1640210846735</time>
     <timezone>America/New_York</timezone>
   </lastModified>
   <contextSet>
     <delegate>
-      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
-      <contextType>DESTINATION_DISPATCHER</contextType>
-      <contextType>SOURCE_RECEIVER</contextType>
       <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
+      <contextType>DESTINATION_DISPATCHER</contextType>
+      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
       <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
+      <contextType>SOURCE_RECEIVER</contextType>
     </delegate>
   </contextSet>
   <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
     <type>FUNCTION</type>
-    <code>/**
-	Modify the description here. Modify the function name and parameters as needed. One function per
-	template is recommended; create a new code template for each new function.
-
-	@param {String} arg1 - arg1 description
-	@return {String} return description
-*/
-function template_3_library_1(arg1) {
-	// TODO: Enter code here
-}</code>
+    <code msync-fileref="Template 3 Library 1.js"/>
   </properties>
 </codeTemplate>

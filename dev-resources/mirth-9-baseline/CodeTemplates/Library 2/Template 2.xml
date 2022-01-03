@@ -3,39 +3,30 @@
   <name>Template 2</name>
   <revision>1</revision>
   <lastModified>
-    <time>1640206203067</time>
+    <time>1640208627857</time>
     <timezone>America/New_York</timezone>
   </lastModified>
   <contextSet>
     <delegate>
-      <contextType>CHANNEL_POSTPROCESSOR</contextType>
-      <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
       <contextType>GLOBAL_UNDEPLOY</contextType>
-      <contextType>DESTINATION_DISPATCHER</contextType>
-      <contextType>SOURCE_RECEIVER</contextType>
-      <contextType>GLOBAL_PREPROCESSOR</contextType>
-      <contextType>GLOBAL_DEPLOY</contextType>
-      <contextType>GLOBAL_POSTPROCESSOR</contextType>
-      <contextType>CHANNEL_BATCH</contextType>
-      <contextType>CHANNEL_ATTACHMENT</contextType>
-      <contextType>CHANNEL_UNDEPLOY</contextType>
-      <contextType>CHANNEL_PREPROCESSOR</contextType>
-      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
       <contextType>CHANNEL_DEPLOY</contextType>
+      <contextType>CHANNEL_PREPROCESSOR</contextType>
+      <contextType>GLOBAL_DEPLOY</contextType>
+      <contextType>CHANNEL_UNDEPLOY</contextType>
+      <contextType>GLOBAL_POSTPROCESSOR</contextType>
+      <contextType>SOURCE_RECEIVER</contextType>
+      <contextType>CHANNEL_ATTACHMENT</contextType>
+      <contextType>GLOBAL_PREPROCESSOR</contextType>
+      <contextType>DESTINATION_DISPATCHER</contextType>
+      <contextType>CHANNEL_BATCH</contextType>
+      <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
       <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
+      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+      <contextType>CHANNEL_POSTPROCESSOR</contextType>
     </delegate>
   </contextSet>
   <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">
     <type>FUNCTION</type>
-    <code>/**
-	Modify the description here. Modify the function name and parameters as needed. One function per
-	template is recommended; create a new code template for each new function.
-
-	@param {String} arg1 - arg1 description
-	@return {String} return description
-*/
-function template_2_library_2(arg1) {
-	// TODO: Enter code here
-}</code>
+    <code msync-fileref="Template 2.js"/>
   </properties>
 </codeTemplate>

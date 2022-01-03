@@ -3,7 +3,7 @@
   <nextMetaDataId>3</nextMetaDataId>
   <name>Hello DB Writer</name>
   <description/>
-  <revision>17</revision>
+  <revision>1</revision>
   <sourceConnector version="3.11.0">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
