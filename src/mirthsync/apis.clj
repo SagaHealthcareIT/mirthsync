@@ -325,10 +325,8 @@
 (defn deconstruct-node
   "Takes an xml node representing one of our major api elements and returns one or
   more deconstructed parts with filenames and a zip loc for the content."
-  [file-path el-loc find-name-val place-in-subdir?]
-  (let [base-path (if place-in-subdir?
-                    (str (mf/remove-extension file-path) File/separator)
-                    (str (.getParentFile (File. file-path)) File/separator))]
+  [file-path el-loc find-name-val]
+  (let [base-path (str (mf/remove-extension file-path) File/separator)]
     (loop [el-loc el-loc
            deconstruction []]
       ;; (log/info (str "tag: " (:tag (cz/node el-loc))))
@@ -352,8 +350,7 @@
    el-loc
    (fn [el-loc]
      (when-let [name-loc (cdzx/xml1-> el-loc :entry :string)]
-       [(cdzx/text name-loc) (cz/right name-loc)]))
-   false))
+       [(cdzx/text name-loc) (cz/right name-loc)]))))
 
 (defmethod mi/deconstruct-node :code-templates [_ file-path el-loc]
   (deconstruct-node
@@ -361,8 +358,7 @@
    el-loc
    (fn [el-loc]
      (when-let [script-loc (cdzx/xml1-> el-loc :properties :code)]
-       [(cdzx/xml1-> el-loc :name cdzx/text) script-loc]))
-   false))
+       [(cdzx/xml1-> el-loc :name cdzx/text) script-loc]))))
 
 (defn name-script-sequence
   "Take a script loc to find and build the script name."
@@ -453,8 +449,7 @@
      (some (fn [[name script]]
              (when-let [script-loc (script el-loc)]
                [(name script-loc) script-loc]))
-           channel-deconstructors))
-   true))
+           channel-deconstructors))))
 
 (comment
 
