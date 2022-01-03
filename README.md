@@ -83,8 +83,8 @@ group.
 
 ## Future plans
 
-### Current Plans for 2.1.1
-
+- Support Mirth > version 3.11 (should be ready soon)
+- Extract javascript from xml (should be ready soon)
 - Support filtering pulls just like we currently are able to filter pushes.
 - Addressing reported issues.
 - Implement more tests.
