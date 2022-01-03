@@ -355,6 +355,7 @@ SELECT * from mdl_assignment
       </lastModified>
       <pruningSettings>
         <archiveEnabled>true</archiveEnabled>
+        <pruneErroredMessages>false</pruneErroredMessages>
       </pruningSettings>
     </metadata>
     <dependentIds/>

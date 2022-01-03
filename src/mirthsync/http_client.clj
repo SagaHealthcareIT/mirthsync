@@ -12,7 +12,8 @@
    params]
   (log/logf :debug "putting xml to: %s" (mi/rest-path api))
   (client/put (str server (mi/rest-path api) "/" (mi/find-id api el-loc))
-              {:insecure? ignore-cert-warnings
+              {:headers {:x-requested-with "XMLHttpRequest"}
+               :insecure? ignore-cert-warnings
                :body (xml/indent-str (zip/node el-loc))
                :query-params params
                :content-type "application/xml"}))
@@ -27,7 +28,8 @@
    query-params]
   (log/logf :debug "posting xml to: %s" (mi/post-path api))
   (client/post (str server (mi/post-path api))
-               {:insecure? ignore-cert-warnings
+               {:headers {:x-requested-with "XMLHttpRequest"}
+                :insecure? ignore-cert-warnings
                 :query-params query-params
                 :multipart (map (fn
                                   [[k v]]
@@ -45,7 +47,8 @@
   (binding [clj-http.core/*cookie-store* (clj-http.cookies/cookie-store)]
     (client/post
      (str server "/users/_login")
-     {:form-params
+     {:headers {:x-requested-with "XMLHttpRequest"}
+      :form-params
       {:username username
        :password password}
       :insecure? ignore-cert-warnings})
@@ -65,7 +68,8 @@
   [{:as app-conf :keys [ignore-cert-warnings]}
    find-elements]
   (-> (api-url app-conf)
-      (client/get {:insecure? ignore-cert-warnings})
+      (client/get {:headers {:x-requested-with "XMLHttpRequest"}
+                   :insecure? ignore-cert-warnings})
       :body
       mxml/to-zip
       find-elements))
