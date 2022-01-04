@@ -150,8 +150,8 @@
                              channel-in-group-loc
                              (nth ma/apis 6)))))
 
-  (ct/testing "Top level channel path is valid"
-    (ct/is (= "target/Channels/Http 3080.xml"
+  (ct/testing "Default Group channel path is valid"
+    (ct/is (= "target/Channels/Default Group/Http 3080.xml"
            (ma/nested-file-path channel-groups-loc
                              [:channelGroup :channels :channel]
                              "target"

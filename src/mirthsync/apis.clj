@@ -66,15 +66,16 @@
   "Returns the nested xml file path for the provided api."
   [group-xml-zip selectors target-dir el-loc api]
   (str (mi/local-path api target-dir) File/separator
-       (when-let [lib-name (mf/safe-name
-                            (let [id (mi/find-id api el-loc)]
-                              (apply cdzx/xml1->
-                                     group-xml-zip
-                                     (flatten [selectors
-                                               :id id
-                                               (repeat (count selectors) cz/up)
-                                               :name cdzx/text]))))]
-         (str lib-name File/separator))
+       (if-let [lib-name (mf/safe-name
+                          (let [id (mi/find-id api el-loc)]
+                            (apply cdzx/xml1->
+                                   group-xml-zip
+                                   (flatten [selectors
+                                             :id id
+                                             (repeat (count selectors) cz/up)
+                                             :name cdzx/text]))))]
+         (str lib-name File/separator)
+         (str "Default Group" File/separator))
        (mf/safe-name (mi/find-name api el-loc))
        ".xml"))
 
