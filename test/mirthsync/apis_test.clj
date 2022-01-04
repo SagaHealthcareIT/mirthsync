@@ -61,7 +61,7 @@
   (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/This is a group/Http Hello2 3081.xml")))
 
 (def channel-without-group-loc
-  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/Http 3080.xml")))
+  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/Default Group/Http 3080.xml")))
 
 (def updated-channel-group-loc
   (update-id channel-group-loc))
