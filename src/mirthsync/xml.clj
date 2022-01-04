@@ -24,7 +24,8 @@
             required-prefix (str target File/separator restrict-to-path)]
         (if (.startsWith ^String fpath required-prefix)
           (do
-            (log/infof "Found a match: %s" fpath)
+            (when (seq restrict-to-path)
+              (log/infof "Found a match: %s" fpath))
 
             (if (and (.exists (io/file fpath))
                      (not (:force app-conf)))

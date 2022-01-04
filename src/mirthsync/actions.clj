@@ -56,7 +56,8 @@
   (let [^String required-prefix (str target File/separator restrict-to-path)
         filtered-api-files (filter #(let [matches (.startsWith (.toString ^File %) required-prefix)]
                                       (if matches
-                                        (do (log/infof "Found a match: %s" %)
+                                        (do (when (seq restrict-to-path)
+                                              (log/infof "Found a match: %s" %))
                                             true)
                                         (do (log/infof "filtering push of '%s' since it does not start with our required prefix: %s" % required-prefix)
                                             false)))
