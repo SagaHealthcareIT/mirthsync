@@ -23,10 +23,39 @@ Mirth Connect's REST API.
   - Please see our
     [mirthsync-ci](https://github.com/SagaHealthcareIT/mirthsync-ci) repository
     for an example that works with Github Actions
+- Work on mirth javascript locally with your favorite editor without having to
+  edit XML
 
 ## Current release
 
-The latest version of mirthSync is "2.1.1".
+The latest version of mirthSync is "3.0.0". Note the changes below. Version 3 of
+mirthSync changed the layout of the target directory structure. Javascript is
+extracted into separate files and top level channels are now placed in a default
+group directory.
+
+## Changes
+
+### 3.0.0
+
+- Major feature - javascript in channels, code templates, and global scripts is
+  now extracted into its own file
+- Breaking change - place top level channels beneath a 'Default Group' directory
+- restrict-to-path now filters pulls (previously only pushes were filtered)
+- code refactoring to use multimethods instead of passing around functions
+- code clarity work
+- more tests
+- support for Mirth Connect 3.12
+
+
+### 2.1.1
+
+- Support for pushing/pulling Alerts
+- Fix bug related to directory/xml ordering and zip/remove
+
+### 2.1.0 (Pre-Release)
+
+- Selective push
+- Testing against mirth 3.11
 
 "2.1.x" versions of mirthSync support selectively pushing/pulling arbitrary
 paths in the target directory to Mirth. This allows, for instance, the ability
@@ -45,19 +74,6 @@ ways from the 2.0.x versions.
 
 If you're trying out 2.1.x after using 2.0.x, be careful to test thoroughly in a
 dev environment first.
-
-## Changes
-
-### 2.1.1
-
-- Support for pushing/pulling Alerts
-- Fix bug related to directory/xml ordering and zip/remove
-
-
-### 2.1.0 (Pre-Release)
-
-- Selective push
-- Testing against mirth 3.11
 
 ### 2.0.10
 
