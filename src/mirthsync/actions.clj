@@ -16,9 +16,9 @@
   (let [params (log/spyf :trace "Push params: %s" (mi/push-params api app-conf))
         query-params (log/spyf :trace "Query params: %s" (mi/query-params api force))
         result (if (mi/post-path api)
-                 (mhttp/post-xml app-conf params query-params)
+                 (mhttp/post-xml app-conf (mi/post-path api) params query-params true)
                  (mhttp/put-xml app-conf params))]
-    (mi/after-push api result)
+    (mi/after-push api app-conf result)
     app-conf))
 
 (defn fetch-and-pre-assoc

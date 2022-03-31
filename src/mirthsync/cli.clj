@@ -40,7 +40,13 @@
 
    ["-i" "--ignore-cert-warnings" "Ignore certificate warnings"
     :default false]
-   
+
+   ["-v" nil "Verbosity level
+        May be specified multiple times to increase level."
+    :id :verbosity
+    :default 0
+    :update-fn inc]
+
    ["-f" "--force" "
         Overwrite existing local files during a pull and overwrite remote items
         without regard for revisions during a push."]
@@ -59,16 +65,15 @@
     :default ""
     :parse-fn strip-trailing-slashes]
 
-   ["-v" nil "Verbosity level
-        May be specified multiple times to increase level."
-    :id :verbosity
-    :default 0
-    :update-fn inc]
-
    [nil "--include-configuration-map" "
         A boolean flag to include the configuration map in the push - defaults
-        to false"
+        to false."
     :default false]
+
+   ["-d" "--deploy" "Deply channels on push
+        During a push, deploy each included channel immediately
+        after saving the channel to Mirth."]
+
 
    ["-h" "--help"]])
 

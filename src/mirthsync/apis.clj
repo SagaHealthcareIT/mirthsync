@@ -7,7 +7,9 @@
             [mirthsync.actions :as ma]
             [mirthsync.files :as mf]
             [mirthsync.interfaces :as mi]
-            [clojure.string :as cs])
+            [clojure.string :as cs]
+            [mirthsync.http-client :as mhttp])
+  (:use [slingshot.slingshot :only [try+]])
   (:import java.io.File))
 
 (defn- api-element-id
@@ -101,8 +103,10 @@
               (:reason-phrase result)
               (:body result))
 
-  (when-not ((apply every-pred preds) result)
-    (unexpected-response result)))
+  (if ((apply every-pred preds) result)
+    true
+    (do (unexpected-response result)
+        false)))
 
 (defn- null-204
   "Result needs a 204 status and a nil body"
@@ -167,7 +171,8 @@
    :code-templates
    :channel-groups
    :channels
-   :alerts])
+   :alerts
+   ])
 
 (defmethod mi/find-name :default [_ api-loc] (api-element-name api-loc))
 (defmethod mi/find-name :configuration-map [_ _] nil)
@@ -198,21 +203,33 @@
 (defmethod mi/preprocess :channel-groups [_ app-conf]
   (ma/fetch-and-pre-assoc :server-groups :set app-conf))
 
-;; (defmethod mi/after-push :default [_ result] (true-200 result))
-(defmethod mi/after-push :configuration-map [_ result] (null-204 result))
-(defmethod mi/after-push :global-scripts [_ result] (null-204 result))
-(defmethod mi/after-push :resources [_ result] (null-204 result))
-(defmethod mi/after-push :code-template-libraries [_ result] (revision-success result))
-(defmethod mi/after-push :code-templates [_ result] (true-200 result))
-(defmethod mi/after-push :channel-groups [_ result] (true-200 result))
+;; (defmethod mi/after-push :default [_ app-conf result] (true-200 result))
+(defmethod mi/after-push :configuration-map [_ app-conf result] (null-204 result))
+(defmethod mi/after-push :global-scripts [_ app-conf result] (null-204 result))
+(defmethod mi/after-push :resources [_ app-conf result] (null-204 result))
+(defmethod mi/after-push :code-template-libraries [_ app-conf result] (revision-success result))
+(defmethod mi/after-push :code-templates [_ app-conf result] (true-200 result))
+(defmethod mi/after-push :channel-groups [_ app-conf result] (true-200 result))
 ;; TODO - If the body of the result is false but it's a 200 http code it means
 ;; that there's a chance that it wasn't updated because the override parameter
 ;; needs to be set. The current error message is just a warning about an
 ;; unexpected result. This warning should be enhanced to include a sensible
 ;; message about what happened and possible solutions (Override param). This
 ;; applies to channels and some other entities as well.
-(defmethod mi/after-push :channels [_ result] (true-200 result))
-(defmethod mi/after-push :alerts [_ result] (null-204 result))
+(defmethod mi/after-push :channels [api app-conf result]
+  (when (and (true-200 result)
+             (:deploy app-conf))
+    (try+
+      (mhttp/post-xml
+       app-conf
+       "/channels/_deploy"
+       (str "<set><string>" (mi/find-id api (:el-loc app-conf)) "</string></set>")
+       {:returnErrors "true" :debug "false"}
+       false)
+      (catch Object {:keys [body]}
+        (log/warn (str "There was an error deploying the channel.
+" body))))))
+(defmethod mi/after-push :alerts [_ app-conf result] (null-204 result))
 
 (defmethod mi/pre-node-action :default [_ app-conf] app-conf)
 (defmethod mi/pre-node-action :code-template-libraries [_ app-conf]

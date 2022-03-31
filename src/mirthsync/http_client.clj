@@ -23,21 +23,24 @@
   params are supported and should be passed as one or more [name
   value] vectors. Name should be a string and value should be an xml
   string."
-  [{:keys [server ignore-cert-warnings api]}
-   params
-   query-params]
-  (log/logf :debug "posting xml to: %s" (mi/post-path api))
-  (client/post (str server (mi/post-path api))
-               {:headers {:x-requested-with "XMLHttpRequest"}
-                :insecure? ignore-cert-warnings
-                :query-params query-params
-                :multipart (map (fn
-                                  [[k v]]
-                                  {:name k
-                                   :content v
-                                   :mime-type "application/xml"
-                                   :encoding "UTF-8"})
-                                params)}))
+  [{:keys [server ignore-cert-warnings]} path params query-params multipart?]
+  (log/logf :debug "posting xml to: %s" path)
+  (let [base-params {:headers {:x-requested-with "XMLHttpRequest"}
+                     :insecure? ignore-cert-warnings
+                     :query-params query-params}]
+    (client/post (str server path)
+                 (if multipart?
+                   (assoc base-params :multipart (map (fn
+                                                        [[k v]]
+                                                        {:name k
+                                                         :content v
+                                                         :mime-type "application/xml"
+                                                         :encoding "UTF-8"})
+                                                      params))
+                   (assoc base-params
+                          :body params
+                          :content-type "application/xml"
+                          :accept "application/xml")))))
 
 (defn with-authentication
   "Binds a cookie store to keep auth cookies, authenticates using the
