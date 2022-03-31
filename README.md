@@ -28,7 +28,7 @@ Mirth Connect's REST API.
 
 ## Current release
 
-The latest version of mirthSync is "3.0.0". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.0.1". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
