@@ -39,6 +39,7 @@ group directory.
 
 - New feature to enable optional deployment of channel(s) during a push
 
+
 ### 3.0.0
 
 - Major feature - javascript in channels, code templates, and global scripts is
