@@ -40,8 +40,6 @@
       <responseDataTypeBinary>false</responseDataTypeBinary>
       <responseStatusCode/>
       <responseHeaders class="linked-hash-map"/>
-      <responseHeadersVariable/>
-      <useResponseHeadersVariable>false</useResponseHeadersVariable>
       <charset>UTF-8</charset>
       <contextPath/>
       <timeout>30000</timeout>

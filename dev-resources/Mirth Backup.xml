@@ -464,7 +464,6 @@ return;</undeployScript>
           <responseDataTypeBinary>false</responseDataTypeBinary>
           <responseStatusCode></responseStatusCode>
           <responseHeaders class="linked-hash-map"/>
-          <useResponseHeadersVariable>false</useResponseHeadersVariable>
           <charset>UTF-8</charset>
           <contextPath></contextPath>
           <timeout>30000</timeout>
@@ -866,8 +865,6 @@ return;</undeployScript>
           <responseDataTypeBinary>false</responseDataTypeBinary>
           <responseStatusCode></responseStatusCode>
           <responseHeaders class="linked-hash-map"/>
-          <responseHeadersVariable></responseHeadersVariable>
-          <useResponseHeadersVariable>false</useResponseHeadersVariable>
           <charset>UTF-8</charset>
           <contextPath></contextPath>
           <timeout>30000</timeout>
@@ -1097,7 +1094,6 @@ return;</undeployScript>
           <responseDataTypeBinary>false</responseDataTypeBinary>
           <responseStatusCode></responseStatusCode>
           <responseHeaders class="linked-hash-map"/>
-          <useResponseHeadersVariable>false</useResponseHeadersVariable>
           <charset>UTF-8</charset>
           <contextPath></contextPath>
           <timeout>30000</timeout>
