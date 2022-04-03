@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        java: [ '8', '11' ]
+        java: [ '8', '11', '17' ]
 
     steps:
     - uses: actions/checkout@v2
@@ -36,7 +36,7 @@ jobs:
     - name: Setup java
       uses: actions/setup-java@v2
       with:
-        distribution: 'adopt-hotspot'
+        distribution: 'temurin'
         java-version: ${{ matrix.java }}
 
     - name: Install clojure tools
