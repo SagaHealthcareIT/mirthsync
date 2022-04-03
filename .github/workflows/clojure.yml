@@ -40,7 +40,7 @@ jobs:
         java-version: ${{ matrix.java }}
 
     - name: Install clojure tools
-      uses: DeLaGuardo/setup-clojure@3.4
+      uses: DeLaGuardo/setup-clojure@4.0
       with:
         # Install just one or all simultaneously
         cli: 1.10.3.822 # Clojure CLI based on tools.deps
