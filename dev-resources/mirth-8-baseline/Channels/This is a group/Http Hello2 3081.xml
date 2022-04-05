@@ -3,7 +3,7 @@
   <nextMetaDataId>2</nextMetaDataId>
   <name>Http Hello2 3081</name>
   <description/>
-  <revision>1</revision>
+  <revision>2</revision>
   <sourceConnector version="3.8.0">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
@@ -201,16 +201,4 @@
       </entry>
     </resourceIds>
   </properties>
-  <exportData>
-    <metadata>
-      <enabled>true</enabled>
-      <lastModified>
-        <time>1637680959799</time>
-        <timezone>America/New_York</timezone>
-      </lastModified>
-      <pruningSettings>
-        <archiveEnabled>true</archiveEnabled>
-      </pruningSettings>
-    </metadata>
-  </exportData>
 </channel>
