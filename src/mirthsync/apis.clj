@@ -92,7 +92,7 @@
 (defn- unexpected-response
   [r]
   (log/warn "An unexpected response was received from the server...")
-  (log/warnf "Status: %s, Phrase: %s" (:status r) (:reason-phrase r)))
+  (log/warnf "Status: %s, Phrase: %s, Body: %s" (:status r) (:reason-phrase r) (:body r)))
 
 (defn- check-results
   "Ensures the result satisfies the predicates. If not, a warning is logged."
@@ -217,18 +217,22 @@
 ;; message about what happened and possible solutions (Override param). This
 ;; applies to channels and some other entities as well.
 (defmethod mi/after-push :channels [api app-conf result]
-  (when (and (true-200 result)
-             (:deploy app-conf))
-    (try+
-      (mhttp/post-xml
-       app-conf
-       "/channels/_deploy"
-       (str "<set><string>" (mi/find-id api (:el-loc app-conf)) "</string></set>")
-       {:returnErrors "true" :debug "false"}
-       false)
-      (catch Object {:keys [body]}
-        (log/warn (str "There was an error deploying the channel.
-" body))))))
+  (if (true-200 result)
+    (when (:deploy app-conf)
+      (try+
+       (mhttp/post-xml
+        app-conf
+        "/channels/_deploy"
+        (str "<set><string>" (mi/find-id api (:el-loc app-conf)) "</string></set>")
+        {:returnErrors "true" :debug "false"}
+        false)
+       (catch Object {:keys [body]}
+         (log/warn (str "There was an error deploying the channel.
+" body)))))
+    (log/error (str "Unable to save the channel."
+                    (when-not (:force app-conf) " There may be remote changes or the remote version does not match the local version. If you want to push the local changes anyway you can use the \"-f\" flag to force an overwrite.")))
+    )
+  )
 (defmethod mi/after-push :alerts [_ app-conf result] (null-204 result))
 
 (defmethod mi/pre-node-action :default [_ app-conf] app-conf)

@@ -35,7 +35,7 @@ group directory.
 
 ## Changes
 
-### 3.1.0
+### 3.0.1
 
 - New feature to enable optional deployment of channel(s) during a push
 
