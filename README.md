@@ -35,6 +35,13 @@ group directory.
 
 ## Changes
 
+### 3.0.2 (Not yet released)
+
+- Support for getting the password from the MIRTHSYNC_PASSWORD
+  environment variable if --password is not specified
+- Prompt for password on console if no password is set, the console is
+  available and the interactive "-I" flag is set
+
 ### 3.0.1
 
 - New feature to enable optional deployment of channel(s) during a push
@@ -165,11 +172,17 @@ How to generate help dialogue:
   Actions:
     push     Push filesystem code to server
     pull     Pull server code to filesystem
+
+  Environment variables:
+    MIRTHSYNC_PASSWORD     Alternative to --password command line option
 ```
 
 ## Examples
 
 ### CLI
+
+> NOTE - The "-p" or "--password" option may be omitted from the the
+> commands below if the environment variable MIRTHSYNC_PASSWORD is set.v
 
 How to pull Mirth Connect code from a Mirth Connect instance:
 
