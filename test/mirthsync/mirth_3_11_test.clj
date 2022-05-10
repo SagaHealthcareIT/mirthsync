@@ -6,8 +6,8 @@
 
 (use-fixtures :once mirth-11-fixture)
 
-(def baseline-dir "dev-resources/mirth-11-baseline")
+(def baseline-dir "dev-resources/mirth-3-11-baseline")
 (def repo-dir "target/tmp-11")
 
 (deftest integration-with-11
-  (test-integration 11 repo-dir baseline-dir))
+  (test-integration "3-11" repo-dir baseline-dir))

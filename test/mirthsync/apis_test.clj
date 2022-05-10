@@ -55,13 +55,13 @@
   </channelGroup>
 </set>"))
 
-(def channel-group-loc (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/This is a group/index.xml")))
+(def channel-group-loc (mx/to-zip (slurp "dev-resources/mirth-3-11-baseline/Channels/This is a group/index.xml")))
 
 (def channel-in-group-loc
-  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/This is a group/Http Hello2 3081.xml")))
+  (mx/to-zip (slurp "dev-resources/mirth-3-11-baseline/Channels/This is a group/Http Hello2 3081.xml")))
 
 (def channel-without-group-loc
-  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/Channels/Default Group/Http 3080.xml")))
+  (mx/to-zip (slurp "dev-resources/mirth-3-11-baseline/Channels/Default Group/Http 3080.xml")))
 
 (def updated-channel-group-loc
   (update-id channel-group-loc))
@@ -116,13 +116,13 @@
 </list>"))
 
 (def codetemplate-library-loc
-  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/CodeTemplates/Library 2/index.xml")))
+  (mx/to-zip (slurp "dev-resources/mirth-3-11-baseline/CodeTemplates/Library 2/index.xml")))
 
 (def updated-codetemplate-library-loc
   (update-id codetemplate-library-loc))
 
 (def codetemplate-loc
-  (mx/to-zip (slurp "dev-resources/mirth-11-baseline/CodeTemplates/Library 2/Template 2.xml")))
+  (mx/to-zip (slurp "dev-resources/mirth-3-11-baseline/CodeTemplates/Library 2/Template 2.xml")))
 
 ;;;; keeping this here for now as an alternate specter based implementation of
 ;;;; our add/update function in api.clj.
