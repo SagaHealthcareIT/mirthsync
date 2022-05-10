@@ -1,4 +1,4 @@
-(ns mirthsync.integration-test-12
+(ns mirthsync.mirth-3-12-test
   (:require [clojure.test :refer :all]
             [mirthsync.core :refer :all]
             [mirthsync.fixture-tools :refer :all]
