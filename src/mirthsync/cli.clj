@@ -6,7 +6,7 @@
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure.tools.logging.impl :as log-impl]
-            )
+            [environ.core :refer [env]])
   (:import java.net.URL
            java.io.File
            ch.qos.logback.classic.Level
@@ -36,7 +36,7 @@
     :missing "--username is required"]
 
    ["-p" "--password PASSWORD" "Password used for authentication"
-    :missing "--password is required"]
+    :default-fn (constantly (:mirthsync-password env))]
 
    ["-i" "--ignore-cert-warnings" "Ignore certificate warnings"
     :default false]
@@ -74,6 +74,8 @@
         During a push, deploy each included channel immediately
         after saving the channel to Mirth."]
 
+   ["-I" "--interactive" "
+        Allow for console prompts for user input"]
 
    ["-h" "--help"]])
 
@@ -90,7 +92,10 @@
                  ""
                  "Actions:"
                  "  push     Push filesystem code to server"
-                 "  pull     Pull server code to filesystem"])))
+                 "  pull     Pull server code to filesystem"
+                 ""
+                 "Environment variables:"
+                 "  MIRTHSYNC_PASSWORD     Alternative to --password command line option"])))
 
 (defn- set-log-level
   "Set the logging level by number"
@@ -115,12 +120,29 @@
 (defn- valid-initial-config?
   "Validate the initial config map. Returns a truth value."
   [{:keys [arguments errors] :as config
-    {:keys [help target restrict-to-path]} :options}]
+    {:keys [help target restrict-to-path password]} :options}]
   (or help
       (and (= 0 (count errors))
            (= 1 (count arguments))
            (#{"pull" "push"} (first arguments))
+           (> (count password) 0)
            (is-child-path target restrict-to-path))))
+
+(defn read-password
+  "Read a password from the console if it is available - otherwise nil"
+  [prompt]
+  (if-let [console (System/console)]
+    (let [chars (.readPassword console "%s" (into-array [prompt]))]
+      (apply str chars))))
+
+(defn- maybe-prompt-for-password
+  "If interaction is allowed \"-I\" and there's no password, get the
+  password using a console prompt."
+  [{:as config {:keys [interactive password]} :options}]
+  (if (and (= (count password) 0)
+           interactive)
+    (assoc-in config [:options :password] (read-password "Password:"))
+    config))
 
 (defn config
   "Parse the CLI arguments and construct a map representing selected
@@ -128,7 +150,7 @@
   necessary."
   [args]
   (let [config (parse-opts args cli-options)
-
+        config (maybe-prompt-for-password config)
         args-valid? (valid-initial-config? config)
         
         config (-> config
