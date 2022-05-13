@@ -94,6 +94,10 @@
                           remove-mirth-db)))
 
 (def mirths [{:enabled true
+              :version "4.0.1.b293"
+              :sha256 "fd5223a15cdcaaf0d8071c1bdd9a0409fecd93fcec25e18c1daab1e9fe1f991d"
+              :what-happened? []}
+             {:enabled false
               :version "3.12.0.b2650"
               :sha256 "57d5790efb5fc976f7e98a47fa4acecfca39809f846975ca4450a6c42caa6f5f"
               :what-happened? []}
@@ -110,10 +114,11 @@
               :sha256 "e4606d0a9ea9d35263fb7937d61c98f26a7295d79b8bf83d0dab920cf875206d"
               :what-happened? []}])
 
-(def mirth-12 (nth mirths 0))
-(def mirth-11 (nth mirths 1))
-(def mirth-9  (nth mirths 2))
-(def mirth-8  (nth mirths 3))
+(def mirth-4-01 (nth mirths 0))
+(def mirth-3-12 (nth mirths 1))
+(def mirth-3-11 (nth mirths 2))
+(def mirth-3-09 (nth mirths 3))
+(def mirth-3-08 (nth mirths 4))
 
 (defn make-all-mirths-ready []
   (ensure-target-dir)
@@ -157,10 +162,11 @@
       (f)
       (stop-mirth mirth-proc)))))
 
-(def mirth-8-fixture (mirth-fixture mirth-8))
-(def mirth-9-fixture (mirth-fixture mirth-9))
-(def mirth-11-fixture (mirth-fixture mirth-11))
-(def mirth-12-fixture (mirth-fixture mirth-12))
+(def mirth-3-08-fixture (mirth-fixture mirth-3-08))
+(def mirth-3-09-fixture (mirth-fixture mirth-3-09))
+(def mirth-3-11-fixture (mirth-fixture mirth-3-11))
+(def mirth-3-12-fixture (mirth-fixture mirth-3-12))
+(def mirth-4-01-fixture (mirth-fixture mirth-4-01))
 
 ;;;;;;;;;;;;;;; The following was the original script created for
 ;;;;;;;;;;;;;;; fetching and validating mirth.  It was ported to the
@@ -194,6 +200,7 @@
 ;;      printf "${MIRTH}\n"
 ;;      if [[ ! -f $(basename "${MIRTH}") ]]; then
 ;; 	 curl  -O -J -L "${MIRTH}"
+
 ;;      fi
 ;;  done
 

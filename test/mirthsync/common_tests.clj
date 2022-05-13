@@ -4,7 +4,7 @@
             [mirthsync.fixture-tools :refer :all]))
 
 (defn test-integration
-  [version repo-dir baseline-dir]
+  [repo-dir baseline-dir]
   (testing "Actions fail with default params and invalid certification path."
     (is (= 1 (main-func "-s" "https://localhost:8443/api"
                         "-u" "admin" "-p" "admin" "-t" repo-dir
@@ -26,7 +26,7 @@
                         "-i" "-f" "pull"))))
 
   (testing "Pull diff from baseline has only inconsequential differences (ordering, etc)"
-    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir (str "dev-resources/mirth-" version "-baseline")))))
+    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir))))
 
   (testing "Push back from pull dir succeeds without errors"
     (is (= 0 (main-func "--include-configuration-map" "-s" "https://localhost:8443/api"
@@ -39,7 +39,7 @@
                         "-i" "-f" "pull"))))
 
   (testing "Pull diff from baseline after multiple pushes has only inconsequential differences (ordering, etc)"
-    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir (str "dev-resources/mirth-" version "-baseline"))))))
+    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir)))))
 
 ;;;;; original approach till the proper diff params were found
 ;; (is (= "cf447090a77086562eb0d6d9eb6e03703c936ed2a10c3afe02e51587171a665b  -\n"
@@ -55,3 +55,6 @@
 ;; (sed "'s/diff -r.*\\/\\(target.*\\/ \\).*\\/\\(dev-resources.*\\)/diff -r \\1 \\2/'"
 ;;      (diff "-r" "target/tmp/" "dev-resources/mirth-8-baseline" {:seq true :throw false}))
 ;; ;; ;; diff -r target/tmp/ dev-resources/mirth-8-baseline | sed 's/diff -r.*\/\(target.*\/ \).*\/\(dev-resources.*\)/diff -r \1 \2/'
+
+;; ignore a few extra line types
+;; (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*version=\"[[:digit:]].[[:digit:]]\\+.[[:digit:]]\\+\".*" "-I" ".*<pruneErroredMessages>.*" repo-dir (str "dev-resources/mirth-" version "-baseline"))

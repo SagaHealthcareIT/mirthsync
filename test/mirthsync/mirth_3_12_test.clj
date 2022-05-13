@@ -4,10 +4,10 @@
             [mirthsync.fixture-tools :refer :all]
             [mirthsync.common-tests :refer :all]))
 
-(use-fixtures :once mirth-12-fixture)
+(use-fixtures :once mirth-3-12-fixture)
 
 (def baseline-dir "dev-resources/mirth-3-12-baseline")
-(def repo-dir "target/tmp-12")
+(def repo-dir "target/tmp-3-12")
 
-(deftest integration-with-12
-  (test-integration "3-12" repo-dir baseline-dir))
+(deftest integration-with-3-12
+  (test-integration repo-dir baseline-dir))
