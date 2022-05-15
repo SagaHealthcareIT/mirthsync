@@ -14,12 +14,13 @@
   rest-path, and id."
   [{:keys [force api] :as app-conf}]
   (let [params (log/spyf :trace "Push params: %s" (mi/push-params api app-conf))
-        query-params (log/spyf :trace "Query params: %s" (mi/query-params api force))
+        query-params (log/spyf :trace "Query params: %s" (mi/query-params api app-conf))
         result (if (mi/post-path api)
                  (mhttp/post-xml app-conf (mi/post-path api) params query-params true)
-                 (mhttp/put-xml app-conf params))]
-    (mi/after-push api app-conf result)
-    app-conf))
+                 (mhttp/put-xml app-conf query-params))]
+    (if (mi/after-push api app-conf result)
+      app-conf
+      (assoc app-conf :exit-code 1 :exit-msg "Failure(s) were encountered during the push"))))
 
 (defn fetch-and-pre-assoc
   "Fetches the children of the current api from the server. Wraps the

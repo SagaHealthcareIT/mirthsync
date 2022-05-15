@@ -180,22 +180,21 @@
 (defmethod mi/find-name :resources [_ _] nil)
 
 (defmethod mi/query-params :default [_ _] nil)
-(defmethod mi/query-params :code-template-libraries [_ app-conf] (override-params (:force app-conf)))
-(defmethod mi/query-params :channel-groups [_ app-conf] (override-params (:force app-conf)))
+(defmethod mi/query-params :code-template-libraries [_ app-conf] (override-params (app-conf :force)))
+(defmethod mi/query-params :code-templates [_ app-conf] (override-params (app-conf :force)))
+(defmethod mi/query-params :channel-groups [_ app-conf] (override-params (app-conf :force)))
+(defmethod mi/query-params :channels [_ app-conf] (override-params (app-conf :force)))
 
 (defmethod mi/push-params :default [_ _] nil)
 (defmethod mi/push-params :code-template-libraries [_ app-conf]
     {"libraries" (cdx/indent-str (cz/node (:server-codelibs app-conf)))
      "removedLibraryIds" "<set/>"
      "updatedCodeTemplates" "<list/>"
-     "removedCodeTemplateIds" "<set/>"
-     "override" (if (:force app-conf) "true" "false")})
-(defmethod mi/push-params :code-templates [_ app-conf] (override-params (:force app-conf)))
+     "removedCodeTemplateIds" "<set/>"})
+
 (defmethod mi/push-params :channel-groups [_ app-conf]
   {"channelGroups" (cdx/indent-str (cz/node (:server-groups app-conf)))
-   "removedChannelGroupsIds" "<set/>"
-   "override" (if (:force app-conf) "true" "false")})
-(defmethod mi/push-params :channels [_ app-conf] (override-params (:force app-conf)))
+   "removedChannelGroupsIds" "<set/>"})
 
 (defmethod mi/preprocess :default [_ app-conf] app-conf)
 (defmethod mi/preprocess :code-template-libraries [_ app-conf]
@@ -218,19 +217,22 @@
 ;; applies to channels and some other entities as well.
 (defmethod mi/after-push :channels [api app-conf result]
   (if (true-200 result)
-    (when (:deploy app-conf)
-      (try+
-       (mhttp/post-xml
-        app-conf
-        "/channels/_deploy"
-        (str "<set><string>" (mi/find-id api (:el-loc app-conf)) "</string></set>")
-        {:returnErrors "true" :debug "false"}
-        false)
-       (catch Object {:keys [body]}
-         (log/warn (str "There was an error deploying the channel.
+    (do
+      (when (:deploy app-conf)
+        (try+
+         (mhttp/post-xml
+          app-conf
+          "/channels/_deploy"
+          (str "<set><string>" (mi/find-id api (:el-loc app-conf)) "</string></set>")
+          {:returnErrors "true" :debug "false"}
+          false)
+         (catch Object {:keys [body]}
+           (log/warn (str "There was an error deploying the channel.
 " body)))))
-    (log/error (str "Unable to save the channel."
-                    (when-not (:force app-conf) " There may be remote changes or the remote version does not match the local version. If you want to push the local changes anyway you can use the \"-f\" flag to force an overwrite.")))
+      true)
+    (do (log/error (str "Unable to save the channel."
+                        (when-not (app-conf :force) " There may be remote changes or the remote version does not match the local version. If you want to push the local changes anyway you can use the \"-f\" flag to force an overwrite.")))
+        false)
     )
   )
 (defmethod mi/after-push :alerts [_ app-conf result] (null-204 result))

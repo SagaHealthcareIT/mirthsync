@@ -39,7 +39,36 @@
                         "-i" "-f" "pull"))))
 
   (testing "Pull diff from baseline after multiple pushes has only inconsequential differences (ordering, etc)"
-    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir)))))
+    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir))))
+
+  (testing "Code template push fails wth changes and --force not enabled."
+    (is (= 1 (do
+               (update-all-xml repo-dir)
+               (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" repo-dir
+                          "-i" "--restrict-to-path" "CodeTemplates" "push")))))
+
+  (testing "Code template push succeeds wth changes and --force enabled."
+    (is (= 0 (do
+               (update-all-xml repo-dir)
+               (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" repo-dir
+                          "-i" "--restrict-to-path" "CodeTemplates" "-f" "push")))))
+
+  (testing "Channel push fails wth changes and --force not enabled."
+    (is (= 1 (do
+               (update-all-xml repo-dir)
+               (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" repo-dir
+                          "-i" "--restrict-to-path" "Channels" "push")))))
+
+  (testing "Channel push succeeds wth changes and --force enabled."
+    (is (= 0 (do
+               (update-all-xml repo-dir)
+               (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" repo-dir
+                          "-i" "--restrict-to-path" "Channels" "-f" "push")))))
+  )
 
 ;;;;; original approach till the proper diff params were found
 ;; (is (= "cf447090a77086562eb0d6d9eb6e03703c936ed2a10c3afe02e51587171a665b  -\n"

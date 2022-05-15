@@ -1,6 +1,7 @@
 (ns mirthsync.fixture-tools
   (:require [clojure.test :refer :all]
             [clojure.java.io :as io]
+            [clojure.string :as cs]
             [clj-http.client :as client]
             [mirthsync.core :refer :all]
             [me.raynes.conch :refer [programs with-programs let-programs]]
@@ -9,7 +10,16 @@
 ;;; note that these tests will only work in unix'ish environments with
 ;;; appropriate commands in the path
 
-(programs mkdir sha256sum curl tar cp rm rmdir diff ps java) ;; sed ;; echo
+(programs mkdir sha256sum curl tar cp rm rmdir diff ps java find sed) ;; grep echo
+
+(defn update-all-xml [path]
+  (as-> (find path "-type" "f" "-iname" "*.xml") v
+    (cs/split v #"\n")
+    (reduce (fn [_ file]
+              (sed "-i"
+                   "-e" "s/<revision>.*/<revision>99<\\/revision>/g"
+                   "-e" "s/<time>.*<\\/time>/<time>1556232311111<\\/time>/g"
+                   "-e" "s/<description\\/>/<description>a description<\\/description>/g" file)) nil v)))
 
 ;;;; starting data and accessor fns
 (def mirths-dir "vendor/mirths")

@@ -28,7 +28,7 @@
               (log/infof "Found a match: %s" fpath))
 
             (if (and (.exists (io/file fpath))
-                     (not (:force app-conf)))
+                     (not (app-conf :force)))
               (log/warn (str "File at " fpath " already exists and the "
                              "force (-f) option was not specified. Refusing "
                              "to overwrite the file."))
