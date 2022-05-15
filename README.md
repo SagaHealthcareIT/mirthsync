@@ -35,12 +35,14 @@ group directory.
 
 ## Changes
 
-### 3.0.2 (Not yet released)
+### 3.0.2
 
 - Support for getting the password from the MIRTHSYNC_PASSWORD
   environment variable if --password is not specified
 - Prompt for password on console if no password is set, the console is
   available and the interactive "-I" flag is set
+- Fix bug preventing local modifications from being pushed even with
+  --force flag specified
 
 ### 3.0.1
 
