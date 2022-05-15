@@ -1,4 +1,4 @@
-(defproject com.saga-it/mirthsync "3.0.2"
+(defproject com.saga-it/mirthsync "3.0.3-SNAPSHOT"
   :description "Mirthsync is a command line tool, created by Saga IT,
   for keeping a local copy of important aspects of Mirth Connect
   configuration in order to allow for the use of traditional version
