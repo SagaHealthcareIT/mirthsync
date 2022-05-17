@@ -139,44 +139,48 @@ How to generate help dialogue:
 ### Help Dialogue:
 
 ``` text
-  The following errors occurred while parsing your command:
+The following errors occurred while parsing your command:
 
-  --server is required
-  --username is required
-  --password is required
-  --target is required
+--server is required
+--username is required
+--target is required
 
-  Usage: mirthsync [options] action
+Usage: mirthsync [options] action
 
-  Options:
-    -s, --server SERVER_URL                    Full HTTP(s) url of the Mirth Connect server
-    -u, --username USERNAME                    Username used for authentication
-    -p, --password PASSWORD                    Password used for authentication
-    -i, --ignore-cert-warnings                 Ignore certificate warnings
-    -f, --force
-          Overwrite existing local files during a pull and overwrite remote items
-          without regard for revisions during a push.
-    -t, --target TARGET_DIR                    Base directory used for pushing or pulling files
-    -r, --restrict-to-path RESTRICT_TO_PATH
-          A path within the target directory to limit the scope of the push. This
-          path may refer to a filename specifically or a directory. If the path
-          refers to a file - only that file will be pushed. If the path refers to
-          a directory - the push will be limited to resources contained within
-          that directory. The RESTRICT_TO_PATH must be specified relative to
-          the target directory.
-    -v                                         Verbosity level
-          May be specified multiple times to increase level.
-        --include-configuration-map
-          A boolean flag to include the configuration map in the push - defaults
-          to false
-    -h, --help
+Options:
+  -s, --server SERVER_URL                              Full HTTP(s) url of the Mirth Connect server
+  -u, --username USERNAME                              Username used for authentication
+  -p, --password PASSWORD                  <computed>  Password used for authentication
+  -i, --ignore-cert-warnings                           Ignore certificate warnings
+  -v                                                   Verbosity level
+        May be specified multiple times to increase level.
+  -f, --force                                          
+        Overwrite existing local files during a pull and overwrite remote items
+        without regard for revisions during a push.
+  -t, --target TARGET_DIR                              Base directory used for pushing or pulling files
+  -r, --restrict-to-path RESTRICT_TO_PATH              
+        A path within the target directory to limit the scope of the push. This
+        path may refer to a filename specifically or a directory. If the path
+        refers to a file - only that file will be pushed. If the path refers to
+        a directory - the push will be limited to resources contained within
+        that directory. The RESTRICT_TO_PATH must be specified relative to
+        the target directory.
+      --include-configuration-map                      
+        A boolean flag to include the configuration map in the push - defaults
+        to false.
+  -d, --deploy                                         Deply channels on push
+        During a push, deploy each included channel immediately
+        after saving the channel to Mirth.
+  -I, --interactive                                    
+        Allow for console prompts for user input
+  -h, --help
 
-  Actions:
-    push     Push filesystem code to server
-    pull     Pull server code to filesystem
+Actions:
+  push     Push filesystem code to server
+  pull     Pull server code to filesystem
 
-  Environment variables:
-    MIRTHSYNC_PASSWORD     Alternative to --password command line option
+Environment variables:
+  MIRTHSYNC_PASSWORD     Alternative to --password command line option
 ```
 
 ## Examples
@@ -184,7 +188,9 @@ How to generate help dialogue:
 ### CLI
 
 > NOTE - The "-p" or "--password" option may be omitted from the the
-> commands below if the environment variable MIRTHSYNC_PASSWORD is set.v
+> commands below if the environment variable MIRTHSYNC_PASSWORD is
+> set. When interactive input is allowed (-I) and no password can be
+> found, you will be prompted to enter the password at the terminal.
 
 How to pull Mirth Connect code from a Mirth Connect instance:
 
