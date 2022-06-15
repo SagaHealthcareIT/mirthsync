@@ -52,25 +52,27 @@
         (recur next-el-loc)))))
 
 (defn- local-locs
-  "Lazy seq of local el-locs for the current api."
-  [{:keys [api restrict-to-path target api] :as app-conf}]
-  (let [^String required-prefix (str target File/separator restrict-to-path)
-        filtered-api-files (filter #(let [matches (.startsWith (.toString ^File %) required-prefix)]
-                                      (if matches
-                                        (do (when (seq restrict-to-path)
-                                              (log/infof "Found a match: %s" %))
-                                            true)
-                                        (do (log/infof "filtering push of '%s' since it does not start with our required prefix: %s" % required-prefix)
-                                            false)))
-                                   (mi/api-files api (mi/local-path api (:target app-conf))))]
+  "Lazy sequence of local el-locs for the current api."
+  [{:keys [api restrict-to-path target] :as app-conf}]
+
+  (let [^String required-prefix (str target File/separator restrict-to-path)]
     (log/debugf "required-prefix: %s" required-prefix)
 
-    (map #(expand-filerefs %
-                           (mxml/to-zip
-                            (do
-                              (log/infof "\tFile: %s" (.toString ^File %))
-                              (slurp %))))
-         filtered-api-files)))
+    (sequence
+     (comp (filter #(let [matches (.startsWith (.toString ^File %) required-prefix)]
+                    (if matches
+                      (do (when (seq restrict-to-path)
+                            (log/infof "Found a match: %s" %))
+                          true)
+                      (do (log/infof "filtering push of '%s' since it does not start with our required prefix: %s" % required-prefix)
+                          false))))
+          (map #(expand-filerefs %
+                                (mxml/to-zip
+                                 (do
+                                   (log/infof "\tFile: %s" (.toString ^File %))
+                                   (slurp %)))))
+          (filter #(not (mi/should-skip? api % app-conf))))
+     (mi/api-files api (mi/local-path api (:target app-conf))))))
 
 (defn- remote-locs
   "Seq of remote el-locs for the current api. Could be lazy or not

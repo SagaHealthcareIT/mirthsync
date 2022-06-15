@@ -65,9 +65,12 @@
     :default ""
     :parse-fn strip-trailing-slashes]
 
-   [nil "--include-configuration-map" "
-        A boolean flag to include the configuration map in the push - defaults
-        to false."
+   [nil "--include-configuration-map" " A boolean flag to include the
+        configuration map in the push. Default: false"
+    :default false]
+
+   [nil "--skip-disabled" " A boolean flag that indicates whether
+        disabled channels should be pushed or pulled. Default: false"
     :default false]
 
    ["-d" "--deploy" "Deply channels on push

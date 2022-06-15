@@ -35,6 +35,14 @@ group directory.
 
 ## Changes
 
+### Current Prerelease
+
+- New "--skip-disabled" flag to indicate whether the item (only
+  channels currently) being pushed or pulled should be included based
+  on its status. The flag defaults to 'false' and all items are pushed
+  or pulled no matter what the 'enabled' setting is. NOTE - this
+  feature only works on mirth versions >= 3.9.
+
 ### 3.0.2
 
 - Support for getting the password from the MIRTHSYNC_PASSWORD
@@ -165,9 +173,10 @@ Options:
         a directory - the push will be limited to resources contained within
         that directory. The RESTRICT_TO_PATH must be specified relative to
         the target directory.
-      --include-configuration-map                      
-        A boolean flag to include the configuration map in the push - defaults
-        to false.
+      --include-configuration-map                       A boolean flag to include the
+        configuration map in the push. Default: false
+      --skip-disabled                                   A boolean flag that indicates whether
+        disabled channels should be pushed or pulled. Default: false
   -d, --deploy                                         Deply channels on push
         During a push, deploy each included channel immediately
         after saving the channel to Mirth.

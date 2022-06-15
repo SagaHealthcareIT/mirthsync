@@ -21,6 +21,12 @@
                    "-e" "s/<time>.*<\\/time>/<time>1556232311111<\\/time>/g"
                    "-e" "s/<description\\/>/<description>a description<\\/description>/g" file)) nil v)))
 
+(defn ensure-directory-exists [path]
+  (mkdir "-p" path))
+
+(defn empty-directory? [path]
+  (= (find path) (str path "\n")))
+
 ;;;; starting data and accessor fns
 (def mirths-dir "vendor/mirths")
 

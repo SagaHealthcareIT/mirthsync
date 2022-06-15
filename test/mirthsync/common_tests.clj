@@ -3,8 +3,67 @@
             [mirthsync.core :refer :all]
             [mirthsync.fixture-tools :refer :all]))
 
+;; NOTE - it's important that some of these tests run in order
 (defn test-integration
   [repo-dir baseline-dir]
+
+  (testing "Complex actions with empty target and restrict-to-path and skip-disabled"
+    ;; this specific test is not compatible with 3.08
+    (is (= [0 0 0 true 0 0 true 0 false]
+           (if (= "target/tmp-3-08" repo-dir)
+             [0 0 0 true 0 0 true 0 false]
+             [
+              ;; we're going to start this process out by pushing a
+              ;; single group from the baseline so that the following
+              ;; single channel push ends up in the group for
+              ;; subsequent pulling
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/index.xml"
+                         "-u" "admin" "-p" "admin" "-t" baseline-dir "-i" "-f" "push")
+
+              ;; this should push nothing to an empty mirth because it's the first
+              ;; test and we're restricting the path to a single disabled channel
+              ;; with skip-disabled set
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+                         "--skip-disabled" "-u" "admin" "-p" "admin" "-t" baseline-dir
+                         "-i" "-f" "push")
+
+              ;; to verify that there's nothing we'll pull everything from the empty
+              ;; mirth and check to see if the target directory is empty
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+                         "-u" "admin" "-p" "admin" "-t" repo-dir
+                         "-i" "-f" "pull")
+
+              ;; this should return true currently
+              (do (ensure-directory-exists repo-dir)
+                  (empty-directory? repo-dir))
+
+              ;; now we'll push the single channel from the baseline directory
+              ;; without skip disabled and it should show up in mirth
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+                         "-u" "admin" "-p" "admin" "-t" baseline-dir
+                         "-i" "-f" "push")
+
+              ;; now let's pull again with skip-enabled and we should still have
+              ;; nothing in the target directory
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+                         "--skip-disabled" "-u" "admin" "-p" "admin" "-t" repo-dir
+                         "-i" "-f" "pull")
+
+              ;; this should return true currently
+              (empty-directory? repo-dir)
+
+              ;; pull without skipping disabled and the target directory should not
+              ;; be empty
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/"
+                         "-u" "admin" "-p" "admin" "-t" repo-dir "-i" "-f" "pull")
+
+              ;; this should return false now
+              (empty-directory? repo-dir)
+
+              ])
+           )))
+
+  
   (testing "Actions fail with default params and invalid certification path."
     (is (= 1 (main-func "-s" "https://localhost:8443/api"
                         "-u" "admin" "-p" "admin" "-t" repo-dir
@@ -15,6 +74,11 @@
                         "-u" "admin" "-p" "invalidpass" "-t" repo-dir
                         "-i" "-f" "pull"))))
 
+  (testing "Pushing/pulling using restrict-to-path and skip-disabled behaves properly."
+    (is (= 0 (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+                        "--skip-disabled" "-u" "admin" "-p" "admin" "-t" baseline-dir
+                        "-i" "-f" "push"))))
+  
   (testing "Push from baseline succeeds without errors"
     (is (= 0 (main-func "--include-configuration-map" "-s" "https://localhost:8443/api"
                         "-u" "admin" "-p" "admin" "-t" baseline-dir

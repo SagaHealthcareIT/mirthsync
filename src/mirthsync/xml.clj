@@ -16,26 +16,28 @@
   name and path. If the file exists it is not overwritten unless the
   -f option is set. Returns app-conf."
   [{:keys [api el-loc restrict-to-path target] :as app-conf}]
-  (loop [files-data (mi/deconstruct-node api (mi/file-path api app-conf) el-loc)
-         file-data (first files-data)]
-    (when (seq files-data)
-      (let [xml-str (second file-data)
-            fpath (first file-data)
-            required-prefix (str target File/separator restrict-to-path)]
-        (if (.startsWith ^String fpath required-prefix)
-          (do
-            (when (seq restrict-to-path)
-              (log/infof "Found a match: %s" fpath))
 
-            (if (and (.exists (io/file fpath))
-                     (not (app-conf :force)))
-              (log/warn (str "File at " fpath " already exists and the "
-                             "force (-f) option was not specified. Refusing "
-                             "to overwrite the file."))
-              (do (io/make-parents fpath)
-                  (log/infof "\tFile: %s" fpath)
-                  (spit fpath xml-str))))
+  (when-not (mi/should-skip? api el-loc app-conf)
+    (loop [files-data (mi/deconstruct-node api (mi/file-path api app-conf) el-loc)
+           file-data (first files-data)]
+      (when (seq files-data)
+        (let [xml-str (second file-data)
+              fpath (first file-data)
+              required-prefix (str target File/separator restrict-to-path)]
+          (if (.startsWith ^String fpath required-prefix)
+            (do
+              (when (seq restrict-to-path)
+                (log/infof "Found a match: %s" fpath))
 
-          (log/infof "filtering pull of '%s' since it does not start with our required prefix: %s" fpath required-prefix)))
-      (recur (rest files-data) (second files-data))))
+              (if (and (.exists (io/file fpath))
+                       (not (app-conf :force)))
+                (log/warn (str "File at " fpath " already exists and the "
+                               "force (-f) option was not specified. Refusing "
+                               "to overwrite the file."))
+                (do (io/make-parents fpath)
+                    (log/infof "\tFile: %s" fpath)
+                    (spit fpath xml-str))))
+            ;; else
+            (log/infof "Filtering pull of '%s' since it does not start with our required prefix: %s" fpath required-prefix)))
+        (recur (rest files-data) (second files-data)))))
   app-conf)

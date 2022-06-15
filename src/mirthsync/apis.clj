@@ -262,6 +262,11 @@
 (defmethod mi/api-files :channels [_  directory]
   (mf/without-named-xml-files-seq 2 "index" directory))
 
+(defmethod mi/enabled? :default [_ _]
+  true)
+(defmethod mi/enabled? :channels [_ el-loc]
+  (not= (cdzx/xml1-> el-loc :exportData :metadata :enabled cdzx/text) "false"))
+
 (defmethod mi/find-id :default [_  el-loc]
   (api-element-id el-loc))
 (defmethod mi/find-id :configuration-map [_ _] nil)

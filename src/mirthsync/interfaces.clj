@@ -1,4 +1,6 @@
-(ns mirthsync.interfaces)
+(ns mirthsync.interfaces
+  (:require [clojure.tools.logging :as log]))
+
 ;;;;;;;;;; API multimethods
 
 ;; simply dispatch on the api keyword
@@ -27,6 +29,9 @@
 (defmulti deconstruct-node "Explode XML node into file/content pairs"
   {:arglists '([api file-path el-loc])} first-param)
 
+(defmulti enabled? "Is the current xml enabled?"
+  {:arglists '([api el-loc])} first-param)
+
 (defmulti find-elements "Find elements in the returned XML"
   {:arglists '([api el-loc])} first-param)
 
@@ -38,6 +43,19 @@
 
 (defmulti local-path "Base dir for saving files for the api"
   {:arglists '([api target])} first-param)
+
+(defn should-skip?
+  "Convenience function to combine enabled? check with skip-disabled
+  check."
+  [api el-loc {:keys [skip-disabled] :as app-conf}]
+  (if (and skip-disabled
+           (not (enabled? api el-loc)))
+    (do
+      (log/infof "Filtering '%s' because it is disabled and --skip-disabled is set" (find-name api el-loc))
+      true)
+    (do
+      (log/debugf "Not filtering '%s'. Skip-disabled is '%b'." (find-name api el-loc) skip-disabled)
+      false)))
 
 ;;;;;;;;;;;;;;;;;;; HTTP API info ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
