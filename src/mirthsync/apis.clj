@@ -451,19 +451,24 @@
 
 
 ;; ************** TODO - deal with the duplication/ugliness
-(defmethod mi/deconstruct-node :channels [{:keys [disk-mode] :as app-conf} file-path el-loc]
-  (case (int disk-mode)
-    1 (let [index-loc (mx/to-zip (slurp file-path))]
-        [[file-path (cdx/indent-str (cz/root (mx/add-update-child (cdzx/xml1-> index-loc :channels) el-loc)))]])
-    2 [[file-path (cdx/indent-str (cz/node el-loc))]]
-    (deconstruct-node
-     file-path
-     el-loc
-     (fn [el-loc]
-       (some (fn [[name script]]
-               (when-let [script-loc (script el-loc)]
-                 [(name script-loc) script-loc]))
-             channel-deconstructors)))))
+(defmethod mi/deconstruct-node :channels [{:keys [disk-mode] :as app-conf} ^String file-path el-loc]
+  ;; handle default-group channels
+  (let [effective-disk-mode (if (and (= 1 disk-mode)
+                                     (not (.endsWith file-path (str File/separator "index.xml"))))
+                              2
+                              disk-mode)]
+    (case (int effective-disk-mode)
+      1 (let [index-loc (mx/to-zip (slurp file-path))]
+          [[file-path (cdx/indent-str (cz/root (mx/add-update-child (cdzx/xml1-> index-loc :channels) el-loc)))]])
+      2 [[file-path (cdx/indent-str (cz/node el-loc))]]
+      (deconstruct-node
+       file-path
+       el-loc
+       (fn [el-loc]
+         (some (fn [[name script]]
+                 (when-let [script-loc (script el-loc)]
+                   [(name script-loc) script-loc]))
+               channel-deconstructors))))))
 
 (defmethod mi/deconstruct-node :code-templates [{:keys [disk-mode] :as app-conf} file-path el-loc]
   (case (int disk-mode)

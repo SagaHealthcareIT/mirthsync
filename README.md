@@ -263,14 +263,11 @@ Requires [Leiningen](https://leiningen.org/)
 
 ## Todo
 
-- Add the ability to selectively push or pull any channel, group,
-  script, etc (this is in progress)
-- Add granular extraction of scripts into their own files and merge
-  back into XML for pushing
+- Gracefully handle renames and deletions
 
 ## License
 
-Copyright © 2017-2021 Saga IT LLC
+Copyright © 2017-2022 Saga IT LLC
 
 Distributed under the Eclipse Public License either version 1.0 or any later version.
 
