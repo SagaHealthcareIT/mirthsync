@@ -144,45 +144,46 @@
 (ct/deftest test-nested-file-path
   (ct/testing "Nested channel path is valid"
     (ct/is (= "target/Channels/This is a group/Http Hello2 3081.xml"
-           (ma/nested-file-path channel-groups-loc
-                             [:channelGroup :channels :channel]
-                             "target"
-                             channel-in-group-loc
-                             (nth ma/apis 6)))))
+              ;; TODO - fix and enhance these nested-file-path calls
+              (ma/nested-file-path channel-groups-loc
+                                   [:channelGroup :channels :channel]
+                                   {:target "target"
+                                    :el-loc channel-in-group-loc
+                                    :api :channels}))))
 
   (ct/testing "Default Group channel path is valid"
     (ct/is (= "target/Channels/Default Group/Http 3080.xml"
-           (ma/nested-file-path channel-groups-loc
-                             [:channelGroup :channels :channel]
-                             "target"
-                             channel-without-group-loc
-                             (nth ma/apis 6)))))
+              (ma/nested-file-path channel-groups-loc
+                                   [:channelGroup :channels :channel]
+                                   {:target "target"
+                                    :el-loc channel-without-group-loc
+                                    :api :channels}))))
 
   (ct/testing "Nested code template path is valid"
     (ct/is (= "target/CodeTemplates/Library 2/Template 2.xml"
-           (ma/nested-file-path codetemplate-libraries-loc
-                             [:codeTemplateLibrary :codeTemplates :codeTemplate]
-                             "target"
-                             codetemplate-loc
-                             (nth ma/apis 4))))))
+              (ma/nested-file-path codetemplate-libraries-loc
+                                   [:codeTemplateLibrary :codeTemplates :codeTemplate]
+                                   {:target "target"
+                                    :el-loc codetemplate-loc
+                                    :api :code-templates})))))
 
 (ct/deftest test-add-update-child
   (ct/testing "Update results in identical codetemplate library xml"
     (let [[a b] (cd/diff
                  (cz/node codetemplate-libraries-loc)
-                 (cz/node (ma/add-update-child codetemplate-libraries-loc codetemplate-library-loc)))]
+                 (cz/node (mx/add-update-child codetemplate-libraries-loc codetemplate-library-loc)))]
       (ct/is (= [nil nil] [a b]))))
 
   (ct/testing "Update results in identical channel group xml"
     (let [[a b] (cd/diff
                  (cz/node channel-groups-loc)
-                 (cz/node (ma/add-update-child channel-groups-loc channel-group-loc)))]
+                 (cz/node (mx/add-update-child channel-groups-loc channel-group-loc)))]
       (ct/is (= [nil nil] [a b]))))
 
   (ct/testing "Add results in addition to right side of diff and nothing on left"
     (let [[a b] (cd/diff
                  (cz/node channel-groups-loc)
-                 (cz/node (ma/add-update-child channel-groups-loc updated-channel-group-loc)))]
+                 (cz/node (mx/add-update-child channel-groups-loc updated-channel-group-loc)))]
       (ct/is (= nil a))
       (ct/is (not= nil b)))))
 

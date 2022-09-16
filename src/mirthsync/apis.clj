@@ -7,6 +7,7 @@
             [mirthsync.actions :as ma]
             [mirthsync.files :as mf]
             [mirthsync.interfaces :as mi]
+            [mirthsync.xml :as mx]
             [clojure.string :as cs]
             [mirthsync.http-client :as mhttp])
   (:use [slingshot.slingshot :only [try+]])
@@ -32,23 +33,6 @@
   [force]
   {"override" (if force "true" "false")})
 
-(defn add-update-child
-  "Adds or updates (by ID) an child element within the supplied root. Assumes that
-  the typical mirth xml structure is present with a root collection element
-  and an ID element within the child."
-  [root-loc child-loc]
-  (let [collection-keyword (:tag (cz/node root-loc))
-        node-element-keyword (:tag (cz/node child-loc))
-        id (cdzx/xml1-> child-loc :id cdzx/text)
-        found-id-loc (cdzx/xml1-> root-loc
-                                collection-keyword
-                                node-element-keyword
-                                :id
-                                (cdzx/text= id))]
-    (if found-id-loc
-      (cz/up (cz/replace (cz/up found-id-loc) (cz/node child-loc)))
-      (cz/append-child root-loc (cz/node child-loc)))))
-
 (defn- file-path
   "Returns a string file path for the current api with path appended."
   [path {:keys [api el-loc] :as app-conf}]
@@ -65,21 +49,28 @@
   (mi/preprocess api app-conf))
 
 (defn nested-file-path
-  "Returns the nested xml file path for the provided api."
-  [group-xml-zip selectors target-dir el-loc api]
-  (str (mi/local-path api target-dir) File/separator
-       (if-let [lib-name (mf/safe-name
-                          (let [id (mi/find-id api el-loc)]
-                            (apply cdzx/xml1->
-                                   group-xml-zip
-                                   (flatten [selectors
-                                             :id id
-                                             (repeat (count selectors) cz/up)
-                                             :name cdzx/text]))))]
-         (str lib-name File/separator)
-         (str "Default Group" File/separator))
-       (mf/safe-name (mi/find-name api el-loc))
-       ".xml"))
+  "Returns the nested xml file path for the provided api. 'Nested' means
+  that the api xml may be part of a library or group and the path
+  should take that into account. In the case of disk-mode '1' the file
+  path may point to an existing xml file representing the group or
+  library."
+  [group-xml-zip selectors {:keys [target el-loc api disk-mode]}]
+  (let [id (mi/find-id api el-loc)
+        lib-name (mf/safe-name
+                  (apply cdzx/xml1->
+                         group-xml-zip
+                         (flatten [selectors
+                                   :id id
+                                   (repeat (count selectors) cz/up)
+                                   :name cdzx/text])))]
+    (str (mi/local-path api target) File/separator
+         (if lib-name
+           (str lib-name File/separator)
+           (str "Default Group" File/separator))
+         (if (and lib-name (= 1 disk-mode)) ; point to group/lib index xml if mode 1
+           "index"
+           (mf/safe-name (mi/find-name api el-loc)))
+         ".xml")))
 
 (defn- alert-file-path
   "Returns the alert xml path."
@@ -145,7 +136,7 @@
 (defn pre-node-action [keyword app-conf]
   (assoc app-conf
          keyword
-         (add-update-child (keyword app-conf) (:el-loc app-conf))))
+         (mx/add-update-child (keyword app-conf) (:el-loc app-conf))))
 
 (defn- post-path
   "Takes an api and builds a _bulkUpdate from the rest-path"
@@ -163,21 +154,23 @@
            action)
     app-conf))
 
-(def apis
-  [:configuration-map
-   :global-scripts
-   :resources
-   :code-template-libraries
-   :code-templates
-   :channel-groups
-   :channels
-   :alerts
-   ])
+(defn apis [app-conf]
+  (if (= 0 (:disk-mode app-conf))
+    [:server-configuration]
+    [:configuration-map
+     :global-scripts
+     :resources
+     :code-template-libraries
+     :code-templates
+     :channel-groups
+     :channels
+     :alerts]))
 
 (defmethod mi/find-name :default [_ api-loc] (api-element-name api-loc))
 (defmethod mi/find-name :configuration-map [_ _] nil)
 (defmethod mi/find-name :global-scripts [_ _] nil)
 (defmethod mi/find-name :resources [_ _] nil)
+(defmethod mi/find-name :server-configuration [_ _] nil)
 
 (defmethod mi/query-params :default [_ _] nil)
 (defmethod mi/query-params :code-template-libraries [_ app-conf] (override-params (app-conf :force)))
@@ -236,6 +229,7 @@
     )
   )
 (defmethod mi/after-push :alerts [_ app-conf result] (null-204 result))
+(defmethod mi/after-push :server-configuration [_ app-conf result] (null-204 result))
 
 (defmethod mi/pre-node-action :default [_ app-conf] app-conf)
 (defmethod mi/pre-node-action :code-template-libraries [_ app-conf]
@@ -261,6 +255,8 @@
   (mf/only-named-xml-files-seq 2 "index" directory))
 (defmethod mi/api-files :channels [_  directory]
   (mf/without-named-xml-files-seq 2 "index" directory))
+(defmethod mi/api-files :server-configuration [_  directory]
+  (mf/only-named-xml-files-seq 1 "FullBackup" directory))
 
 (defmethod mi/enabled? :default [_ _]
   true)
@@ -285,6 +281,7 @@
       (cdzx/xml-> el-loc :channelGroup))) ; from filesystem
 (defmethod mi/find-elements :channels [_ el-loc] (cdzx/xml-> el-loc :list :channel))
 (defmethod mi/find-elements :alerts [_ el-loc] (cdzx/xml-> el-loc :list :alertModel))
+(defmethod mi/find-elements :server-configuration [_ el-loc] (cdzx/xml-> el-loc :serverConfiguration))
 
 (defmethod mi/file-path :configuration-map [_ app-conf]
   (file-path "ConfigurationMap.xml" app-conf))
@@ -297,19 +294,17 @@
 (defmethod mi/file-path :code-templates [_ app-conf]
   (nested-file-path (:server-codelibs app-conf)
                     [:codeTemplateLibrary :codeTemplates :codeTemplate]
-                    (:target app-conf)
-                    (:el-loc app-conf)
-                    (:api app-conf)))
+                    app-conf))
 (defmethod mi/file-path :channel-groups [_ app-conf]
   (file-path (str File/separator "index.xml") app-conf))
 (defmethod mi/file-path :channels [_ app-conf]
   (nested-file-path (:server-groups app-conf)
                     [:channelGroup :channels :channel]
-                    (:target app-conf)
-                    (:el-loc app-conf)
-                    (:api app-conf)))
+                    app-conf))
 (defmethod mi/file-path :alerts [_ app-conf]
   (alert-file-path app-conf))
+(defmethod mi/file-path :server-configuration [_ app-conf]
+  (file-path "FullBackup.xml" app-conf))
 
 (defmethod mi/local-path :configuration-map [_ target]
   (local-path-str File/separator target))
@@ -327,6 +322,8 @@
   (local-path-str "Channels" target))
 (defmethod mi/local-path :alerts [_ target]
   (local-path-str "Alerts" target))
+(defmethod mi/local-path :server-configuration [_ target]
+  (local-path-str File/separator target))
 
 (defmethod mi/rest-path :configuration-map [_] "/server/configurationMap")
 (defmethod mi/rest-path :global-scripts [_] "/server/globalScripts")
@@ -336,6 +333,7 @@
 (defmethod mi/rest-path :channel-groups [_] "/channelgroups")
 (defmethod mi/rest-path :channels [_] "/channels")
 (defmethod mi/rest-path :alerts [_] "/alerts")
+(defmethod mi/rest-path :server-configuration [_] "/server/configuration")
 
 (defn- script-node->fileref
   [script script-name]
@@ -370,24 +368,6 @@
 
           (recur next-el-loc deconstruction))))))
 
-(defmethod mi/deconstruct-node :default [_ file-path el-loc]
-  [[file-path (cdx/indent-str (cz/node el-loc))]]) ;; just return whole node
-
-(defmethod mi/deconstruct-node :global-scripts [_ file-path el-loc]
-  (deconstruct-node
-   file-path
-   el-loc
-   (fn [el-loc]
-     (when-let [name-loc (cdzx/xml1-> el-loc :entry :string)]
-       [(cdzx/text name-loc) (cz/right name-loc)]))))
-
-(defmethod mi/deconstruct-node :code-templates [_ file-path el-loc]
-  (deconstruct-node
-   file-path
-   el-loc
-   (fn [el-loc]
-     (when-let [script-loc (cdzx/xml1-> el-loc :properties :code)]
-       [(cdzx/xml1-> el-loc :name cdzx/text) script-loc]))))
 
 (defn name-script-sequence
   "Take a script loc to find and build the script name."
@@ -470,15 +450,45 @@
                   [cz/up cz/up cz/up :responseTransformer cz/up :connector cz/up :destinationConnectors])]])
 
 
-(defmethod mi/deconstruct-node :channels [_ file-path el-loc]
-  (deconstruct-node
-   file-path
-   el-loc
-   (fn [el-loc]
-     (some (fn [[name script]]
-             (when-let [script-loc (script el-loc)]
-               [(name script-loc) script-loc]))
-           channel-deconstructors))))
+;; ************** TODO - deal with the duplication/ugliness
+(defmethod mi/deconstruct-node :channels [{:keys [disk-mode] :as app-conf} file-path el-loc]
+  (case (int disk-mode)
+    1 (let [index-loc (mx/to-zip (slurp file-path))]
+        [[file-path (cdx/indent-str (cz/root (mx/add-update-child (cdzx/xml1-> index-loc :channels) el-loc)))]])
+    2 [[file-path (cdx/indent-str (cz/node el-loc))]]
+    (deconstruct-node
+     file-path
+     el-loc
+     (fn [el-loc]
+       (some (fn [[name script]]
+               (when-let [script-loc (script el-loc)]
+                 [(name script-loc) script-loc]))
+             channel-deconstructors)))))
+
+(defmethod mi/deconstruct-node :code-templates [{:keys [disk-mode] :as app-conf} file-path el-loc]
+  (case (int disk-mode)
+    1 (let [index-loc (mx/to-zip (slurp file-path))]
+        [[file-path (cdx/indent-str (cz/root (mx/add-update-child (cdzx/xml1-> index-loc :codeTemplates) el-loc)))]])
+    2 [[file-path (cdx/indent-str (cz/node el-loc))]]
+    (deconstruct-node
+     file-path
+     el-loc
+     (fn [el-loc]
+       (when-let [script-loc (cdzx/xml1-> el-loc :properties :code)]
+         [(cdzx/xml1-> el-loc :name cdzx/text) script-loc])))))
+
+(defmethod mi/deconstruct-node :global-scripts [{:keys [disk-mode] :as app-conf} file-path el-loc]
+  (if-not (> disk-mode 2)
+    [[file-path (cdx/indent-str (cz/node el-loc))]]
+    (deconstruct-node
+     file-path
+     el-loc
+     (fn [el-loc]
+       (when-let [name-loc (cdzx/xml1-> el-loc :entry :string)]
+         [(cdzx/text name-loc) (cz/right name-loc)])))))
+
+(defmethod mi/deconstruct-node :default [_ file-path el-loc]
+  [[file-path (cdx/indent-str (cz/node el-loc))]]) ;; just return whole node
 
 (comment
 

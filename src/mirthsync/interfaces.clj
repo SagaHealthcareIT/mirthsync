@@ -3,12 +3,15 @@
 
 ;;;;;;;;;; API multimethods
 
-;; simply dispatch on the api keyword
+;; simply dispatch on the first parameter (should be api keyword)
 (defn- first-param [x & _] x)
+
+;; dispatch on api still but with the app-conf
+(defn- app-conf [{:keys [api] :as app-conf} & _] api)
 
 ;;;;;;;;;;;;;;;;;;;; Event hooks ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmulti after-push "Process result of item push"
-  {:arglists '([api-key app-conf result])} first-param)
+  {:arglists '([api app-conf result])} first-param)
 
 (defmulti pre-node-action "Transform app-conf before processing"
   {:arglists '([api app-conf])} first-param)
@@ -27,7 +30,7 @@
 ;;;;;;;;;;;;;;;;;;;; Work with the the XML ;;;;;;;;;;;;;;;;;;;;
 
 (defmulti deconstruct-node "Explode XML node into file/content pairs"
-  {:arglists '([api file-path el-loc])} first-param)
+  {:arglists '([app-conf file-path el-loc])} app-conf) ;; TODO - consider redundancy of app-conf and other params
 
 (defmulti enabled? "Is the current xml enabled?"
   {:arglists '([api el-loc])} first-param)

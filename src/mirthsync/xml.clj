@@ -1,7 +1,8 @@
 (ns mirthsync.xml
   (:require [clojure.data.xml :as xml]
             [clojure.java.io :as io]
-            [clojure.zip :as zip]
+            [clojure.zip :as cz]
+            [clojure.data.zip.xml :as cdzx]
             [clojure.tools.logging :as log]
             [mirthsync.interfaces :as mi])
   (:import java.io.File))
@@ -9,7 +10,24 @@
 (defn to-zip
   "Takes a string of xml and returns an xml zipper"
   [x]
-  (zip/xml-zip (xml/parse-str x)))
+  (cz/xml-zip (xml/parse-str x)))
+
+(defn add-update-child
+  "Adds or updates (by ID) an child element within the supplied root. Assumes that
+  the typical mirth xml structure is present with a root collection element
+  and an ID element within the child."
+  [root-loc child-loc]
+  (let [collection-keyword (:tag (cz/node root-loc))
+        node-element-keyword (:tag (cz/node child-loc))
+        id (cdzx/xml1-> child-loc :id cdzx/text)
+        found-id-loc (cdzx/xml1-> root-loc
+                                collection-keyword
+                                node-element-keyword
+                                :id
+                                (cdzx/text= id))]
+    (if found-id-loc
+      (cz/up (cz/replace (cz/up found-id-loc) (cz/node child-loc)))
+      (cz/append-child root-loc (cz/node child-loc)))))
 
 (defn serialize-node
   "Take an xml location and write to the filesystem with a meaningful
@@ -18,7 +36,7 @@
   [{:keys [api el-loc restrict-to-path target] :as app-conf}]
 
   (when-not (mi/should-skip? api el-loc app-conf)
-    (loop [files-data (mi/deconstruct-node api (mi/file-path api app-conf) el-loc)
+    (loop [files-data (mi/deconstruct-node app-conf (mi/file-path api app-conf) el-loc)
            file-data (first files-data)]
       (when (seq files-data)
         (let [xml-str (second file-data)
