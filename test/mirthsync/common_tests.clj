@@ -5,7 +5,7 @@
 
 ;; NOTE - it's important that some of these tests run in order
 (defn test-integration
-  [repo-dir baseline-dir]
+  [repo-dir baseline-dir version]
 
   (testing "Complex actions with empty target and restrict-to-path and skip-disabled"
     ;; this specific test is not compatible with 3.08
@@ -132,6 +132,31 @@
                (main-func "-s" "https://localhost:8443/api"
                           "-u" "admin" "-p" "admin" "-t" repo-dir
                           "-i" "--restrict-to-path" "Channels" "-f" "push")))))
+
+  (testing "Disk mode 0 pull and push works"
+    (let [repo-dir (str repo-dir "-0")]
+      (is (= 0 (do
+                 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" repo-dir
+                            "-i" "-m" "0" "pull"))))
+      (is (= "" (diff "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" (str repo-dir "/FullBackup.xml") (str baseline-dir "/../mirth-backup-" version ".xml"))))
+      (is (= 0 (do
+                 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" repo-dir
+                            "-i" "-m" "0" "push"))))))
+
+  (testing "Disk mode 1 pull and push works"
+    (let [repo-dir (str repo-dir "-1")
+          baseline-dir (str baseline-dir "-1")]
+      (is (= 0 (do
+                 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" repo-dir
+                            "-i" "-m" "1" "pull"))))
+      (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir)))
+      (is (= 0 (do
+                 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" repo-dir
+                            "-i" "-m" "1" "push"))))))
   )
 
 ;;;;; original approach till the proper diff params were found

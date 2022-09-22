@@ -58,10 +58,12 @@
    ["-m" "--disk-mode DISK_MODE" "Use this flag to specify the target directory
         disk format.
         - 0 Equivalent to Mirth Administrator backup and restore.
-        - 1 All resources expanded to \"Group\" or \"Library\" level.
-        - 2 Expand resources one level deeper than '1' to the individual XML level.
-        - Numbers greater than 2 (Default) Expand everything to the most
-          granular level (javascript, Sql, etc)"
+        - 1 All items expanded to \"Group\" or \"Library\" level.
+        - 2 Expand items one level deeper than '1' to the individual XML level.
+            In other words - Channels and Code Templates are in their own individual
+            XML files.
+        - Numbers greater than 2 (Default). Expand everything to the most
+          granular level (Javascript, Sql, etc)."
     :default 9
     :parse-fn #(Integer/parseInt %)]
 

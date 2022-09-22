@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><map>
+  <entry>
+    <string>This is a key</string>
+    <com.mirth.connect.util.ConfigurationProperty>
+      <value>This is a multi
+line
+value</value>
+      <comment>this is a comment</comment>
+    </com.mirth.connect.util.ConfigurationProperty>
+  </entry>
+</map>

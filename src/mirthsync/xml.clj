@@ -33,7 +33,7 @@
   "Take an xml location and write to the filesystem with a meaningful
   name and path. If the file exists it is not overwritten unless the
   -f option is set. Returns app-conf."
-  [{:keys [api el-loc restrict-to-path target] :as app-conf}]
+  [{:keys [api el-loc restrict-to-path target disk-mode] :as app-conf}]
 
   (when-not (mi/should-skip? api el-loc app-conf)
     (loop [files-data (mi/deconstruct-node app-conf (mi/file-path api app-conf) el-loc)
@@ -47,8 +47,12 @@
               (when (seq restrict-to-path)
                 (log/infof "Found a match: %s" fpath))
 
+              ;; never overwrite unless force is specified or we're updating
+              ;; index files in disk mode 1
               (if (and (.exists (io/file fpath))
-                       (not (app-conf :force)))
+                       (not (app-conf :force))
+                       (not (and (= 1 disk-mode)
+                                 (.endsWith fpath (str File/separator "index.xml")))))
                 (log/warn (str "File at " fpath " already exists and the "
                                "force (-f) option was not specified. Refusing "
                                "to overwrite the file."))

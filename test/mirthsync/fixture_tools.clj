@@ -173,10 +173,10 @@
   [mirth]
   (fn [f]
     (when (:enabled mirth)
-    (make-all-mirths-ready)
-    (let [mirth-proc (start-mirth mirth)]
-      (f)
-      (stop-mirth mirth-proc)))))
+      (make-all-mirths-ready)
+      (let [mirth-proc (start-mirth mirth)]
+        (f)
+        (stop-mirth mirth-proc)))))
 
 (def mirth-3-08-fixture (mirth-fixture mirth-3-08))
 (def mirth-3-09-fixture (mirth-fixture mirth-3-09))
