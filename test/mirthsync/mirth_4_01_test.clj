@@ -7,7 +7,7 @@
 (use-fixtures :once mirth-4-01-fixture)
 
 (def version "4-01")
-(def baseline-dir (str "dev-resources/mirth-" version "-baseline"))
+(def baseline-dir (str "target/test-data/mirth-" version "-baseline"))
 (def repo-dir (str "target/tmp-" version))
 
 (deftest integration-with-4-01

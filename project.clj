@@ -76,7 +76,7 @@
 
    :dev {:dependencies [[clj-commons/conch "0.9.2"]]}
    }
-
+  :prep-tasks [["shell" "tar" "-xzf" "dev-resources/test-data.tar.gz" "--directory=target"]]
   :release-tasks [["vcs" "assert-committed"]
                   ["clean"]
                   ["test"]
