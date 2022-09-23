@@ -31,9 +31,9 @@ if [[ "$_java" ]]; then
     version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2}')
     echo version "$version"
     # if [[ "$version" > "1.8" ]]; then
-    #     $_java --illegal-access=permit -jar ${_dir}/lib/uberjar/mirthsync-3.1.0-SNAPSHOT-standalone.jar $@
+    #     $_java --illegal-access=permit -jar ${_dir}/lib/uberjar/mirthsync-3.1.0-standalone.jar $@
     # else         
-        $_java -jar ${_dir}/../lib/mirthsync-3.1.0-SNAPSHOT-standalone.jar $@
+        $_java -jar ${_dir}/../lib/mirthsync-3.1.0-standalone.jar $@
     # fi
 fi
 ##
