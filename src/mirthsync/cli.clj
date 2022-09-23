@@ -64,7 +64,9 @@
             XML files.
         - code   : Default behavior. Expands everything to the most granular level
             (Javascript, Sql, etc)."
-    :default "code"]
+    :default "code"
+    :validate [#(contains? #{"backup" "groups" "items" "code"} %)
+               (str "Must be either backup, groups, items, or code")]]
 
    ["-r" "--restrict-to-path RESTRICT_TO_PATH" "
         A path within the target directory to limit the scope of the push. This
