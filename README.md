@@ -35,7 +35,7 @@ group directory.
 
 ## Changes
 
-### 3.1.0-SNAPSHOT
+### 3.1.0
 
 - *NOTE* that this version respects the --include-configuration-map
          (false by default) parameter during both a "push" and a
