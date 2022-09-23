@@ -37,7 +37,7 @@ group directory.
 
 ### 3.1.0
 
-- *NOTE* that this version respects the --include-configuration-map
+- **NOTE** that this version respects the --include-configuration-map
          (false by default) parameter during both a "push" and a
          "pull". Previous versions would always "pull" the
          configuration map even if the parameter was not set or was
