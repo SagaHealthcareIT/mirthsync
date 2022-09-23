@@ -51,7 +51,7 @@
 (defn nested-file-path
   "Returns the nested xml file path for the provided api. 'Nested' means
   that the api xml may be part of a library or group and the path
-  should take that into account. In the case of disk-mode '1' the file
+  should take that into account. In the case of disk-mode 'groups' the file
   path may point to an existing xml file representing the group or
   library."
   [group-xml-zip selectors {:keys [target el-loc api disk-mode]}]
@@ -67,7 +67,7 @@
          (if lib-name
            (str lib-name File/separator)
            (str "Default Group" File/separator))
-         (if (and lib-name (= 1 disk-mode)) ; point to group/lib index xml if mode 1
+         (if (and lib-name (= "groups" disk-mode)) ; point to group/lib index xml if mode groups
            "index"
            (mf/safe-name (mi/find-name api el-loc)))
          ".xml")))
@@ -156,8 +156,8 @@
 
 (defn apis [{:keys [disk-mode include-configuration-map] :as app-conf}]
   (filter #(cond
-             (and (= :server-configuration %) (not= 0 disk-mode)) false
-             (and (not= :server-configuration %) (= 0 disk-mode)) false
+             (and (= :server-configuration %) (not= "backup" disk-mode)) false
+             (and (not= :server-configuration %) (= "backup" disk-mode)) false
              (and (= :configuration-map %) (not include-configuration-map)) false
              :else true)
 
@@ -458,14 +458,14 @@
 ;; ************** TODO - deal with the duplication/ugliness
 (defmethod mi/deconstruct-node :channels [{:keys [disk-mode] :as app-conf} ^String file-path el-loc]
   ;; handle default-group channels
-  (let [effective-disk-mode (if (and (= 1 disk-mode)
+  (let [effective-disk-mode (if (and (= "groups" disk-mode)
                                      (not (.endsWith file-path (str File/separator "index.xml"))))
-                              2
+                              "items"
                               disk-mode)]
-    (case (int effective-disk-mode)
-      1 (let [index-loc (mx/to-zip (slurp file-path))]
-          [[file-path (cdx/indent-str (cz/root (mx/add-update-child (cdzx/xml1-> index-loc :channels) el-loc)))]])
-      2 [[file-path (cdx/indent-str (cz/node el-loc))]]
+    (case effective-disk-mode
+      "groups" (let [index-loc (mx/to-zip (slurp file-path))]
+                 [[file-path (cdx/indent-str (cz/root (mx/add-update-child (cdzx/xml1-> index-loc :channels) el-loc)))]])
+      "items" [[file-path (cdx/indent-str (cz/node el-loc))]]
       (deconstruct-node
        file-path
        el-loc
@@ -476,10 +476,10 @@
                channel-deconstructors))))))
 
 (defmethod mi/deconstruct-node :code-templates [{:keys [disk-mode] :as app-conf} file-path el-loc]
-  (case (int disk-mode)
-    1 (let [index-loc (mx/to-zip (slurp file-path))]
-        [[file-path (cdx/indent-str (cz/root (mx/add-update-child (cdzx/xml1-> index-loc :codeTemplates) el-loc)))]])
-    2 [[file-path (cdx/indent-str (cz/node el-loc))]]
+  (case disk-mode
+    "groups" (let [index-loc (mx/to-zip (slurp file-path))]
+               [[file-path (cdx/indent-str (cz/root (mx/add-update-child (cdzx/xml1-> index-loc :codeTemplates) el-loc)))]])
+    "items" [[file-path (cdx/indent-str (cz/node el-loc))]]
     (deconstruct-node
      file-path
      el-loc
@@ -488,7 +488,7 @@
          [(cdzx/xml1-> el-loc :name cdzx/text) script-loc])))))
 
 (defmethod mi/deconstruct-node :global-scripts [{:keys [disk-mode] :as app-conf} file-path el-loc]
-  (if-not (> disk-mode 2)
+  (if-not (= disk-mode "code")
     [[file-path (cdx/indent-str (cz/node el-loc))]]
     (deconstruct-node
      file-path

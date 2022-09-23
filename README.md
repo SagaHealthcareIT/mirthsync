@@ -179,15 +179,15 @@ Options:
         Overwrite existing local files during a pull and overwrite remote items
         without regard for revisions during a push.
   -t, --target TARGET_DIR                              Base directory used for pushing or pulling files
-  -m, --disk-mode DISK_MODE                9           Use this flag to specify the target directory
+  -m, --disk-mode DISK_MODE                code        Use this flag to specify the target directory
         disk format.
-        - 0 Equivalent to Mirth Administrator backup and restore.
-        - 1 All items expanded to "Group" or "Library" level.
-        - 2 Expand items one level deeper than '1' to the individual XML level.
+        - backup : Equivalent to Mirth Administrator backup and restore.
+        - groups : All items expanded to "Group" or "Library" level.
+        - items  : Expand items one level deeper than 'groups' to the individual XML level.
             In other words - Channels and Code Templates are in their own individual
             XML files.
-        - Numbers greater than 2 (Default). Expand everything to the most
-          granular level (Javascript, Sql, etc).
+        - code   : Default behavior. Expands everything to the most granular level
+            (Javascript, Sql, etc).
   -r, --restrict-to-path RESTRICT_TO_PATH              
         A path within the target directory to limit the scope of the push. This
         path may refer to a filename specifically or a directory. If the path

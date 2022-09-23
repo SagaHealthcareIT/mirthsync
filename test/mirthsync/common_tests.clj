@@ -139,12 +139,12 @@
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
-                            "-i" "-m" "0" "pull"))))
+                            "-i" "-m" "backup" "pull"))))
       (is (= "" (diff "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" (str repo-dir "/FullBackup.xml") (str baseline-dir "/../mirth-backup-" version ".xml"))))
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
-                            "-i" "-m" "0" "push"))))))
+                            "-i" "-m" "backup" "push"))))))
 
   (testing "Disk mode 1 pull and push works"
     (let [repo-dir (str repo-dir "-1")
@@ -152,12 +152,12 @@
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
-                            "-i" "-m" "1" "--include-configuration-map" "pull"))))
+                            "-i" "-m" "groups" "--include-configuration-map" "pull"))))
       (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir)))
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
-                            "-i" "-m" "1" "push"))))))
+                            "-i" "-m" "groups" "push"))))))
   )
 
 ;;;;; original approach till the proper diff params were found

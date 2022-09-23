@@ -51,7 +51,7 @@
               ;; index files in disk mode 1
               (if (and (.exists (io/file fpath))
                        (not (app-conf :force))
-                       (not (and (= 1 disk-mode)
+                       (not (and (= "groups" disk-mode)
                                  (.endsWith fpath (str File/separator "index.xml")))))
                 (log/warn (str "File at " fpath " already exists and the "
                                "force (-f) option was not specified. Refusing "
