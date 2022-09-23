@@ -26,16 +26,16 @@ Mirth Connect's REST API.
 - Work on mirth javascript locally with your favorite editor without having to
   edit XML
 
-## Current release
+## Current version
 
-The latest version of mirthSync is "3.0.4-SNAPSHOT". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.1.0-SNAPSHOT". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
 
 ## Changes
 
-### 3.1.0
+### 3.1.0-SNAPSHOT
 
 - *NOTE* that this version respects the --include-configuration-map
          (false by default) parameter during both a "push" and a
