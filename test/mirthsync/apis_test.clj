@@ -144,7 +144,6 @@
 (ct/deftest test-nested-file-path
   (ct/testing "Nested channel path is valid"
     (ct/is (= "target/Channels/This is a group/Http Hello2 3081.xml"
-              ;; TODO - fix and enhance these nested-file-path calls
               (ma/nested-file-path channel-groups-loc
                                    [:channelGroup :channels :channel]
                                    {:target "target"
@@ -193,6 +192,28 @@
       "foo.xml" (mf/safe-name "foo.xml")
       "%2Fpath chars in%2F%5C%5C%2F%5C%2F name.ext%2F" (mf/safe-name "/path chars in/\\\\/\\/ name.ext/")
       "!@#$%^&*()_+-=[]{}||;:'\",<.>%2F?.xml" (mf/safe-name "!@#$%^&*()_+-=[]{}||;:'\",<.>/?.xml"))))
+
+(ct/deftest test-correct-apis-for-conf
+  (ct/testing "Apis function returns the correct apis depending on app-conf"
+    (ct/is (= [:server-configuration]
+              (ma/apis {:disk-mode 0})))
+    (ct/is (= [:configuration-map
+               :global-scripts
+               :resources
+               :code-template-libraries
+               :code-templates
+               :channel-groups
+               :channels
+               :alerts]
+              (ma/apis {:disk-mode 1 :include-configuration-map true})))
+    (ct/is (= [:global-scripts
+               :resources
+               :code-template-libraries
+               :code-templates
+               :channel-groups
+               :channels
+               :alerts]
+              (ma/apis {:disk-mode 1 :include-configuration-map false})))))
 
 (comment
   (ct/deftest iterate-apis

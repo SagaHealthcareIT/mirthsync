@@ -30,7 +30,7 @@
               ;; to verify that there's nothing we'll pull everything from the empty
               ;; mirth and check to see if the target directory is empty
               (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
-                         "-u" "admin" "-p" "admin" "-t" repo-dir
+                         "-u" "admin" "-p" "admin" "-t" repo-dir "--include-configuration-map"
                          "-i" "-f" "pull")
 
               ;; this should return true currently
@@ -47,7 +47,7 @@
               ;; nothing in the target directory
               (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
                          "--skip-disabled" "-u" "admin" "-p" "admin" "-t" repo-dir
-                         "-i" "-f" "pull")
+                         "--include-configuration-map" "-i" "-f" "pull")
 
               ;; this should return true currently
               (empty-directory? repo-dir)
@@ -55,7 +55,8 @@
               ;; pull without skipping disabled and the target directory should not
               ;; be empty
               (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/"
-                         "-u" "admin" "-p" "admin" "-t" repo-dir "-i" "-f" "pull")
+                         "-u" "admin" "-p" "admin" "-t" repo-dir "-i" "-f"
+                         "--include-configuration-map" "pull")
 
               ;; this should return false now
               (empty-directory? repo-dir)
@@ -87,7 +88,7 @@
   (testing "Pull from Mirth succeeds without errors"
     (is (= 0 (main-func "-s" "https://localhost:8443/api"
                         "-u" "admin" "-p" "admin" "-t" repo-dir
-                        "-i" "-f" "pull"))))
+                        "-i" "-f" "--include-configuration-map" "pull"))))
 
   (testing "Pull diff from baseline has only inconsequential differences (ordering, etc)"
     (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir))))
@@ -100,7 +101,7 @@
   (testing "Pull back from Mirth after last push succeeds without errors"
     (is (= 0 (main-func "-s" "https://localhost:8443/api"
                         "-u" "admin" "-p" "admin" "-t" repo-dir
-                        "-i" "-f" "pull"))))
+                        "-i" "-f" "--include-configuration-map" "pull"))))
 
   (testing "Pull diff from baseline after multiple pushes has only inconsequential differences (ordering, etc)"
     (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir))))
@@ -151,7 +152,7 @@
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
-                            "-i" "-m" "1" "pull"))))
+                            "-i" "-m" "1" "--include-configuration-map" "pull"))))
       (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" repo-dir baseline-dir)))
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"

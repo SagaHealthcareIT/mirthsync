@@ -154,17 +154,22 @@
            action)
     app-conf))
 
-(defn apis [app-conf]
-  (if (= 0 (:disk-mode app-conf))
-    [:server-configuration]
-    [:configuration-map
-     :global-scripts
-     :resources
-     :code-template-libraries
-     :code-templates
-     :channel-groups
-     :channels
-     :alerts]))
+(defn apis [{:keys [disk-mode include-configuration-map] :as app-conf}]
+  (filter #(cond
+             (and (= :server-configuration %) (not= 0 disk-mode)) false
+             (and (not= :server-configuration %) (= 0 disk-mode)) false
+             (and (= :configuration-map %) (not include-configuration-map)) false
+             :else true)
+
+          [:server-configuration
+           :configuration-map
+           :global-scripts
+           :resources
+           :code-template-libraries
+           :code-templates
+           :channel-groups
+           :channels
+           :alerts]))
 
 (defmethod mi/find-name :default [_ api-loc] (api-element-name api-loc))
 (defmethod mi/find-name :configuration-map [_ _] nil)

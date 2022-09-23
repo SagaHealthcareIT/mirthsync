@@ -78,7 +78,7 @@
     :parse-fn strip-trailing-slashes]
 
    [nil "--include-configuration-map" " A boolean flag to include the
-        configuration map in the push. Default: false"
+        configuration map in a push or pull. Default: false"
     :default false]
 
    [nil "--skip-disabled" " A boolean flag that indicates whether

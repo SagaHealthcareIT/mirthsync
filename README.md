@@ -35,13 +35,32 @@ group directory.
 
 ## Changes
 
-### Current Prerelease
+### 3.1.0
+
+- *NOTE* that this version respects the --include-configuration-map
+         (false by default) parameter during both a "push" and a
+         "pull". Previous versions would always "pull" the
+         configuration map even if the parameter was not set or was
+         false. If you want to include the configuration map now
+         during a "pull" please ensure that you set the flag.
 
 - New "--skip-disabled" flag to indicate whether the item (only
   channels currently) being pushed or pulled should be included based
   on its status. The flag defaults to 'false' and all items are pushed
   or pulled no matter what the 'enabled' setting is. NOTE - this
   feature only works on mirth versions >= 3.9.
+  
+- New "--disk-mode" setting that alters behavior around how granular
+  the resulting files are in the target directory. 
+  - Mode "backup" pushes and pulls a full backup XML file and doesn't
+    produce any other disk artifacts.
+  - Mode "groups" pushes and pulls code at the next most granular level
+    which means that channel groups and code template library XML
+    actually contains the assocated channels and javascript
+  - Mode "items" extracts code templates and channels from the respective
+    library or group XML.
+  - Mode "code" extracts even further pulling all code from XML files
+    into individual language specific files.
 
 ### 3.0.2
 
@@ -147,12 +166,6 @@ How to generate help dialogue:
 ### Help Dialogue:
 
 ``` text
-The following errors occurred while parsing your command:
-
---server is required
---username is required
---target is required
-
 Usage: mirthsync [options] action
 
 Options:
@@ -166,6 +179,15 @@ Options:
         Overwrite existing local files during a pull and overwrite remote items
         without regard for revisions during a push.
   -t, --target TARGET_DIR                              Base directory used for pushing or pulling files
+  -m, --disk-mode DISK_MODE                9           Use this flag to specify the target directory
+        disk format.
+        - 0 Equivalent to Mirth Administrator backup and restore.
+        - 1 All items expanded to "Group" or "Library" level.
+        - 2 Expand items one level deeper than '1' to the individual XML level.
+            In other words - Channels and Code Templates are in their own individual
+            XML files.
+        - Numbers greater than 2 (Default). Expand everything to the most
+          granular level (Javascript, Sql, etc).
   -r, --restrict-to-path RESTRICT_TO_PATH              
         A path within the target directory to limit the scope of the push. This
         path may refer to a filename specifically or a directory. If the path
@@ -174,7 +196,7 @@ Options:
         that directory. The RESTRICT_TO_PATH must be specified relative to
         the target directory.
       --include-configuration-map                       A boolean flag to include the
-        configuration map in the push. Default: false
+        configuration map in a push or pull. Default: false
       --skip-disabled                                   A boolean flag that indicates whether
         disabled channels should be pushed or pulled. Default: false
   -d, --deploy                                         Deply channels on push
