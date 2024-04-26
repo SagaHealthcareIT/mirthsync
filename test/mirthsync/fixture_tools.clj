@@ -1,5 +1,6 @@
 (ns mirthsync.fixture-tools
-  (:require [clojure.test :refer :all]
+  (:require [clojure.string :as str]
+            [clojure.test :refer :all]
             [clojure.java.io :as io]
             [clojure.string :as cs]
             [clj-http.client :as client]
@@ -10,7 +11,14 @@
 ;;; note that these tests will only work in unix'ish environments with
 ;;; appropriate commands in the path
 
-(programs mkdir sha256sum curl tar cp rm rmdir diff ps java find sed) ;; grep echo
+;;Check if the os is MAcOS
+(defn is-macos? []
+  (= "Mac OS X" (System/getProperty "os.name")))
+
+(if (is-macos?)
+  (do (programs mkdir sha256sum curl tar cp rm rmdir diff ps java find gsed)
+      (def sed gsed))
+  (programs mkdir sha256sum curl tar cp rm rmdir diff ps java find sed))
 
 (defn update-all-xml [path]
   (as-> (find path "-type" "f" "-iname" "*.xml") v
@@ -40,7 +48,7 @@
   (str (:sha256 mirth) "  " (mirth-targz mirth)))
 
 (defn mirth-url [mirth]
-  (str "http://downloads.mirthcorp.com/connect/" (:version mirth) "/" (mirth-targz mirth)))
+  (str "https://downloads.mirthcorp.com/connect/" (:version mirth) "/" (mirth-targz mirth)))
 
 ;;;; impure actions and checks
 (defn ensure-target-dir []
@@ -50,7 +58,7 @@
   (str mirths-dir "/" (mirth-name mirth)))
 
 (defn mirth-db-dir [mirth]
-  (str (mirth-base-dir mirth) "/appdata/mirthdb" ))
+  (str (mirth-base-dir mirth) "/appdata/mirthdb"))
 
 (defn mirth-unpacked? [mirth]
   (.isDirectory (io/file (mirth-base-dir mirth))))
@@ -67,7 +75,7 @@
          {:dir mirths-dir}))
 
 (defn download-mirth [mirth]
-  (curl  "-O" "-J" "-L" "--progress-bar" "--stderr" "-" (mirth-url mirth) {:dir mirths-dir}))
+  (curl "-O" "-J" "-L" "-k" "--progress-bar" "--stderr" "-" (mirth-url mirth) {:dir mirths-dir}))
 
 (defn select-jvm-options [mirth]
   (java "-version" {:seq true :redirect-err true})
@@ -81,6 +89,21 @@
       (and (clojure.string/ends-with? dbdir "mirthdb")
            (= 0 @(:exit-code (system-test "-d" dbdir {:throw false :verbose true})))
            (rm "-f" "--preserve-root" "--one-file-system" "-r" dbdir)))))
+
+(defn delete-dir? [dir]
+  (and
+   (.exists (io/file dir))
+   (clojure.string/starts-with? dir "target") ;; not sure if this is needed, already defined as parameter to find
+   (not (clojure.string/includes? dir " "))
+   (not (clojure.string/includes? dir "\n"))))
+
+(defn delete-temp-dirs [version]
+  (let [dirs-pattern (str "tmp-" version "*")
+        temp-dirs-string (find "target" "-type" "d" "-name" dirs-pattern)
+        temp-dirs (str/split temp-dirs-string #"\n")
+        dirs (filter delete-dir? temp-dirs)]
+    (when (seq dirs)
+      (mapv #(rm "-rf" "--preserve-root" "--one-file-system" %) dirs))))
 
 ;;;; A couple of helper functions to track the flow of
 ;;;; tracking the flow and outcomes
@@ -130,11 +153,12 @@
               :sha256 "e4606d0a9ea9d35263fb7937d61c98f26a7295d79b8bf83d0dab920cf875206d"
               :what-happened? []}])
 
-(def mirth-4-01 (nth mirths 0))
-(def mirth-3-12 (nth mirths 1))
-(def mirth-3-11 (nth mirths 2))
-(def mirth-3-09 (nth mirths 3))
-(def mirth-3-08 (nth mirths 4))
+(def mirth-4-01 [(nth mirths 0) "4-01"])
+(def mirth-3-12 [(nth mirths 1) "3-12"])
+(def mirth-3-11 [(nth mirths 2) "3-11"])
+(def mirth-3-09 [(nth mirths 3) "3-09"])
+(def mirth-3-08 [(nth mirths 4) "3-08"])
+
 
 (defn make-all-mirths-ready []
   (ensure-target-dir)
@@ -161,7 +185,6 @@
           (println (str "waiting up to 90s for mirth to be available - " i))
           (Thread/sleep 1000)
           (recur (inc i)))))
-    
     mcserver))
 
 (defn stop-mirth [mirth-proc]
@@ -170,19 +193,20 @@
     @exit-code))
 
 (defn mirth-fixture
-  [mirth]
+  [mirth version]
   (fn [f]
     (when (:enabled mirth)
+      (delete-temp-dirs version)
       (make-all-mirths-ready)
       (let [mirth-proc (start-mirth mirth)]
         (f)
         (stop-mirth mirth-proc)))))
 
-(def mirth-3-08-fixture (mirth-fixture mirth-3-08))
-(def mirth-3-09-fixture (mirth-fixture mirth-3-09))
-(def mirth-3-11-fixture (mirth-fixture mirth-3-11))
-(def mirth-3-12-fixture (mirth-fixture mirth-3-12))
-(def mirth-4-01-fixture (mirth-fixture mirth-4-01))
+(def mirth-3-08-fixture (apply mirth-fixture mirth-3-08))
+(def mirth-3-09-fixture (apply mirth-fixture mirth-3-09))
+(def mirth-3-11-fixture (apply mirth-fixture mirth-3-11))
+(def mirth-3-12-fixture (apply mirth-fixture mirth-3-12))
+(def mirth-4-01-fixture (apply mirth-fixture mirth-4-01))
 
 ;;;;;;;;;;;;;;; The following was the original script created for
 ;;;;;;;;;;;;;;; fetching and validating mirth.  It was ported to the

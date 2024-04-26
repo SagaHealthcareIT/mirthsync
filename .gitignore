@@ -12,3 +12,15 @@ pom.xml.asc
 /vendor/
 /.clj-kondo/.cache
 /.lsp/
+/.cpcache/
+.idea/
+*.iml
+.nrepl-history
+.nrepl-port
+/dev-resources/test-data/
+.vscode/
+/.clj-kondo/
+/.github/
+/.history/
+/home/
+DS_Store

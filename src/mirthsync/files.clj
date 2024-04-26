@@ -27,7 +27,7 @@
 
 (defn- ends-xml?
   "True if the file ends with .xml."
-  [^File f] 
+  [^File f]
   (-> f
       (.getName)
       (cs/lower-case)
@@ -106,5 +106,5 @@
 (defn remove-extension
   [file-path]
   (if-let [lastdot (cs/last-index-of file-path ".")]
-                          (subs file-path 0 lastdot)
-                          file-path))
+    (subs file-path 0 lastdot)
+    file-path))
