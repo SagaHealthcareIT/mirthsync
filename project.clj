@@ -42,13 +42,13 @@
                  [org.slf4j/jul-to-slf4j "1.7.30"]
 
                  ;; optionally pull config from environment
-                 [environ "1.2.0"]
+                 [environ "1.2.0"]]
 
                  ;;;; don't need this for now
                  ;; [com.fasterxml.jackson.core/jackson-core "2.9.6"]
                  ;; [com.fasterxml.jackson.dataformat/jackson-dataformat-xml "2.9.6"]
                  ;; [com.fasterxml.jackson.core/jackson-databind "2.9.6"]
-                 ]
+
   ;; :exclusions [commons-logging
   ;;              log4j
   ;;              org.apache.logging.log4j/log4j
@@ -74,8 +74,8 @@
    
    :repl {:plugins [[cider/cider-nrepl "0.25.2"]]}
 
-   :dev {:dependencies [[clj-commons/conch "0.9.2"]]}
-   }
+   :dev {:dependencies [[clj-commons/conch "0.9.2"]]}}
+
   :prep-tasks [["shell" "tar" "-xzf" "dev-resources/test-data.tar.gz" "--directory=target"]
                "javac" "compile"]
   :release-tasks [["make" "release"]])

@@ -230,9 +230,9 @@
       true)
     (do (log/error (str "Unable to save the channel."
                         (when-not (app-conf :force) " There may be remote changes or the remote version does not match the local version. If you want to push the local changes anyway you can use the \"-f\" flag to force an overwrite.")))
-        false)
-    )
-  )
+        false)))
+
+
 (defmethod mi/after-push :alerts [_ app-conf result] (null-204 result))
 (defmethod mi/after-push :server-configuration [_ app-conf result] (null-204 result))
 
@@ -520,5 +520,5 @@
                  :elements
                  :com.mirth.connect.plugins.javascriptstep.JavaScriptStep
                  :script
-                 [cz/up cz/up cz/up :transformer cz/up :sourceConnector]))
-)
+                 [cz/up cz/up cz/up :transformer cz/up :sourceConnector])))
+

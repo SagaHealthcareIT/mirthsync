@@ -40,7 +40,7 @@
   (str (:sha256 mirth) "  " (mirth-targz mirth)))
 
 (defn mirth-url [mirth]
-  (str "http://downloads.mirthcorp.com/connect/" (:version mirth) "/" (mirth-targz mirth)))
+  (str "https://downloads.mirthcorp.com/connect/" (:version mirth) "/" (mirth-targz mirth)))
 
 ;;;; impure actions and checks
 (defn ensure-target-dir []
@@ -67,7 +67,7 @@
          {:dir mirths-dir}))
 
 (defn download-mirth [mirth]
-  (curl  "-O" "-J" "-L" "--progress-bar" "--stderr" "-" (mirth-url mirth) {:dir mirths-dir}))
+  (curl "-O" "-J" "-L" "-k" "--progress-bar" "--stderr" "-" (mirth-url mirth) {:dir mirths-dir}))
 
 (defn select-jvm-options [mirth]
   (java "-version" {:seq true :redirect-err true})
