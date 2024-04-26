@@ -156,6 +156,20 @@ group.
 Requires Java JRE or JDK version 8 (versions 9 and above are not
 currently supported)
 
+## For MacOS users
+To be able to run the script on MacOS, you need to install the following tools:
+- coreutils
+- gnu-sed
+
+like this:
+
+- brew install coreutils
+- brew install gnu-sed
+
+Put this line in your shell config file (.zshrc or .bashrc) to use commands from coreutils as standard MacOS commands
+```
+export PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
+```
 
 ## Help
 

@@ -10,7 +10,14 @@
 ;;; note that these tests will only work in unix'ish environments with
 ;;; appropriate commands in the path
 
-(programs mkdir sha256sum curl tar cp rm rmdir diff ps java find sed) ;; grep echo
+;;Check if the os is MAcOS
+(defn is-macos? []
+  (= "Mac OS X" (System/getProperty "os.name")))
+
+(if (is-macos?)
+  (do (programs mkdir sha256sum curl tar cp rm rmdir diff ps java find gsed)
+      (def sed gsed))
+  (programs mkdir sha256sum curl tar cp rm rmdir diff ps java find sed))
 
 (defn update-all-xml [path]
   (as-> (find path "-type" "f" "-iname" "*.xml") v
@@ -50,7 +57,7 @@
   (str mirths-dir "/" (mirth-name mirth)))
 
 (defn mirth-db-dir [mirth]
-  (str (mirth-base-dir mirth) "/appdata/mirthdb" ))
+  (str (mirth-base-dir mirth) "/appdata/mirthdb"))
 
 (defn mirth-unpacked? [mirth]
   (.isDirectory (io/file (mirth-base-dir mirth))))
