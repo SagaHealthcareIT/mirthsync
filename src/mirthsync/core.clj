@@ -36,6 +36,8 @@
                             (api/iterate-apis (api/apis app-conf) api/preprocess-api)
                             (api/iterate-apis (api/apis app-conf) action-fn)))]
         (log/info "Finished!")
+        ;; Perform auto-commit after successful operation
+        (mgit/auto-commit-after-operation app-conf)
         (log/spy :trace app-conf)))))
 
 

@@ -85,8 +85,46 @@
   ([target-dir message]
    (auto-commit target-dir message nil nil))
   ([target-dir message author-name author-email]
-   (when (git-add-all target-dir)
-     (git-commit target-dir message author-name author-email))))
+   (if (git-add-all target-dir)
+     (git-commit target-dir message author-name author-email)
+     false)))
+
+(defn generate-commit-message
+  "Generate a commit message based on the operation and server"
+  [{:keys [action server commit-message] :as app-conf}]
+  (if (and commit-message (not= commit-message "mirthsync commit"))
+    commit-message
+    (case action
+      "pull" (str "Pull from " (or server "server"))
+      "push" (str "Push to " (or server "server"))
+      commit-message)))
+
+(defn auto-commit-after-operation
+  "Perform auto-commit after a successful pull/push operation"
+  [{:keys [target auto-commit git-init] :as app-conf}]
+  (when auto-commit
+    (log/info "Auto-commit enabled, processing git operations")
+    
+    ;; Initialize git repository if requested and needed
+    (when git-init
+      (ensure-git-repo target))
+    
+    ;; Only proceed if we have a git repository  
+    (let [git-dir (File. target ".git")]
+      (if (.exists git-dir)
+        (do
+          (log/info "Auto-committing changes with message:" (generate-commit-message app-conf))
+          (try
+            (git-add-all target)
+            (git-commit target 
+                       (generate-commit-message app-conf)
+                       (:git-author app-conf)
+                       (:git-email app-conf))
+            (log/info "Auto-commit successful")
+            (catch Exception e
+              (log/warn "Auto-commit failed:" (.getMessage e)))))
+        (log/warn "Auto-commit requested but no git repository found in" target 
+                  "- use --git-init to create one automatically")))))
 
 (defn git-operation
   "Dispatch git operations based on subcommand and arguments"

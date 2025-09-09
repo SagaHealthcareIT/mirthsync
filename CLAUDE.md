@@ -20,6 +20,8 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - `java -jar mirthsync.jar -t <target-dir> git init` - Initialize git repository
 - `java -jar mirthsync.jar -t <target-dir> git status` - Check git status
 - `java -jar mirthsync.jar -t <target-dir> --commit-message "msg" git commit` - Commit changes
+- `java -jar mirthsync.jar -s <server> -u <user> -p <pass> -t <dir> --auto-commit pull` - Auto-commit after pull
+- `java -jar mirthsync.jar -s <server> -u <user> -p <pass> -t <dir> --git-init --auto-commit push` - Auto-commit with repo init
 
 ### Testing
 - Tests are organized by Mirth version in `test/mirthsync/mirth_*_test.clj`

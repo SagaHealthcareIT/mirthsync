@@ -88,11 +88,10 @@
   (testing "git-commit with non-existent repo returns false"
     (is (not (git-commit *test-dir* "test commit"))))
   
-  (testing "git-commit with no staged changes returns false"
+  (testing "git-commit with no staged changes succeeds (JGit allows empty commits)"
     (ensure-git-repo *test-dir*)
-    ;; Note: JGit may allow empty commits unlike native git
-    ;; This test might need adjustment based on clj-jgit behavior
-    (is (not (git-commit *test-dir* "empty commit"))))
+    ;; JGit allows empty commits unlike native git, so this should succeed
+    (is (git-commit *test-dir* "empty commit")))
   
   (testing "git-commit with staged changes succeeds"
     (ensure-git-repo *test-dir*)
@@ -176,6 +175,65 @@
       (is (= 0 (:exit-code config)))
       (is (nil? (:server config)))
       (is (nil? (:username config))))))
+
+(deftest test-auto-commit-functions
+  (testing "generate-commit-message creates appropriate messages"
+    (is (= "Pull from https://server:8443/api" 
+           (generate-commit-message {:action "pull" :server "https://server:8443/api" :commit-message "mirthsync commit"})))
+    (is (= "Push to https://server:8443/api" 
+           (generate-commit-message {:action "push" :server "https://server:8443/api" :commit-message "mirthsync commit"})))
+    (is (= "Custom message" 
+           (generate-commit-message {:action "pull" :server "server" :commit-message "Custom message"}))))
+
+  (testing "auto-commit-after-operation with git-init"
+    (let [app-conf {:target *test-dir* :auto-commit true :git-init true :action "pull" :server "test-server"}]
+      (auto-commit-after-operation app-conf)
+      ;; Should have created git repo and made initial commit
+      (is (git-repo-exists-test? *test-dir*))))
+
+  (testing "auto-commit-after-operation without git repo warns"
+    ;; Use a different temp directory to isolate this test
+    (let [temp-dir (str "/tmp/mirthsync-git-test-warn-" (System/currentTimeMillis))
+          app-conf {:target temp-dir :auto-commit true :action "pull" :server "test-server"}]
+      (try
+        (.mkdirs (java.io.File. temp-dir))
+        ;; Should log warning but not create repo without git-init flag
+        (auto-commit-after-operation app-conf)
+        (is (not (git-repo-exists-test? temp-dir)))
+        (finally
+          ;; Clean up
+          (when (.exists (java.io.File. temp-dir))
+            (let [dir (java.io.File. temp-dir)]
+              (doseq [^java.io.File file (reverse (file-seq dir))]
+                (.delete file))))))))
+
+  (testing "auto-commit-after-operation disabled does nothing"
+    ;; Use a different temp directory to isolate this test
+    (let [temp-dir (str "/tmp/mirthsync-git-test-disabled-" (System/currentTimeMillis))
+          app-conf {:target temp-dir :action "pull" :server "test-server"}]
+      (try
+        (.mkdirs (java.io.File. temp-dir))
+        (auto-commit-after-operation app-conf)
+        (is (not (git-repo-exists-test? temp-dir)))
+        (finally
+          ;; Clean up
+          (when (.exists (java.io.File. temp-dir))
+            (let [dir (java.io.File. temp-dir)]
+              (doseq [^java.io.File file (reverse (file-seq dir))]
+                (.delete file)))))))))
+
+(deftest test-auto-commit-cli-integration
+  (testing "CLI accepts auto-commit flags"
+    (let [config (cli/config ["-s" "https://server:8443/api" "-u" "admin" "-p" "password" "-t" *test-dir* "--auto-commit" "--git-init" "pull"])]
+      (is (= 0 (:exit-code config)))
+      (is (:auto-commit config))
+      (is (:git-init config))))
+
+  (testing "CLI auto-commit options have correct defaults"
+    (let [config (cli/config ["-s" "https://server:8443/api" "-u" "admin" "-p" "password" "-t" *test-dir* "pull"])]
+      (is (= 0 (:exit-code config)))
+      (is (not (:auto-commit config)))
+      (is (not (:git-init config))))))
 
 ;; Integration test using the git-operation directly 
 (deftest test-git-integration-end-to-end

@@ -99,6 +99,12 @@
     :default (System/getProperty "user.name")]
    
    [nil "--git-email EMAIL" "Git author email for commits"]
+   
+   [nil "--auto-commit" "Automatically commit changes after pull/push operations"
+    :default false]
+   
+   [nil "--git-init" "Initialize git repository in target directory if not present"
+    :default false]
 
    ["-h" "--help"]])
 

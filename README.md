@@ -224,6 +224,8 @@ Options:
       --commit-message MESSAGE             mirthsync commit  Commit message for git operations
       --git-author NAME                    <computed>        Git author name for commits
       --git-email EMAIL                                      Git author email for commits
+      --auto-commit                                          Automatically commit changes after pull/push operations
+      --git-init                                             Initialize git repository in target directory if not present
   -h, --help
 
 Actions:
@@ -295,6 +297,28 @@ Commit with custom author information:
 
 ``` shell
 $ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated configurations" --git-author "John Doe" --git-email "john@example.com" git commit
+```
+
+### Auto-Commit Integration
+
+mirthsync can automatically commit changes after pull or push operations:
+
+Automatically commit changes after pulling from server:
+
+``` shell
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /home/user/mirth-config --auto-commit pull
+```
+
+Initialize git repository and auto-commit in one command:
+
+``` shell
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /home/user/mirth-config --git-init --auto-commit --commit-message "Initial pull from production" pull
+```
+
+Auto-commit with custom message and author:
+
+``` shell
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /home/user/mirth-config --auto-commit --commit-message "Sync from dev server" --git-author "CI System" --git-email "ci@company.com" pull
 ```
 
 ### Cron
