@@ -202,10 +202,10 @@
         (f)
         (stop-mirth mirth-proc)))))
 
-(def mirth-3-08-fixture (apply mirth-fixture mirth-3-08))
-(def mirth-3-09-fixture (apply mirth-fixture mirth-3-09))
-(def mirth-3-11-fixture (apply mirth-fixture mirth-3-11))
-(def mirth-3-12-fixture (apply mirth-fixture mirth-3-12))
+;; (def mirth-3-08-fixture (apply mirth-fixture mirth-3-08))
+;; (def mirth-3-09-fixture (apply mirth-fixture mirth-3-09))
+;; (def mirth-3-11-fixture (apply mirth-fixture mirth-3-11))
+;; (def mirth-3-12-fixture (apply mirth-fixture mirth-3-12))
 (def mirth-4-01-fixture (apply mirth-fixture mirth-4-01))
 
 ;;;;;;;;;;;;;;; The following was the original script created for
