@@ -4,6 +4,7 @@
             [mirthsync.actions :as act]
             [mirthsync.apis :as api]
             [mirthsync.cli :as cli]
+            [mirthsync.git :as mgit]
             [mirthsync.http-client :as http])
   (:import org.slf4j.bridge.SLF4JBridgeHandler))
 
@@ -14,17 +15,28 @@
   happen within the context of an authenticated (thread local) http
   client. The app-config is returned with any updates from the
   action."
-  [{:keys [server username password action] :as app-conf}]
+  [{:keys [server username password action arguments] :as app-conf}]
 
-  (log/info (str "Authenticating to server at " server " as " username))
-  (let [action-fn   ({"push" act/upload, "pull" act/download} action)
-        app-conf (http/with-authentication
-                   app-conf
-                   #(-> app-conf
-                        (api/iterate-apis (api/apis app-conf) api/preprocess-api)
-                        (api/iterate-apis (api/apis app-conf) action-fn)))]
-    (log/info "Finished!")
-    (log/spy :trace app-conf)))
+  (cond
+    ;; Git operations don't require server authentication
+    (= "git" action)
+    (let [git-subcommand (first arguments)
+          git-args (rest arguments)]
+      (log/info (str "Executing git " git-subcommand))
+      (apply mgit/git-operation app-conf git-subcommand git-args))
+
+    ;; Traditional push/pull operations require authentication
+    :else
+    (do
+      (log/info (str "Authenticating to server at " server " as " username))
+      (let [action-fn   ({"push" act/upload, "pull" act/download} action)
+            app-conf (http/with-authentication
+                       app-conf
+                       #(-> app-conf
+                            (api/iterate-apis (api/apis app-conf) api/preprocess-api)
+                            (api/iterate-apis (api/apis app-conf) action-fn)))]
+        (log/info "Finished!")
+        (log/spy :trace app-conf)))))
 
 
 (defn- exit-prep

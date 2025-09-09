@@ -27,13 +27,11 @@
 
 (def ^{:private true} cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
-    :missing "--server is required"
     :parse-fn strip-trailing-slashes
     :validate [#(URL. %) (str "Must be a valid URL to a mirth server api "
                               "path (EX. https://mirth-server:8443/api)")]]
    
-   ["-u" "--username USERNAME" "Username used for authentication"
-    :missing "--username is required"]
+   ["-u" "--username USERNAME" "Username used for authentication"]
 
    ["-p" "--password PASSWORD" "Password used for authentication"
     :default-fn (constantly (:mirthsync-password env))]
@@ -93,6 +91,15 @@
    ["-I" "--interactive" "
         Allow for console prompts for user input"]
 
+   ;; Git integration options
+   [nil "--commit-message MESSAGE" "Commit message for git operations"
+    :default "mirthsync commit"]
+   
+   [nil "--git-author NAME" "Git author name for commits"
+    :default (System/getProperty "user.name")]
+   
+   [nil "--git-email EMAIL" "Git author email for commits"]
+
    ["-h" "--help"]])
 
 (defn- usage [errors summary]
@@ -109,6 +116,7 @@
                  "Actions:"
                  "  push     Push filesystem code to server"
                  "  pull     Pull server code to filesystem"
+                 "  git      Git operations (init, status, commit)"
                  ""
                  "Environment variables:"
                  "  MIRTHSYNC_PASSWORD     Alternative to --password command line option"])))
@@ -136,13 +144,21 @@
 (defn- valid-initial-config?
   "Validate the initial config map. Returns a truth value."
   [{:keys [arguments errors] :as config
-    {:keys [help target restrict-to-path password]} :options}]
+    {:keys [help target restrict-to-path password server username]} :options}]
   (or help
-      (and (= 0 (count errors))
-           (= 1 (count arguments))
-           (#{"pull" "push"} (first arguments))
-           (> (count password) 0)
-           (is-child-path target restrict-to-path))))
+      (let [action (first arguments)
+            git-action? (= "git" action)
+            valid-arg-count? (if git-action? 
+                               (>= (count arguments) 2) ; git needs subcommand
+                               (= 1 (count arguments))) ; push/pull are single
+            server-valid? (if git-action?
+                            true ; git doesn't need server credentials
+                            (and server username (> (count password) 0)))]
+        (and (= 0 (count errors))
+             valid-arg-count?
+             (#{"pull" "push" "git"} action)
+             server-valid?
+             (is-child-path target restrict-to-path)))))
 
 (defn read-password
   "Read a password from the console if it is available - otherwise nil"
@@ -171,11 +187,12 @@
         
         config (-> config
 
-                   ;; pull options and first arg into top level for
+                   ;; pull options and arguments into top level for
                    ;; convenience in rest of code
                    (into (:options config))
                    (dissoc :options)
                    (assoc :action (first (:arguments config)))
+                   (assoc :arguments (rest (:arguments config)))
                    
                    ;; Set up our exit code
                    (assoc :exit-code
@@ -185,14 +202,27 @@
                             0)))
 
         config (-> config
-                   ;; exit message if errors
+                   ;; exit message if errors - add custom validation errors
                    (assoc :exit-msg
                           (when (or (> (:exit-code config) 0)
                                     (:help config))
-                            (usage (:errors config) (:summary config))))
+                            (let [action (first (:arguments config))
+                                  git-action? (= "git" action)
+                                  custom-errors (when (and (not git-action?) 
+                                                           (not (:help config)))
+                                                  (cond-> []
+                                                    (not (:server config)) 
+                                                    (conj "--server is required for push/pull operations")
+                                                    (not (:username config)) 
+                                                    (conj "--username is required for push/pull operations")
+                                                    (not (and (:password config) 
+                                                             (> (count (:password config)) 0)))
+                                                    (conj "--password is required for push/pull operations")))
+                                  all-errors (concat (:errors config) custom-errors)]
+                              (usage all-errors (:summary config)))))
 
-                   ;; keep config clean by removing unecessary entries
-                   (dissoc :summary :arguments))]
+                   ;; keep config clean by removing unecessary entries  
+                   (dissoc :summary))]
 
     (set-log-level (:verbosity config))
 

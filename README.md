@@ -4,9 +4,10 @@
 
 mirthSync is a command line tool for synchronizing Mirth Connect code
 between servers by allowing you to push or pull channels, code
-templates, configuration map and global scripts. The tool can also be
-integrated with Git or other version control systems for the purpose
-of tracking changes to Mirth Connect code and configuration.
+templates, configuration map and global scripts. The tool includes
+built-in Git integration for version control of Mirth Connect code
+and configuration, and can also be integrated with other version
+control systems.
 
 The only requirements are having credentials for the server that is
 being synced and the server also needs to support and allow access to
@@ -14,6 +15,8 @@ Mirth Connect's REST API.
 
 ## Suggestions for use
 
+- Use mirthSync's built-in Git integration to automatically version control
+  your Mirth Connect configurations
 - Use mirthSync in conjunction with Git (or any VCS) to back up and
   track changes to code and settings
 - Pull and push changes between Mirth Connect servers
@@ -218,11 +221,15 @@ Options:
         after saving the channel to Mirth.
   -I, --interactive                                    
         Allow for console prompts for user input
+      --commit-message MESSAGE             mirthsync commit  Commit message for git operations
+      --git-author NAME                    <computed>        Git author name for commits
+      --git-email EMAIL                                      Git author email for commits
   -h, --help
 
 Actions:
   push     Push filesystem code to server
   pull     Pull server code to filesystem
+  git      Git operations (init, status, commit)
 
 Environment variables:
   MIRTHSYNC_PASSWORD     Alternative to --password command line option
@@ -260,6 +267,34 @@ Pushing a channel group and its channels to a Mirth Connect instance
 
 ``` shell
 $ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin push -t /home/user/  -r "Channels/This is a group"
+```
+
+### Git Integration
+
+mirthsync now includes built-in git integration for version control of your Mirth Connect configurations:
+
+Initialize a git repository in your target directory:
+
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git init
+```
+
+Check the status of your git repository:
+
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git status
+```
+
+Commit all changes to your repository:
+
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated channel configurations" git commit
+```
+
+Commit with custom author information:
+
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated configurations" --git-author "John Doe" --git-email "john@example.com" git commit
 ```
 
 ### Cron

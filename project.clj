@@ -42,7 +42,10 @@
                  [org.slf4j/jul-to-slf4j "1.7.30"]
 
                  ;; optionally pull config from environment
-                 [environ "1.2.0"]]
+                 [environ "1.2.0"]
+                 
+                 ;; git integration
+                 [clj-jgit "1.1.0"]]
 
                  ;;;; don't need this for now
                  ;; [com.fasterxml.jackson.core/jackson-core "2.9.6"]
