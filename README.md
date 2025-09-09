@@ -36,6 +36,12 @@ mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
 
+**Recent Git Integration Improvements:**
+- Enhanced git operations with comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull)
+- Improved JGit API integration for better reliability and performance
+- Fixed reflection warnings and type safety issues
+- All git operations now work without requiring server credentials
+
 ## Changes
 
 ### 3.1.0
@@ -231,7 +237,7 @@ Options:
 Actions:
   push     Push filesystem code to server
   pull     Pull server code to filesystem
-  git      Git operations (init, status, commit)
+  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull)
 
 Environment variables:
   MIRTHSYNC_PASSWORD     Alternative to --password command line option
@@ -273,30 +279,99 @@ $ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin
 
 ### Git Integration
 
-mirthsync now includes built-in git integration for version control of your Mirth Connect configurations:
+mirthsync includes comprehensive built-in git integration for version control of your Mirth Connect configurations. All git operations work directly with your target directory without requiring server credentials.
 
-Initialize a git repository in your target directory:
+#### Available Git Operations
 
+**Initialize a git repository:**
 ``` shell
 $ java -jar mirthsync.jar -t /home/user/mirth-config git init
 ```
 
-Check the status of your git repository:
-
+**Check repository status:**
 ``` shell
 $ java -jar mirthsync.jar -t /home/user/mirth-config git status
 ```
 
-Commit all changes to your repository:
+**Stage all changes:**
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git add
+```
 
+**Commit changes:**
 ``` shell
 $ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated channel configurations" git commit
 ```
 
-Commit with custom author information:
-
+**Commit with custom author information:**
 ``` shell
 $ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated configurations" --git-author "John Doe" --git-email "john@example.com" git commit
+```
+
+**View differences:**
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff
+```
+
+**View commit history:**
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git log
+$ java -jar mirthsync.jar -t /home/user/mirth-config git log 5  # Show last 5 commits
+```
+
+**List branches:**
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git branch
+```
+
+**Switch branches:**
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git checkout develop
+```
+
+**List remotes:**
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git remote
+```
+
+**Pull from remote:**
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git pull
+```
+
+#### Git Workflow Examples
+
+**Complete workflow - pull from server, commit changes, and push to remote:**
+``` shell
+# Pull latest from Mirth server
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /home/user/mirth-config pull
+
+# Check what changed
+$ java -jar mirthsync.jar -t /home/user/mirth-config git status
+
+# View differences
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff
+
+# Commit the changes
+$ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated from production server" git commit
+
+# Push to remote repository
+$ cd /home/user/mirth-config && git push origin main
+```
+
+**Branch-based development workflow:**
+``` shell
+# Create and switch to development branch
+$ java -jar mirthsync.jar -t /home/user/mirth-config git checkout -b feature/new-channel
+
+# Make changes and commit
+$ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Added new channel configuration" git commit
+
+# Switch back to main branch
+$ java -jar mirthsync.jar -t /home/user/mirth-config git checkout main
+
+# Merge feature branch
+$ cd /home/user/mirth-config && git merge feature/new-channel
 ```
 
 ### Auto-Commit Integration

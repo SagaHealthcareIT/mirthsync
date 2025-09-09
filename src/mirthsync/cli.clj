@@ -122,7 +122,7 @@
                  "Actions:"
                  "  push     Push filesystem code to server"
                  "  pull     Pull server code to filesystem"
-                 "  git      Git operations (init, status, commit)"
+                 "  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull)"
                  ""
                  "Environment variables:"
                  "  MIRTHSYNC_PASSWORD     Alternative to --password command line option"])))
