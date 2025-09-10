@@ -37,7 +37,7 @@ extracted into separate files and top level channels are now placed in a default
 group directory.
 
 **Recent Git Integration Improvements:**
-- Enhanced git operations with comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull, push)
+- Enhanced git operations with comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull, push, reset)
 - Improved JGit API integration for better reliability and performance
 - Fixed reflection warnings and type safety issues
 - All git operations now work without requiring server credentials
@@ -237,9 +237,11 @@ Options:
 Actions:
   push     Push filesystem code to server
   pull     Pull server code to filesystem
-  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull, push)
+  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull, push, reset)
            git diff [--staged|--cached] [<revision-spec>]
            Examples: git diff, git diff --staged, git diff HEAD~1..HEAD, git diff main..feature-branch
+           git reset [--soft|--mixed|--hard] [<commit>]
+           Examples: git reset, git reset --soft HEAD~1, git reset --hard origin/main
 
 Environment variables:
   MIRTHSYNC_PASSWORD     Alternative to --password command line option
@@ -355,6 +357,19 @@ $ java -jar mirthsync.jar -t /home/user/mirth-config git pull
 $ java -jar mirthsync.jar -t /home/user/mirth-config git push
 ```
 
+**Reset changes:**
+``` shell
+# Reset staged changes (mixed mode - default)
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset
+
+# Soft reset - move HEAD but keep changes staged
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --soft HEAD~1
+
+# Hard reset - discard all changes and reset to specific commit
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard HEAD~1
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard origin/main
+```
+
 #### Enhanced Diff Functionality
 
 mirthsync provides comprehensive diff capabilities to help you understand changes at different stages of your git workflow:
@@ -393,6 +408,53 @@ This enhanced diff functionality helps you:
 - Compare different versions of your configuration
 - Understand changes between development branches
 - Track configuration evolution over time
+
+#### Git Reset Functionality
+
+mirthsync provides comprehensive git reset capabilities to help you undo changes and move between different states in your git history:
+
+**Reset staged changes (mixed mode - default):**
+``` shell
+# Unstage all staged changes, keeping working directory unchanged
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset
+```
+
+**Soft reset (move HEAD only):**
+``` shell
+# Move HEAD to previous commit, keep index and working directory unchanged
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --soft HEAD~1
+
+# Undo last commit but keep changes staged for recommit
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --soft HEAD~1
+```
+
+**Hard reset (reset everything):**
+``` shell
+# Reset HEAD, index, and working directory to match the commit
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard
+
+# Reset to a specific commit, discarding all changes
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard HEAD~2
+
+# Reset to remote branch state
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard origin/main
+```
+
+**Reset to specific commits:**
+``` shell
+# Reset to a specific commit hash
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --mixed abc1234
+
+# Reset to a tag
+$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard v1.0.0
+```
+
+This git reset functionality helps you:
+- Unstage files that were accidentally added to the index
+- Undo commits while preserving your work (soft reset)
+- Completely revert to a previous state (hard reset)
+- Clean up commit history before pushing to remote
+- Recover from mistakes in your local development
 
 #### Git Workflow Examples
 

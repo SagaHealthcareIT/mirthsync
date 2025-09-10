@@ -220,6 +220,112 @@
           result (git-operation app-conf "push")]
       (is (= 1 (:exit-code result))) ; Fails as no remote configured
       (is (= "Git push failed" (:exit-msg result)))))
+
+  (testing "git-operation handles reset subcommand with default mixed mode"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "test content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    ;; Add and stage more changes
+    (spit (File. ^String *test-dir* "test.txt") "modified content")
+    (git-add-all *test-dir*)
+    ;; Reset should succeed (mixed mode by default)
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "reset")]
+      (is (= 0 (:exit-code result)))))
+
+  (testing "git-operation handles reset with --soft flag"
+    (let [test-dir (str (System/getProperty "java.io.tmpdir") "/mirthsync-git-test-reset-soft-" (System/currentTimeMillis))]
+      (ensure-git-repo test-dir)
+      (spit (File. ^String test-dir "test.txt") "initial test content")
+      ;; Configure git for testing
+      (let [repo (git/load-repo test-dir)]
+        (-> (git/git-config-load repo)
+            (git/git-config-set "commit.gpgsign" "false")
+            (git/git-config-set "user.name" "Test User")
+            (git/git-config-set "user.email" "test@example.com")
+            (git/git-config-save)))
+      (git-add-all test-dir)
+      (git-commit test-dir "initial commit")
+      ;; Modify and commit again with distinctly different content
+      (Thread/sleep 100) ; Brief delay to ensure file timestamp changes
+      (spit (File. ^String test-dir "test.txt") "completely different content for the second commit")
+      ;; Check status before staging
+      (let [status-before (git-status test-dir)]
+        (when (empty? (:modified status-before))
+          (throw (Exception. "File modification not detected by git"))))
+      (git-add-all test-dir)
+      (git-commit test-dir "second commit")
+      ;; Verify we have commits to work with
+      (let [log-result (git-log test-dir 5)]
+        (is (>= (count log-result) 2))) ; Should have at least 2 commits
+      ;; Soft reset to previous commit should succeed
+      (let [app-conf {:target test-dir}
+            result (git-operation app-conf "reset" "--soft" "HEAD~1")]
+        (is (= 0 (:exit-code result))))))
+
+  (testing "git-operation handles reset with --hard flag"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "test content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    ;; Modify file and stage changes
+    (spit (File. ^String *test-dir* "test.txt") "modified content")
+    (git-add-all *test-dir*)
+    ;; Hard reset should succeed and discard changes
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "reset" "--hard")]
+      (is (= 0 (:exit-code result)))))
+
+  (testing "git-operation handles reset with target commit"
+    (let [test-dir (str (System/getProperty "java.io.tmpdir") "/mirthsync-git-test-reset-target-" (System/currentTimeMillis))]
+      (ensure-git-repo test-dir)
+      (spit (File. ^String test-dir "test.txt") "test content")
+      ;; Configure git for testing
+      (let [repo (git/load-repo test-dir)]
+        (-> (git/git-config-load repo)
+            (git/git-config-set "commit.gpgsign" "false")
+            (git/git-config-set "user.name" "Test User")
+            (git/git-config-set "user.email" "test@example.com")
+            (git/git-config-save)))
+      (git-add-all test-dir)
+      (git-commit test-dir "initial commit")
+      ;; Create second commit
+      (Thread/sleep 100) ; Brief delay to ensure file timestamp changes
+      (spit (File. ^String test-dir "test2.txt") "second file content")
+      (git-add-all test-dir)
+      (git-commit test-dir "second commit")
+      ;; Reset to previous commit using HEAD~1
+      (let [app-conf {:target test-dir}
+            result (git-operation app-conf "reset" "HEAD~1")]
+        (is (= 0 (:exit-code result))))))
+
+  (testing "git-operation handles reset without git repository"
+    (let [non-git-dir (str "/tmp/mirthsync-no-git-" (System/currentTimeMillis))]
+      (.mkdirs (File. ^String non-git-dir))
+      (try
+        (let [app-conf {:target non-git-dir}
+              result (git-operation app-conf "reset")]
+          (is (= 1 (:exit-code result)))
+          (is (= "Git reset failed" (:exit-msg result))))
+        (finally
+          (let [dir (File. ^String non-git-dir)]
+            (doseq [^File file (reverse (file-seq dir))]
+              (.delete file)))))))
 )
 
 (deftest test-cli-git-integration
@@ -856,4 +962,111 @@
     (let [config (cli/config ["-t" *test-dir* "git" "diff" "--staged" "HEAD~1..HEAD"])]
       (is (= 0 (:exit-code config)))
       (is (= "git" (:action config)))
-      (is (= ["diff" "--staged" "HEAD~1..HEAD"] (vec (:arguments config)))))))
+      (is (= ["diff" "--staged" "HEAD~1..HEAD"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git reset command"
+    (let [config (cli/config ["-t" *test-dir* "git" "reset"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["reset"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git reset with --soft flag"
+    (let [config (cli/config ["-t" *test-dir* "git" "reset" "--soft"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["reset" "--soft"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git reset with --hard flag"
+    (let [config (cli/config ["-t" *test-dir* "git" "reset" "--hard"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["reset" "--hard"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git reset with commit reference"
+    (let [config (cli/config ["-t" *test-dir* "git" "reset" "HEAD~1"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["reset" "HEAD~1"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git reset with --soft and commit reference"
+    (let [config (cli/config ["-t" *test-dir* "git" "reset" "--soft" "HEAD~1"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["reset" "--soft" "HEAD~1"] (vec (:arguments config)))))))
+
+(deftest test-git-reset
+  (testing "git-reset with non-existent repo returns false"
+    (is (not (git-reset *test-dir*))))
+  
+  (testing "git-reset with default mixed mode succeeds"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "test content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    ;; Stage some changes
+    (spit (File. ^String *test-dir* "test.txt") "modified content")
+    (git-add-all *test-dir*)
+    ;; Reset should succeed and unstage changes
+    (is (git-reset *test-dir*)))
+
+  (testing "git-reset with soft mode succeeds"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "test content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    ;; Make another commit
+    (spit (File. ^String *test-dir* "test.txt") "modified content")
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "second commit")
+    ;; Soft reset to previous commit should succeed
+    (is (git-reset *test-dir* {:reset-type :soft :ref "HEAD~1"})))
+
+  (testing "git-reset with hard mode succeeds"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "test content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    ;; Modify file (uncommitted changes)
+    (spit (File. ^String *test-dir* "test.txt") "modified content")
+    ;; Hard reset should succeed and discard changes
+    (is (git-reset *test-dir* {:reset-type :hard})))
+
+  (testing "git-reset with specific commit reference succeeds"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "test content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    ;; Make another commit
+    (spit (File. ^String *test-dir* "test2.txt") "second file")
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "second commit")
+    ;; Reset to previous commit using HEAD~1
+    (is (git-reset *test-dir* {:ref "HEAD~1"}))))

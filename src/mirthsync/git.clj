@@ -23,7 +23,9 @@
            org.eclipse.jgit.dircache.DirCacheIterator
            org.eclipse.jgit.treewalk.FileTreeIterator
            org.eclipse.jgit.api.DiffCommand
-           org.eclipse.jgit.api.Status))
+           org.eclipse.jgit.api.Status
+           org.eclipse.jgit.api.ResetCommand
+           org.eclipse.jgit.api.ResetCommand$ResetType))
 
 (defn- git-repo-exists?
   "Check if a git repository exists in the given directory"
@@ -107,11 +109,15 @@
   "Check if there are any staged changes (added, modified, or removed files)"
   [target-dir]
   (if (git-repo-exists? target-dir)
-    (let [repo (git/load-repo target-dir)
-          status (git/git-status repo)]
-      (or (seq (:added status))
-          (seq (:modified status))
-          (seq (:removed status))))
+    (try
+      (let [git-api (Git/open (io/file target-dir))
+            ^Status jgit-status (.call (.status git-api))]
+        (or (seq (.getAdded jgit-status))
+            (seq (.getChanged jgit-status))
+            (seq (.getRemoved jgit-status))))
+      (catch Exception e
+        (log/error "Failed to check staged changes:" (.getMessage e))
+        false))
     false))
 
 (defn git-commit
@@ -473,6 +479,43 @@
       (log/error "No git repository found in" target-dir)
       false)))
 
+(defn git-reset
+  "Reset the current branch to a specific commit with various reset modes.
+  Options:
+  - :reset-type - One of :soft, :mixed (default), :hard
+  - :ref - Target commit/branch reference (defaults to HEAD)"
+  ([target-dir]
+   (git-reset target-dir nil))
+  ([target-dir options]
+   (if (git-repo-exists? target-dir)
+     (try
+       (let [reset-type (get options :reset-type :mixed)
+             ref (get options :ref "HEAD")
+             git-api (Git/open (io/file target-dir))
+             jgit-reset-type (case reset-type
+                               :soft ResetCommand$ResetType/SOFT
+                               :mixed ResetCommand$ResetType/MIXED
+                               :hard ResetCommand$ResetType/HARD
+                               ResetCommand$ResetType/MIXED)] ; Default fallback
+         (log/info "Performing git reset" reset-type "to" ref "in" target-dir)
+         (let [reset-cmd (.reset git-api)
+               _ (.setMode reset-cmd jgit-reset-type)
+               _ (when ref (.setRef reset-cmd ref))
+               result (.call reset-cmd)]
+           (if result
+             (do
+               (log/info "Git reset successful")
+               true)
+             (do
+               (log/error "Git reset failed - no result returned")
+               false))))
+       (catch Exception e
+         (log/error "Failed to perform git reset:" (.getMessage e))
+         false))
+     (do
+       (log/error "No git repository found in" target-dir)
+       false))))
+
 (defn auto-commit-after-operation
   "Perform auto-commit after a successful pull/push operation"
   [{:keys [target auto-commit git-init] :as app-conf}]
@@ -564,6 +607,17 @@
       "push" (if (git-push target-dir)
                (assoc app-conf :exit-code 0)
                (assoc app-conf :exit-code 1 :exit-msg "Git push failed"))
+      
+      "reset" (let [reset-mode (cond 
+                                 (some #{"--soft"} args) :soft
+                                 (some #{"--hard"} args) :hard
+                                 :else :mixed) ; Default to mixed
+                    ref (first (remove #(str/starts-with? % "--") args))
+                    options (cond-> {:reset-type reset-mode}
+                             ref (assoc :ref ref))]
+                (if (git-reset target-dir options)
+                  (assoc app-conf :exit-code 0)
+                  (assoc app-conf :exit-code 1 :exit-msg "Git reset failed")))
       
       ;; Default case - unknown subcommand
       (assoc app-conf 

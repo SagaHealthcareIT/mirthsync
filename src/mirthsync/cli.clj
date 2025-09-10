@@ -122,9 +122,11 @@
                  "Actions:"
                  "  push     Push filesystem code to server"
                  "  pull     Pull server code to filesystem"
-                 "  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull, push)"
+                 "  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull, push, reset)"
                  "           git diff [--staged|--cached] [<revision-spec>]"
                  "           Examples: git diff, git diff --staged, git diff HEAD~1..HEAD, git diff main..feature-branch"
+                 "           git reset [--soft|--mixed|--hard] [<commit>]"
+                 "           Examples: git reset, git reset --soft HEAD~1, git reset --hard origin/main"
                  ""
                  "Environment variables:"
                  "  MIRTHSYNC_PASSWORD     Alternative to --password command line option"])))
