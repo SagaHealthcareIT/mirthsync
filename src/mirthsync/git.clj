@@ -2,7 +2,8 @@
   (:require [clj-jgit.porcelain :as git]
             [clojure.tools.logging :as log]
             [clojure.java.io :as io]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.set])
   (:import java.io.File
            java.io.ByteArrayOutputStream
            org.eclipse.jgit.diff.DiffEntry
@@ -15,7 +16,14 @@
            org.eclipse.jgit.api.PullResult
            org.eclipse.jgit.transport.FetchResult
            org.eclipse.jgit.api.Git
-           org.eclipse.jgit.lib.ObjectId))
+           org.eclipse.jgit.lib.ObjectId
+           org.eclipse.jgit.transport.PushResult
+           org.eclipse.jgit.treewalk.AbstractTreeIterator
+           org.eclipse.jgit.treewalk.CanonicalTreeParser
+           org.eclipse.jgit.dircache.DirCacheIterator
+           org.eclipse.jgit.treewalk.FileTreeIterator
+           org.eclipse.jgit.api.DiffCommand
+           org.eclipse.jgit.api.Status))
 
 (defn- git-repo-exists?
   "Check if a git repository exists in the given directory"
@@ -37,26 +45,48 @@
         (git/git-init :dir target-dir)))))
 
 (defn git-status
-  "Get git status for the target directory"
+  "Get git status for the target directory using JGit StatusCommand directly"
   [target-dir]
   (if (git-repo-exists? target-dir)
-    (let [repo (git/load-repo target-dir)
-          status (git/git-status repo)]
-      (log/info "Git status for" target-dir)
-      (when (seq (:untracked status))
-        (log/info "Untracked files:" (str/join ", " (:untracked status))))
-      (when (seq (:modified status))
-        (log/info "Modified files:" (str/join ", " (:modified status))))
-      (when (seq (:added status))
-        (log/info "Added files:" (str/join ", " (:added status))))
-      (when (seq (:removed status))
-        (log/info "Removed files:" (str/join ", " (:removed status))))
-      (when (and (empty? (:untracked status))
-                 (empty? (:modified status))
-                 (empty? (:added status))
-                 (empty? (:removed status)))
-        (log/info "Working directory is clean"))
-      status)
+    (try
+      (let [git-api (Git/open (io/file target-dir))
+            ^Status jgit-status (.call (.status git-api))
+            
+            ;; Extract status information from JGit Status object
+            untracked (set (.getUntracked jgit-status))
+            modified (set (.getModified jgit-status))
+            added (set (.getAdded jgit-status))
+            removed (set (.getRemoved jgit-status))
+            missing (set (.getMissing jgit-status))  ; This is the key - files deleted from working dir
+            changed (set (.getChanged jgit-status))
+            
+            ;; Combine missing and removed for a complete "removed" status
+            all-removed (clojure.set/union removed missing)
+            
+            ;; Create status map compatible with clj-jgit format
+            status {:untracked untracked
+                    :modified (clojure.set/union modified changed)
+                    :added added  
+                    :removed all-removed}]
+        
+        (log/info "Git status for" target-dir)
+        (when (seq (:untracked status))
+          (log/info "Untracked files:" (str/join ", " (:untracked status))))
+        (when (seq (:modified status))
+          (log/info "Modified files:" (str/join ", " (:modified status))))
+        (when (seq (:added status))
+          (log/info "Added files:" (str/join ", " (:added status))))
+        (when (seq (:removed status))
+          (log/info "Removed files:" (str/join ", " (:removed status))))
+        (when (and (empty? (:untracked status))
+                   (empty? (:modified status))
+                   (empty? (:added status))
+                   (empty? (:removed status)))
+          (log/info "Working directory is clean"))
+        status)
+      (catch Exception e
+        (log/error "Failed to get git status:" (.getMessage e))
+        nil))
     (do
       (log/error "No git repository found in" target-dir)
       nil)))
@@ -73,25 +103,40 @@
       (log/error "No git repository found in" target-dir)
       false)))
 
+(defn- has-staged-changes?
+  "Check if there are any staged changes (added, modified, or removed files)"
+  [target-dir]
+  (if (git-repo-exists? target-dir)
+    (let [repo (git/load-repo target-dir)
+          status (git/git-status repo)]
+      (or (seq (:added status))
+          (seq (:modified status))
+          (seq (:removed status))))
+    false))
+
 (defn git-commit
   "Create a git commit with the specified message and optional author info"
   ([target-dir message]
    (git-commit target-dir message nil nil))
   ([target-dir message author-name author-email]
    (if (git-repo-exists? target-dir)
-     (let [repo (git/load-repo target-dir)
-           commit-args (->> [message
-                             (when author-name :author-name) author-name
-                             (when author-email :author-email) author-email]
-                            (remove nil?))]
-       (try
-         (log/info "Creating git commit:" message)
-         (apply git/git-commit repo commit-args)
-         (log/info "Git commit created successfully")
-         true
-         (catch Exception e
-           (log/error "Failed to create git commit:" (.getMessage e))
-           false)))
+     (if (has-staged-changes? target-dir)
+       (let [repo (git/load-repo target-dir)
+             commit-args (->> [message
+                               (when author-name :author-name) author-name
+                               (when author-email :author-email) author-email]
+                              (remove nil?))]
+         (try
+           (log/info "Creating git commit:" message)
+           (apply git/git-commit repo commit-args)
+           (log/info "Git commit created successfully")
+           true
+           (catch Exception e
+             (log/error "Failed to create git commit:" (.getMessage e))
+             false)))
+       (do
+         (log/info "No staged changes to commit")
+         true)) ; Return true since there's nothing to commit (not an error)
      (do
        (log/error "No git repository found in" target-dir)
        false))))
@@ -101,8 +146,19 @@
   ([target-dir message]
    (auto-commit target-dir message nil nil))
   ([target-dir message author-name author-email]
-   (if (git-add-all target-dir)
-     (git-commit target-dir message author-name author-email)
+   (if (git-repo-exists? target-dir)
+     (let [repo (git/load-repo target-dir)
+           status (git/git-status repo)]
+       ;; Check if there are any changes to commit (untracked, modified, or removed files)
+       (if (or (seq (:untracked status))
+               (seq (:modified status))
+               (seq (:removed status)))
+         (if (git-add-all target-dir)
+           (git-commit target-dir message author-name author-email)
+           false)
+         (do
+           (log/info "No changes to commit")
+           true))) ; Return true since there's nothing to commit (not an error)
      false)))
 
 (defn generate-commit-message
@@ -115,37 +171,137 @@
       "push" (str "Push to " (or server "server"))
       commit-message)))
 
+(defn parse-revision-spec
+  "Parse revision specification like 'HEAD', 'branch1..branch2', or 'commit1^..commit2'"
+  [spec]
+  (cond
+    (nil? spec) nil
+    (str/includes? spec "..")
+    (let [[old-rev new-rev] (str/split spec #"\.\.")]
+      {:old-rev (when (not (empty? old-rev)) old-rev)
+       :new-rev (when (not (empty? new-rev)) new-rev)})
+    :else {:old-rev spec :new-rev nil}))  ; Single revision means compare that commit to working directory
+
+(defn- get-object-id
+  "Get ObjectId for a revision string, returns nil if not found"
+  [^Git git-api revision]
+  (try
+    (when revision
+      (.resolve (.getRepository git-api) revision))
+    (catch Exception e
+      (log/warn "Failed to resolve revision" revision ":" (.getMessage e))
+      nil)))
+
+(defn- get-tree-iterator
+  "Get tree iterator for a given object ID or special cases"
+  [^Repository repository ^ObjectId object-id]
+  (when object-id
+    (let [rev-walk (RevWalk. repository)
+          commit (.parseCommit rev-walk object-id)
+          tree (.getTree commit)
+          tree-parser (CanonicalTreeParser.)]
+      (.reset tree-parser (.newObjectReader repository) tree)
+      (.dispose rev-walk)
+      tree-parser)))
+
 (defn git-diff
-  "Show git diff for the target directory"
+  "Show git diff for the target directory with various options:
+  - No arguments: shows working directory vs index (unstaged changes)
+  - --staged: shows index vs HEAD (staged changes)
+  - --cached: alias for --staged
+  - revision-spec: shows diff for revisions (e.g., HEAD, branch1..branch2, commit^..HEAD)"
   ([target-dir]
    (git-diff target-dir nil))
   ([target-dir options]
    (if (git-repo-exists? target-dir)
      (try
-       (log/info "Getting git diff for" target-dir)
-       ;; Use JGit API directly to get the diff
        (let [git-api (Git/open (io/file target-dir))
-             diff-entries (.call (.diff git-api))]
-         (if (empty? diff-entries)
-           (do
-             (log/info "No differences found")
-             [])
-           (do
-             (log/info "Found" (count diff-entries) "changed files")
-             ;; Generate and output the actual diff content
-             (doseq [^DiffEntry entry diff-entries]
-               (log/info "Changed:" (.getNewPath entry)))
-             ;; Use DiffCommand with ByteArrayOutputStream to capture diff output
-             (let [output-stream (ByteArrayOutputStream.)
-                   diff-cmd (.diff git-api)
-                   _ (.setOutputStream diff-cmd output-stream)
-                   diff-entries-result (.call diff-cmd)]
-               (when (seq diff-entries-result)
+             repository (.getRepository git-api)]
+         
+         ;; Configure diff based on options
+         (let [diff-cmd (.diff git-api)
+               diff-entries
+               (cond
+                 ;; Show staged changes (index vs HEAD)
+                 (or (:staged options) (:cached options))
+                 (do
+                   (log/info "Getting staged changes (index vs HEAD) for" target-dir)
+                   (if-let [head-id (get-object-id git-api "HEAD")]
+                     (let [old-tree (get-tree-iterator repository head-id)
+                           new-tree (DirCacheIterator. (.readDirCache repository))]
+                       (.setOldTree diff-cmd old-tree)
+                       (.setNewTree diff-cmd new-tree)
+                       (.call diff-cmd))
+                     (do
+                       (log/info "No HEAD commit found, showing all staged files")
+                       (let [new-tree (DirCacheIterator. (.readDirCache repository))]
+                         (.setOldTree diff-cmd nil)
+                         (.setNewTree diff-cmd new-tree)
+                         (.call diff-cmd)))))
+                 
+                 ;; Show revision-based diff
+                 (:revision-spec options)
+                 (let [parsed-spec (parse-revision-spec (:revision-spec options))
+                       old-rev (:old-rev parsed-spec)
+                       new-rev (:new-rev parsed-spec)]
+                   (log/info "Getting diff for revisions" old-rev ".." new-rev "in" target-dir)
+                   (let [old-id (when old-rev (get-object-id git-api old-rev))
+                         new-id (when new-rev (get-object-id git-api new-rev))
+                         old-tree (when old-id (get-tree-iterator repository old-id))
+                         new-tree (if new-id 
+                                    (get-tree-iterator repository new-id)
+                                    (FileTreeIterator. repository))]  ; Working directory when new-rev is nil
+                     (.setOldTree diff-cmd old-tree)
+                     (.setNewTree diff-cmd new-tree)
+                     (.call diff-cmd)))
+                 
+                 ;; Default: working directory vs index (unstaged changes)
+                 :else
+                 (do
+                   (log/info "Getting working directory changes (unstaged) for" target-dir)
+                   (.call diff-cmd)))]
+           
+           (if (empty? diff-entries)
+             (do
+               (log/info "No differences found")
+               [])
+             (do
+               (log/info "Found" (count diff-entries) "changed files")
+               ;; Generate and output the actual diff content
+               (doseq [^DiffEntry entry diff-entries]
+                 (log/info "Changed:" (.getNewPath entry)))
+               ;; Use DiffCommand with ByteArrayOutputStream to capture diff output
+               (let [output-stream (ByteArrayOutputStream.)
+                     diff-cmd2 (.diff git-api)
+                     _ (.setOutputStream diff-cmd2 output-stream)]
+                 ;; Reconfigure the same tree settings
+                 (cond
+                   (or (:staged options) (:cached options))
+                   (when-let [head-id (get-object-id git-api "HEAD")]
+                     (.setOldTree diff-cmd2 (get-tree-iterator repository head-id))
+                     (.setCached diff-cmd2 true))
+                   
+                   (:revision-spec options)
+                   (let [parsed-spec (parse-revision-spec (:revision-spec options))
+                         old-rev (:old-rev parsed-spec)
+                         new-rev (:new-rev parsed-spec)]
+                     (when old-rev
+                       (when-let [old-id (get-object-id git-api old-rev)]
+                         (.setOldTree diff-cmd2 (get-tree-iterator repository old-id))))
+                     (if new-rev
+                       (when-let [new-id (get-object-id git-api new-rev)]
+                         (.setNewTree diff-cmd2 (get-tree-iterator repository new-id)))
+                       (.setNewTree diff-cmd2 (FileTreeIterator. repository))))
+                   
+                   :else
+                   nil) ; Default is working directory vs index
+                 
+                 (.call diff-cmd2)
                  (let [diff-text (.toString output-stream)]
                    (when (not (empty? diff-text))
-                     (println diff-text))))
-               (.close output-stream))
-             diff-entries)))
+                     (println diff-text)))
+                 (.close output-stream))
+               diff-entries))))
        (catch Exception e
          (log/error "Failed to get git diff:" (.getMessage e))
          [])) ; Return empty list on error
@@ -275,7 +431,7 @@
       ;; Use JGit API directly to pull
       (let [git-api (Git/open (io/file target-dir))
             ^PullResult result (.call (.pull git-api))]
-        (if (.isSuccessful ^FetchResult (.getFetchResult result))
+        (if (.getFetchResult result)
           (do
             (log/info "Git pull successful")
             true)
@@ -284,6 +440,34 @@
             false)))
       (catch Exception e
         (log/error "Failed to perform git pull:" (.getMessage e))
+        false))
+    (do
+      (log/error "No git repository found in" target-dir)
+      false)))
+
+(defn git-push
+  "Push changes to a remote repository"
+  [target-dir]
+  (if (git-repo-exists? target-dir)
+    (try
+      (log/info "Pushing changes to remote for" target-dir)
+      ;; Use JGit API directly to push
+      (let [git-api (Git/open (io/file target-dir))
+            ^Iterable push-results (.call (.push git-api))]
+        (if (and push-results (seq push-results))
+          (let [all-successful (every? #(.isSuccessful ^PushResult %) push-results)]
+            (if all-successful
+              (do
+                (log/info "Git push successful")
+                true)
+              (do
+                (log/warn "Git push failed for some remotes")
+                false)))
+          (do
+            (log/warn "No push results returned")
+            false)))
+      (catch Exception e
+        (log/error "Failed to perform git push:" (.getMessage e))
         false))
     (do
       (log/error "No git repository found in" target-dir)
@@ -342,8 +526,12 @@
                    (assoc app-conf :exit-code 0)
                    (assoc app-conf :exit-code 1 :exit-msg "Git commit failed")))
       
-      "diff" (do
-               (git-diff target-dir)
+      "diff" (let [staged? (some #{"--staged" "--cached"} args)
+                   revision-spec (first (remove #(str/starts-with? % "--") args))
+                   options (cond-> {}
+                            staged? (assoc :staged true)
+                            revision-spec (assoc :revision-spec revision-spec))]
+               (git-diff target-dir options)
                (assoc app-conf :exit-code 0))
       
       "log" (let [limit (if-let [limit-arg (first args)]
@@ -372,6 +560,10 @@
       "pull" (if (git-pull target-dir)
                (assoc app-conf :exit-code 0)
                (assoc app-conf :exit-code 1 :exit-msg "Git pull failed"))
+      
+      "push" (if (git-push target-dir)
+               (assoc app-conf :exit-code 0)
+               (assoc app-conf :exit-code 1 :exit-msg "Git push failed"))
       
       ;; Default case - unknown subcommand
       (assoc app-conf 

@@ -157,6 +157,22 @@
       (is (= 0 (:exit-code result)))
       (let [status (git-status *test-dir*)]
         (is (empty? (:added status))))))
+
+  (testing "git-operation handles commit subcommand with no staged changes"
+    (let [test-dir (str (System/getProperty "java.io.tmpdir") "/mirthsync-git-test-" (System/currentTimeMillis))]
+      (ensure-git-repo test-dir)
+      ;; Configure git for testing
+      (let [repo (git/load-repo test-dir)]
+        (-> (git/git-config-load repo)
+            (git/git-config-set "commit.gpgsign" "false")
+            (git/git-config-set "user.name" "Test User")
+            (git/git-config-set "user.email" "test@example.com")
+            (git/git-config-save)))
+      (let [app-conf {:target test-dir :commit-message "empty commit"}
+            result (git-operation app-conf "commit")]
+        (is (= 0 (:exit-code result))) ; Should succeed but not create a commit
+        (let [log-result (git-log test-dir 5)]
+          (is (empty? log-result)))))) ; Should have no commits
   
   (testing "git-operation handles unknown subcommand"
     (let [app-conf {:target *test-dir*}
@@ -197,6 +213,13 @@
           result (git-operation app-conf "pull")]
       (is (= 1 (:exit-code result))) ; Fails as no remote configured
       (is (= "Git pull failed" (:exit-msg result)))))
+
+  (testing "git-operation handles push subcommand"
+    (ensure-git-repo *test-dir*)
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "push")]
+      (is (= 1 (:exit-code result))) ; Fails as no remote configured
+      (is (= "Git push failed" (:exit-msg result)))))
 )
 
 (deftest test-cli-git-integration
@@ -319,7 +342,7 @@
     (let [diff (git-diff *test-dir*)]
       (is (= [] diff))))
   
-  (testing "git-diff shows differences after file modification"
+  (testing "git-diff shows unstaged differences (working dir vs index)"
     (ensure-git-repo *test-dir*)
     (spit (File. ^String *test-dir* "test.txt") "initial content")
     ;; Configure git for testing
@@ -332,10 +355,202 @@
     (git-add-all *test-dir*)
     (git-commit *test-dir* "initial commit")
     
-    ;; Modify file
+    ;; Modify file (unstaged change)
     (spit (File. ^String *test-dir* "test.txt") "modified content")
     (let [diff (git-diff *test-dir*)]
       (is (not (empty? diff))))))
+
+(deftest test-git-diff-staged
+  (testing "git-diff --staged shows staged changes (index vs HEAD)"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "initial content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    
+    ;; Modify file and stage it
+    (spit (File. ^String *test-dir* "test.txt") "modified and staged content")
+    (git-add-all *test-dir*)
+    
+    ;; Should show staged differences
+    (let [staged-diff (git-diff *test-dir* {:staged true})]
+      (is (not (empty? staged-diff))))
+    
+    ;; Should also work with :cached option
+    (let [cached-diff (git-diff *test-dir* {:cached true})]
+      (is (not (empty? cached-diff)))))
+  
+  (testing "git-diff --staged with initial commit shows all staged files"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "new-file.txt") "new file content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    
+    ;; Before any commit, staged diff should show all staged files
+    (let [staged-diff (git-diff *test-dir* {:staged true})]
+      (is (not (empty? staged-diff))))))
+
+(deftest test-git-diff-revisions
+  (testing "git-diff with single revision shows changes from HEAD"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "initial content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    
+    ;; Make another commit
+    (spit (File. ^String *test-dir* "test.txt") "second content")
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "second commit")
+    
+    ;; Check diff against HEAD~1..HEAD (should show changes from previous commit to current)
+    (let [rev-diff (git-diff *test-dir* {:revision-spec "HEAD~1..HEAD"})]
+      (is (not (empty? rev-diff)))))
+  
+  (testing "git-diff with revision range shows changes between commits"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "range-test.txt") "first content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "range test first commit")
+    
+    ;; Make second commit  
+    (spit (File. ^String *test-dir* "range-test.txt") "second content")
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "range test second commit")
+    
+    ;; Make third commit
+    (spit (File. ^String *test-dir* "range-test.txt") "third content")
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "range test third commit")
+    
+    ;; Check diff between HEAD~2 and HEAD~1 (should show first->second change)
+    (let [range-diff (git-diff *test-dir* {:revision-spec "HEAD~2..HEAD~1"})]
+      (is (not (empty? range-diff))))))
+
+(deftest test-parse-revision-spec
+  (testing "parse-revision-spec handles nil input"
+    (is (nil? (parse-revision-spec nil))))
+  
+  (testing "parse-revision-spec handles single revision"
+    (let [parsed (parse-revision-spec "HEAD")]
+      (is (= "HEAD" (:old-rev parsed)))
+      (is (nil? (:new-rev parsed)))))
+  
+  (testing "parse-revision-spec handles revision range"
+    (let [parsed (parse-revision-spec "HEAD~2..HEAD")]
+      (is (= "HEAD~2" (:old-rev parsed)))
+      (is (= "HEAD" (:new-rev parsed)))))
+  
+  (testing "parse-revision-spec handles range with empty old revision"
+    (let [parsed (parse-revision-spec "..HEAD")]
+      (is (nil? (:old-rev parsed)))
+      (is (= "HEAD" (:new-rev parsed)))))
+  
+  (testing "parse-revision-spec handles range with empty new revision"
+    (let [parsed (parse-revision-spec "HEAD~1..")]
+      (is (= "HEAD~1" (:old-rev parsed)))
+      (is (nil? (:new-rev parsed))))))
+
+(deftest test-git-operation-diff-commands
+  (testing "git-operation handles diff subcommand with no options"
+    (ensure-git-repo *test-dir*)
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "diff")]
+      (is (= 0 (:exit-code result)))))
+  
+  (testing "git-operation handles diff --staged subcommand"
+    (ensure-git-repo *test-dir*)
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "diff" "--staged")]
+      (is (= 0 (:exit-code result)))))
+  
+  (testing "git-operation handles diff --cached subcommand"
+    (ensure-git-repo *test-dir*)
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "diff" "--cached")]
+      (is (= 0 (:exit-code result)))))
+  
+  (testing "git-operation handles diff with revision spec"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "initial content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "diff" "HEAD")]
+      (is (= 0 (:exit-code result)))))
+  
+  (testing "git-operation handles diff with revision range"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "initial content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "first commit")
+    
+    ;; Make another commit
+    (spit (File. ^String *test-dir* "test.txt") "modified content")
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "second commit")
+    
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "diff" "HEAD~1..HEAD")]
+      (is (= 0 (:exit-code result)))))
+  
+  (testing "git-operation ignores --staged when revision spec provided"
+    (ensure-git-repo *test-dir*)
+    (spit (File. ^String *test-dir* "test.txt") "initial content")
+    ;; Configure git for testing
+    (let [repo (git/load-repo *test-dir*)]
+      (-> (git/git-config-load repo)
+          (git/git-config-set "commit.gpgsign" "false")
+          (git/git-config-set "user.name" "Test User")
+          (git/git-config-set "user.email" "test@example.com")
+          (git/git-config-save)))
+    (git-add-all *test-dir*)
+    (git-commit *test-dir* "initial commit")
+    
+    ;; When both --staged and revision-spec provided, revision-spec takes precedence
+    (let [app-conf {:target *test-dir*}
+          result (git-operation app-conf "diff" "--staged" "HEAD")]
+      (is (= 0 (:exit-code result))))))
 
 (deftest test-git-log
   (testing "git-log with non-existent repo returns nil"
@@ -478,33 +693,42 @@
         (.mkdirs remote-dir)
         (git/git-init :dir (.getPath remote-dir) :bare true)
 
-        ;; 2. Clone the remote to our test directory
-        (git/git-clone (str "file://" (.getPath remote-dir)) :dir *test-dir*)
+        ;; 2. Clone the remote to a fresh test directory
+        (let [clone-dir (str "/tmp/mirthsync-git-test-clone-" (System/currentTimeMillis))]
+          (git/git-clone (str "file://" (.getPath remote-dir)) :dir clone-dir)
+          
+          ;; Configure git for the clone
+          (let [clone-repo (git/load-repo clone-dir)]
+            (-> (git/git-config-load clone-repo)
+                (git/git-config-set "commit.gpgsign" "false")
+                (git/git-config-set "user.name" "Test User")
+                (git/git-config-set "user.email" "test@example.com")
+                (git/git-config-save)))
 
-        ;; 3. Make a commit in a temporary clone of the remote to simulate a change
-        (let [temp-clone-dir (io/file (str "/tmp/mirthsync-git-test-temp-clone-" (System/currentTimeMillis)))]
-          (try
-            (git/git-clone (str "file://" (.getPath remote-dir)) :dir (.getPath temp-clone-dir))
-            (spit (io/file temp-clone-dir "remote_file.txt") "from remote")
-            (let [temp-repo (git/load-repo (.getPath temp-clone-dir))]
-              (-> (git/git-config-load temp-repo)
-                  (git/git-config-set "commit.gpgsign" "false")
-                  (git/git-config-set "user.name" "Remote User")
-                  (git/git-config-set "user.email" "remote@example.com")
-                  (git/git-config-save))
-              (git/git-add temp-repo "remote_file.txt")
-              (git/git-commit temp-repo "commit on remote")
-              (git/git-push temp-repo))
-            (finally
-              (when (.exists temp-clone-dir)
-                (doseq [^File file (reverse (file-seq temp-clone-dir))]
-                  (.delete file))))))
+          ;; 3. Make a commit in a temporary clone of the remote to simulate a change
+          (let [temp-clone-dir (io/file (str "/tmp/mirthsync-git-test-temp-clone-" (System/currentTimeMillis)))]
+            (try
+              (git/git-clone (str "file://" (.getPath remote-dir)) :dir (.getPath temp-clone-dir))
+              (spit (io/file temp-clone-dir "remote_file.txt") "from remote")
+              (let [temp-repo (git/load-repo (.getPath temp-clone-dir))]
+                (-> (git/git-config-load temp-repo)
+                    (git/git-config-set "commit.gpgsign" "false")
+                    (git/git-config-set "user.name" "Remote User")
+                    (git/git-config-set "user.email" "remote@example.com")
+                    (git/git-config-save))
+                (git/git-add temp-repo "remote_file.txt")
+                (git/git-commit temp-repo "commit on remote")
+                (git/git-push temp-repo))
+              (finally
+                (when (.exists temp-clone-dir)
+                  (doseq [^File file (reverse (file-seq temp-clone-dir))]
+                    (.delete file))))))
 
-        ;; 4. Now, pull the changes in our original repo
-        (is (git-pull *test-dir*))
+          ;; 4. Now, pull the changes in our original repo
+          (is (git-pull clone-dir))
 
-        ;; 5. Verify the file from remote exists
-        (is (.exists (io/file *test-dir* "remote_file.txt")))
+          ;; 5. Verify the file from remote exists
+          (is (.exists (io/file clone-dir "remote_file.txt"))))
 
         (finally
           (when (.exists remote-dir)
@@ -608,4 +832,28 @@
     (let [config (cli/config ["-t" *test-dir* "git" "pull"])]
       (is (= 0 (:exit-code config)))
       (is (= "git" (:action config)))
-      (is (= ["pull"] (vec (:arguments config)))))))
+      (is (= ["pull"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git diff with --staged option"
+    (let [config (cli/config ["-t" *test-dir* "git" "diff" "--staged"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["diff" "--staged"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git diff with --cached option"
+    (let [config (cli/config ["-t" *test-dir* "git" "diff" "--cached"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["diff" "--cached"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git diff with revision spec"
+    (let [config (cli/config ["-t" *test-dir* "git" "diff" "HEAD~1..HEAD"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["diff" "HEAD~1..HEAD"] (vec (:arguments config))))))
+
+  (testing "CLI accepts git diff with multiple options"
+    (let [config (cli/config ["-t" *test-dir* "git" "diff" "--staged" "HEAD~1..HEAD"])]
+      (is (= 0 (:exit-code config)))
+      (is (= "git" (:action config)))
+      (is (= ["diff" "--staged" "HEAD~1..HEAD"] (vec (:arguments config)))))))

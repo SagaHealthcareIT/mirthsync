@@ -37,7 +37,7 @@ extracted into separate files and top level channels are now placed in a default
 group directory.
 
 **Recent Git Integration Improvements:**
-- Enhanced git operations with comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull)
+- Enhanced git operations with comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull, push)
 - Improved JGit API integration for better reliability and performance
 - Fixed reflection warnings and type safety issues
 - All git operations now work without requiring server credentials
@@ -237,7 +237,9 @@ Options:
 Actions:
   push     Push filesystem code to server
   pull     Pull server code to filesystem
-  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull)
+  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull, push)
+           git diff [--staged|--cached] [<revision-spec>]
+           Examples: git diff, git diff --staged, git diff HEAD~1..HEAD, git diff main..feature-branch
 
 Environment variables:
   MIRTHSYNC_PASSWORD     Alternative to --password command line option
@@ -310,7 +312,16 @@ $ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated c
 
 **View differences:**
 ``` shell
+# Show unstaged changes (working directory vs index)
 $ java -jar mirthsync.jar -t /home/user/mirth-config git diff
+
+# Show staged changes (index vs HEAD)
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --staged
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --cached
+
+# Show changes between commits/branches
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff HEAD~1..HEAD
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff main..feature-branch
 ```
 
 **View commit history:**
@@ -339,6 +350,50 @@ $ java -jar mirthsync.jar -t /home/user/mirth-config git remote
 $ java -jar mirthsync.jar -t /home/user/mirth-config git pull
 ```
 
+**Push to remote:**
+``` shell
+$ java -jar mirthsync.jar -t /home/user/mirth-config git push
+```
+
+#### Enhanced Diff Functionality
+
+mirthsync provides comprehensive diff capabilities to help you understand changes at different stages of your git workflow:
+
+**Show unstaged changes (working directory vs index):**
+``` shell
+# Default behavior - shows files you've modified but not yet staged
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff
+```
+
+**Show staged changes (index vs HEAD):**
+``` shell
+# Shows changes that are staged and ready to commit
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --staged
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --cached  # Same as --staged
+```
+
+**Show changes between commits/branches:**
+``` shell
+# Compare two commits
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff HEAD~1..HEAD
+
+# Compare current branch with another branch  
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff main..feature-branch
+
+# Compare any two commits (using commit hashes)
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff abc123..def456
+
+# Show what changed from 3 commits ago to 1 commit ago
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff HEAD~3..HEAD~1
+```
+
+This enhanced diff functionality helps you:
+- Review what you've changed before staging
+- Verify staged changes before committing  
+- Compare different versions of your configuration
+- Understand changes between development branches
+- Track configuration evolution over time
+
 #### Git Workflow Examples
 
 **Complete workflow - pull from server, commit changes, and push to remote:**
@@ -349,14 +404,20 @@ $ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /ho
 # Check what changed
 $ java -jar mirthsync.jar -t /home/user/mirth-config git status
 
-# View differences
+# View unstaged differences
 $ java -jar mirthsync.jar -t /home/user/mirth-config git diff
+
+# Stage changes for commit
+$ java -jar mirthsync.jar -t /home/user/mirth-config git add
+
+# Review staged changes before commit
+$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --staged
 
 # Commit the changes
 $ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated from production server" git commit
 
 # Push to remote repository
-$ cd /home/user/mirth-config && git push origin main
+$ java -jar mirthsync.jar -t /home/user/mirth-config git push
 ```
 
 **Branch-based development workflow:**
@@ -370,7 +431,7 @@ $ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Added new
 # Switch back to main branch
 $ java -jar mirthsync.jar -t /home/user/mirth-config git checkout main
 
-# Merge feature branch
+# Merge feature branch (requires actual git command for merge)
 $ cd /home/user/mirth-config && git merge feature/new-channel
 ```
 

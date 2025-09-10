@@ -122,7 +122,9 @@
                  "Actions:"
                  "  push     Push filesystem code to server"
                  "  pull     Pull server code to filesystem"
-                 "  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull)"
+                 "  git      Git operations (init, status, add, commit, diff, log, branch, checkout, remote, pull, push)"
+                 "           git diff [--staged|--cached] [<revision-spec>]"
+                 "           Examples: git diff, git diff --staged, git diff HEAD~1..HEAD, git diff main..feature-branch"
                  ""
                  "Environment variables:"
                  "  MIRTHSYNC_PASSWORD     Alternative to --password command line option"])))
@@ -182,12 +184,34 @@
     (assoc-in config [:options :password] (read-password "Password:"))
     config))
 
+(defn- git-subcommand-args
+  "Extract git subcommand arguments that should not be parsed as main CLI options"
+  [args]
+  (if (nil? args)
+    {:main-args [] :git-args []}
+    (let [git-idx (.indexOf args "git")]
+      (if (and (>= git-idx 0) (< (+ git-idx 2) (count args)))
+        (let [main-args (take (+ git-idx 2) args)  ; up to and including git subcommand
+              git-args (drop (+ git-idx 2) args)]   ; everything after git subcommand
+          {:main-args main-args :git-args git-args})
+        {:main-args args :git-args []}))))
+
+(defn- preprocess-git-args
+  "Preprocess arguments to separate git subcommand options from main CLI options"
+  [args]
+  (let [{:keys [main-args git-args]} (git-subcommand-args args)]
+    (if (empty? git-args)
+      args  ; No git args, return original
+      main-args)))  ; Return just main args, git args will be handled separately
+
 (defn config
   "Parse the CLI arguments and construct a map representing selected
   options and action with sensible defaults provided if
   necessary."
   [args]
-  (let [config (parse-opts args cli-options)
+  (let [processed-args (preprocess-git-args args)
+        {:keys [main-args git-args]} (git-subcommand-args args)
+        config (parse-opts processed-args cli-options)
         config (maybe-prompt-for-password config)
         args-valid? (valid-initial-config? config)
         
@@ -198,7 +222,15 @@
                    (into (:options config))
                    (dissoc :options)
                    (assoc :action (first (:arguments config)))
-                   (assoc :arguments (rest (:arguments config)))
+                   (assoc :arguments (if (= "git" (first (:arguments config)))
+                                       ;; For git commands, include git subcommand + git-specific args  
+                                       (concat (rest (:arguments config)) git-args)
+                                       ;; For non-git commands, use original processing
+                                       (rest (:arguments config))))
+                   ;; Store original git args for reference only if it's a git command
+                   (#(if (= "git" (first (:arguments config)))
+                       (assoc % :git-subcommand-args git-args)
+                       %))
                    
                    ;; Set up our exit code
                    (assoc :exit-code
