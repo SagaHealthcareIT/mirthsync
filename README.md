@@ -292,6 +292,8 @@ $ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin
 
 mirthsync includes comprehensive built-in git integration for version control of your Mirth Connect configurations. All git operations work directly with your target directory without requiring server credentials.
 
+**⚠️ Experimental Feature Notice:** The native git integration is currently experimental and requires extensive testing. While the functionality is comprehensive, we recommend using it alongside traditional git workflows until it has been thoroughly validated across different environments and use cases.
+
 #### Available Git Operations
 
 **Initialize a git repository:**
