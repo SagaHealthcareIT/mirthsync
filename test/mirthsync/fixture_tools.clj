@@ -25,8 +25,8 @@
     (cs/split v #"\n")
     (reduce (fn [_ file]
               (sed "-i"
-                   "-e" "s/<revision>.*/<revision>99<\\/revision>/g"
-                   "-e" "s/<time>.*<\\/time>/<time>1556232311111<\\/time>/g"
+                   "-e" "s/<revision>.*/<revision>98<\\/revision>/g"
+                   "-e" "s/<time>.*<\\/time>/<time>1056232311111<\\/time>/g"
                    "-e" "s/<description\\/>/<description>a description<\\/description>/g" file)) nil v)))
 
 (defn ensure-directory-exists [path]
@@ -39,16 +39,22 @@
 (def mirths-dir "vendor/mirths")
 
 (defn mirth-name [mirth]
-  (str "mirthconnect-" (:version mirth) "-unix"))
+  (if (:oie? mirth)
+    (str "oie_unix_" (str/replace (:version mirth) "." "_"))
+    (str "mirthconnect-" (:version mirth) "-unix")))
 
 (defn mirth-targz [mirth]
-  (str (mirth-name mirth) ".tar.gz"))
+  (if (:oie? mirth)
+    (:filename mirth)  ; OIE uses explicit filename
+    (str (mirth-name mirth) ".tar.gz")))
 
 (defn mirth-checksum [mirth]
   (str (:sha256 mirth) "  " (mirth-targz mirth)))
 
 (defn mirth-url [mirth]
-  (str "https://downloads.mirthcorp.com/connect/" (:version mirth) "/" (mirth-targz mirth)))
+  (if (:oie? mirth)
+    (:download-url mirth)  ; OIE uses explicit download URL
+    (str "https://downloads.mirthcorp.com/connect/" (:version mirth) "/" (mirth-targz mirth))))
 
 ;;;; impure actions and checks
 (defn ensure-target-dir []
@@ -80,8 +86,12 @@
 (defn select-jvm-options [mirth]
   (java "-version" {:seq true :redirect-err true})
   (when-not (re-matches #".*version.\"(1\.)?8.*" (first (java "-version" {:seq true :redirect-err true})))
-    (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
-        {:dir (mirth-base-dir mirth)})))
+    (if (:oie? mirth)
+      ;; OIE may have different JVM options file structure, skip for now
+      (println "Skipping JVM options selection for OIE")
+      ;; Standard Mirth Connect JVM options
+      (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
+          {:dir (mirth-base-dir mirth)}))))
 
 (defn remove-mirth-db [mirth]
   (let-programs [system-test "test"]
@@ -151,6 +161,13 @@
              {:enabled true
               :version "3.8.0.b2464"
               :sha256 "e4606d0a9ea9d35263fb7937d61c98f26a7295d79b8bf83d0dab920cf875206d"
+              :what-happened? []}
+             {:enabled true
+              :oie? true
+              :version "4.5.2"
+              :filename "oie_unix_4_5_2.tar.gz"
+              :download-url "https://github.com/OpenIntegrationEngine/engine/releases/download/v4.5.2/oie_unix_4_5_2.tar.gz"
+              :sha256 "d1923b3f8871f6ccd93e06060cd2695bbeb7496a24c119d36b8beceeb5322e58"
               :what-happened? []}])
 
 (def mirth-4-01 [(nth mirths 0) "4-01"])
@@ -158,6 +175,7 @@
 (def mirth-3-11 [(nth mirths 2) "3-11"])
 (def mirth-3-09 [(nth mirths 3) "3-09"])
 (def mirth-3-08 [(nth mirths 4) "3-08"])
+(def oie-4-52 [(nth mirths 5) "oie-4-52"])
 
 
 (defn make-all-mirths-ready []
@@ -167,7 +185,8 @@
 
 (defn start-mirth [mirth]
   (let [mirth-base (mirth-base-dir mirth)
-        mcserver (sh/proc "./mcserver" :dir mirth-base :verbose :very :redirect-err true)]
+        server-cmd (if (:oie? mirth) "./oieserver" "./mcserver")
+        mcserver (sh/proc server-cmd :dir mirth-base :verbose :very :redirect-err true)]
     (future (sh/stream-to-out mcserver :out))
 
     ;; wait up to 90 seconds for the server to appear
@@ -207,6 +226,7 @@
 ;; (def mirth-3-11-fixture (apply mirth-fixture mirth-3-11))
 ;; (def mirth-3-12-fixture (apply mirth-fixture mirth-3-12))
 (def mirth-4-01-fixture (apply mirth-fixture mirth-4-01))
+(def oie-4-52-fixture (apply mirth-fixture oie-4-52))
 
 ;;;;;;;;;;;;;;; The following was the original script created for
 ;;;;;;;;;;;;;;; fetching and validating mirth.  It was ported to the
