@@ -2,16 +2,22 @@
 
 ![](https://github.com/SagaHealthcareIT/mirthsync/workflows/Clojure%20CI/badge.svg)
 
-mirthSync is a command line tool for synchronizing Mirth Connect code
+mirthSync is a command line tool for synchronizing Mirth Connect and Open Integration Engine (OIE) code
 between servers by allowing you to push or pull channels, code
 templates, configuration map and global scripts. The tool includes
-built-in Git integration for version control of Mirth Connect code
+built-in Git integration for version control of your integration platform code
 and configuration, and can also be integrated with other version
 control systems.
 
 The only requirements are having credentials for the server that is
 being synced and the server also needs to support and allow access to
 Mirth Connect's REST API.
+
+## Open Integration Engine Support
+
+mirthSync now supports **Open Integration Engine (OIE)**, an open-source fork of Mirth Connect that continues to provide the powerful integration capabilities of the original platform. This support allows you to use mirthSync with both traditional Mirth Connect servers and OIE instances seamlessly.
+
+We extend our sincere gratitude to the maintainers and contributors of the [Open Integration Engine project](https://github.com/OpenIntegrationEngine/engine) for their dedication to keeping this powerful integration platform alive and open-source. Their work ensures that the community continues to have access to a robust, actively maintained integration engine.
 
 ## Suggestions for use
 
@@ -153,6 +159,7 @@ group.
 - Support filtering pulls just like we currently are able to filter pushes.
 - Addressing reported issues.
 - Implement more tests.
+- Enhanced Open Integration Engine support and testing.
 
 
 ## Installation 
