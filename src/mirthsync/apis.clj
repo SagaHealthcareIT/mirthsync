@@ -154,22 +154,6 @@
            action)
     app-conf))
 
-(defn apis [{:keys [disk-mode include-configuration-map] :as app-conf}]
-  (filter #(cond
-             (and (= :server-configuration %) (not= "backup" disk-mode)) false
-             (and (not= :server-configuration %) (= "backup" disk-mode)) false
-             (and (= :configuration-map %) (not include-configuration-map)) false
-             :else true)
-
-          [:server-configuration
-           :configuration-map
-           :global-scripts
-           :resources
-           :code-template-libraries
-           :code-templates
-           :channel-groups
-           :channels
-           :alerts]))
 
 (defmethod mi/find-name :default [_ api-loc] (api-element-name api-loc))
 (defmethod mi/find-name :configuration-map [_ _] nil)
@@ -339,6 +323,66 @@
 (defmethod mi/rest-path :channels [_] "/channels")
 (defmethod mi/rest-path :alerts [_] "/alerts")
 (defmethod mi/rest-path :server-configuration [_] "/server/configuration")
+
+;; File management validation - each API knows what files it should manage
+(defmethod mi/manages-file? :default [api file-path target-dir]
+  (let [api-path (mi/local-path api target-dir)
+        file-name (last (cs/split file-path #"/|\\\\"))]
+    (and api-path
+         (.startsWith ^String file-path api-path)
+         (cs/ends-with? file-name ".xml"))))
+
+(defmethod mi/manages-file? :configuration-map [_ file-path target-dir]
+  (let [target-file (str target-dir File/separator "ConfigurationMap.xml")]
+    (= file-path target-file)))
+
+(defmethod mi/manages-file? :resources [_ file-path target-dir]
+  (let [target-file (str target-dir File/separator "Resources.xml")]
+    (= file-path target-file)))
+
+(defmethod mi/manages-file? :global-scripts [_ file-path target-dir]
+  (let [scripts-dir (str target-dir File/separator "GlobalScripts")
+        file-name (last (cs/split file-path #"/|\\\\"))]
+    (and (.startsWith ^String file-path scripts-dir)
+         (or (= file-name "globalScripts.xml")
+             (cs/ends-with? file-name ".js")))))  ; Code disk mode creates .js files
+
+(defmethod mi/manages-file? :server-configuration [_ file-path target-dir]
+  (let [target-file (str target-dir File/separator "FullBackup.xml")]
+    (= file-path target-file)))
+
+(defmethod mi/manages-file? :code-template-libraries [_ file-path target-dir]
+  (let [templates-dir (str target-dir File/separator "CodeTemplates")
+        file-name (last (cs/split file-path #"/|\\\\"))]
+    (and (.startsWith ^String file-path templates-dir)
+         (= file-name "index.xml"))))
+
+(defmethod mi/manages-file? :code-templates [_ file-path target-dir]
+  (let [templates-dir (str target-dir File/separator "CodeTemplates")
+        file-name (last (cs/split file-path #"/|\\\\"))]
+    (and (.startsWith ^String file-path templates-dir)
+         (not= file-name "index.xml")  ; index.xml belongs to libraries
+         (or (cs/ends-with? file-name ".xml")
+             (cs/ends-with? file-name ".js")))))  ; Code disk mode
+
+(defmethod mi/manages-file? :channel-groups [_ file-path target-dir]
+  (let [channels-dir (str target-dir File/separator "Channels")
+        file-name (last (cs/split file-path #"/|\\\\"))]
+    (and (.startsWith ^String file-path channels-dir)
+         (= file-name "index.xml"))))
+
+(defmethod mi/manages-file? :channels [_ file-path target-dir]
+  (let [channels-dir (str target-dir File/separator "Channels")
+        file-name (last (cs/split file-path #"/|\\\\"))]
+    (and (.startsWith ^String file-path channels-dir)
+         (not= file-name "index.xml")  ; index.xml belongs to groups
+         (or (cs/ends-with? file-name ".xml")
+             (cs/ends-with? file-name ".js")))))  ; Code disk mode
+
+(defmethod mi/manages-file? :alerts [_ file-path target-dir]
+  (let [alerts-dir (str target-dir File/separator "Alerts")]
+    (and (.startsWith ^String file-path alerts-dir)
+         (cs/ends-with? file-path ".xml"))))
 
 (defn- script-node->fileref
   [script script-name]

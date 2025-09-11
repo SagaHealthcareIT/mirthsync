@@ -91,6 +91,10 @@
    ["-I" "--interactive" "
         Allow for console prompts for user input"]
 
+   [nil "--clean-target" "
+        Remove all tracked files/directories before pull to handle renames/deletions.
+        This disables automatic state tracking and provides a 'clean slate' pull."]
+
    ;; Git integration options
    [nil "--commit-message MESSAGE" "Commit message for git operations"
     :default "mirthsync commit"]

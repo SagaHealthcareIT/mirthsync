@@ -2,10 +2,13 @@
   (:require [clojure.data.xml :as cdx]
             [clojure.tools.logging :as log]
             [clojure.zip :as cz]
+            [clojure.java.io :as io]
             [mirthsync.files :as mf]
             [mirthsync.interfaces :as mi]
             [mirthsync.http-client :as mhttp]
-            [mirthsync.xml :as mxml])
+            [mirthsync.xml :as mxml]
+            [mirthsync.state :as mstate]
+            [mirthsync.files :as files])
   (:import java.io.File))
 
 (defn- upload-node
@@ -98,6 +101,37 @@
        (rest el-locs))
       app-conf)))
 
+(defn clean-target-directories
+  "Safely remove all tracked mirthsync directories for a clean pull"
+  [target apis]
+  (log/info "Starting clean-target operation with comprehensive safety checks")
+  
+  ;; First, log what would be deleted for transparency
+  (log/info "Files/directories that will be cleaned:")
+  (doseq [api apis]
+    (let [local-path (mi/local-path api target)]
+      (when (.exists (io/file local-path))
+        (let [files-to-delete (files/list-files-that-would-be-deleted 
+                              local-path target "clean-target directory scan")]
+          (when (seq files-to-delete)
+            (log/info "  API" api "- would delete" (count files-to-delete) "files in" local-path))))))
+  
+  ;; Now safely delete API-managed directories
+  (doseq [api apis]
+    (let [local-path (mi/local-path api target)]
+      (when (.exists (io/file local-path))
+        (files/safe-delete-api-managed-path 
+         local-path target api (str "clean-target for API " api)))))
+  
+  ;; Also clean up individual files that might be at the target root
+  (doseq [api [:configuration-map :resources :server-configuration]]
+    (when-let [local-path (mi/local-path api target)]
+      (when (.exists (io/file local-path))
+        (files/safe-delete-api-managed-path 
+         local-path target api (str "clean-target root file for API " api)))))
+  
+  (log/info "Clean-target operation completed"))
+
 (defn download
   "Serializes all xml found at the api rest-path to the filesystem using the
   supplied config. Returns a (potentially) updated app-conf with
@@ -108,6 +142,52 @@
    (str "Downloading from " (mhttp/api-url app-conf) " to " (mi/local-path api (:target app-conf)))
    (remote-locs app-conf)
    mxml/serialize-node))
+
+(defn collect-server-entities
+  "Collect all entities from the server for all APIs for state tracking"
+  [app-conf apis]
+  (into {}
+        (map (fn [api]
+               (let [entities (remote-locs (assoc app-conf :api api))]
+                 [api entities]))
+             apis)))
+
+(defn download-with-state-tracking
+  "Download with three-way sync state tracking to handle renames/deletions"
+  [app-conf apis]
+  (let [target (:target app-conf)]
+    (log/info "Starting download with state tracking...")
+    
+    ;; 1. Load previous state
+    (let [previous-state (mstate/load-sync-state target)]
+      (log/debug "Loaded previous state with" (count previous-state) "APIs")
+      
+      ;; 2. Collect current server entities for all APIs
+      (log/info "Collecting server entities for state comparison...")
+      (let [server-entities (collect-server-entities app-conf apis)
+            current-state (mstate/build-current-state app-conf server-entities)]
+        
+        ;; 3. Detect changes (renames, deletions, new)
+        (let [changes (mstate/detect-changes previous-state current-state)]
+          (log/info "Detected changes:"
+                    (count (:renamed changes)) "renamed,"
+                    (count (:deleted changes)) "deleted,"
+                    (count (:new changes)) "new entities")
+          
+          ;; 4. Clean up stale files before download
+          (mstate/cleanup-stale-files changes target)
+          
+          ;; 5. Proceed with normal download for all APIs
+          (let [updated-app-conf 
+                (reduce (fn [acc-conf api]
+                          (download (assoc acc-conf :api api)))
+                        app-conf
+                        apis)]
+            
+            ;; 6. Save new state
+            (mstate/save-sync-state target current-state)
+            (log/info "Download with state tracking completed")
+            updated-app-conf))))))
 
 (defn upload
   "Takes the current app-conf with the current api and finds associated

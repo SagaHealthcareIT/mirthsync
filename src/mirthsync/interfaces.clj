@@ -73,3 +73,35 @@
 
 (defmulti rest-path "Server API path for GET/PUT"
   {:arglists '([api])} first-param)
+
+(defmulti manages-file? "Does this API manage the given file path?"
+  {:arglists '([api file-path target-dir])} first-param)
+
+;;;;;;;;;;;;;;;;;;; API Registry ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Complete list of all possible APIs in the system
+(def ^:private all-apis 
+  [:server-configuration
+   :configuration-map
+   :global-scripts
+   :resources
+   :code-template-libraries
+   :code-templates
+   :channel-groups
+   :channels
+   :alerts])
+
+(defn apis 
+  "Get list of APIs to process based on configuration"
+  [{:keys [disk-mode include-configuration-map] :as app-conf}]
+  (filter #(cond
+             (and (= :server-configuration %) (not= "backup" disk-mode)) false
+             (and (not= :server-configuration %) (= "backup" disk-mode)) false
+             (and (= :configuration-map %) (not include-configuration-map)) false
+             :else true)
+          all-apis))
+
+(defn all-possible-apis
+  "Get complete list of all APIs in the system (for file safety validation)"
+  []
+  all-apis)

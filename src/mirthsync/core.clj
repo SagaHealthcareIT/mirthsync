@@ -5,7 +5,8 @@
             [mirthsync.apis :as api]
             [mirthsync.cli :as cli]
             [mirthsync.git :as mgit]
-            [mirthsync.http-client :as http])
+            [mirthsync.http-client :as http]
+            [mirthsync.interfaces :as mi])
   (:import org.slf4j.bridge.SLF4JBridgeHandler))
 
 (defn- run
@@ -29,12 +30,21 @@
     :else
     (do
       (log/info (str "Authenticating to server at " server " as " username))
-      (let [action-fn   ({"push" act/upload, "pull" act/download} action)
+      (let [apis (mi/apis app-conf)
             app-conf (http/with-authentication
                        app-conf
-                       #(-> app-conf
-                            (api/iterate-apis (api/apis app-conf) api/preprocess-api)
-                            (api/iterate-apis (api/apis app-conf) action-fn)))]
+                       #(let [preprocessed-conf (api/iterate-apis app-conf apis api/preprocess-api)]
+                          (if (= "pull" action)
+                            (if (:clean-target app-conf)
+                              ;; Use clean-target approach - clean directories then regular download
+                              (do
+                                (log/info "Using clean-target mode - removing tracked directories before pull")
+                                (act/clean-target-directories (:target app-conf) apis)
+                                (api/iterate-apis preprocessed-conf apis act/download))
+                              ;; Use state-tracking download for pulls
+                              (act/download-with-state-tracking preprocessed-conf apis))
+                            ;; Use regular iterate-apis for pushes
+                            (api/iterate-apis preprocessed-conf apis act/upload))))]
         (log/info "Finished!")
         ;; Perform auto-commit after successful operation
         (mgit/auto-commit-after-operation app-conf)

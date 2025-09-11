@@ -5,6 +5,7 @@
             [clojure.zip :as cz]
             [mirthsync.apis :as ma]
             [mirthsync.files :as mf]
+            [mirthsync.interfaces :as mi]
             [mirthsync.xml :as mx]))
 
 (defn update-id [loc]
@@ -196,7 +197,7 @@
 (ct/deftest test-correct-apis-for-conf
   (ct/testing "Apis function returns the correct apis depending on app-conf"
     (ct/is (= [:server-configuration]
-              (ma/apis {:disk-mode "backup"})))
+              (mi/apis {:disk-mode "backup"})))
     (ct/is (= [:configuration-map
                :global-scripts
                :resources
@@ -205,7 +206,7 @@
                :channel-groups
                :channels
                :alerts]
-              (ma/apis {:disk-mode "groups" :include-configuration-map true})))
+              (mi/apis {:disk-mode "groups" :include-configuration-map true})))
     (ct/is (= [:global-scripts
                :resources
                :code-template-libraries
@@ -213,7 +214,7 @@
                :channel-groups
                :channels
                :alerts]
-              (ma/apis {:disk-mode "groups" :include-configuration-map false})))))
+              (mi/apis {:disk-mode "groups" :include-configuration-map false})))))
 
 (comment
   (ct/deftest iterate-apis

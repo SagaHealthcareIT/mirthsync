@@ -33,7 +33,11 @@
   (mkdir "-p" path))
 
 (defn empty-directory? [path]
-  (= (find path) (str path "\n")))
+  ;; Directory is empty if find only returns the directory itself
+  ;; We need to exclude .mirthsync-state.json files from our emptiness check
+  (let [found-items (cs/split (find path "!" "-name" ".mirthsync-state.json") #"\n")
+        filtered-items (filter #(not (cs/blank? %)) found-items)]
+    (= 1 (count filtered-items))))
 
 ;;;; starting data and accessor fns
 (def mirths-dir "vendor/mirths")

@@ -23,6 +23,7 @@
                  [clj-http "3.10.1" :exclusions [commons-logging]]
                  [org.clojure/data.xml "0.0.8"]
                  [org.clojure/data.zip "1.0.0"]
+                 [org.clojure/data.json "2.4.0"]
                  [org.clojure/tools.cli "1.0.206"]
                  ;; [tolitius/xml-in "0.1.0"]
                  ;; [com.rpl/specter "1.1.3"]
