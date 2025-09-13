@@ -22,6 +22,7 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - `java -jar mirthsync.jar -t <target-dir> --commit-message "msg" git commit` - Commit changes
 - `java -jar mirthsync.jar -s <server> -u <user> -p <pass> -t <dir> --auto-commit pull` - Auto-commit after pull
 - `java -jar mirthsync.jar -s <server> -u <user> -p <pass> -t <dir> --git-init --auto-commit push` - Auto-commit with repo init
+- `lein run` - this is the quickest way to run the application for quick tests (be sure to add appropriate command line args). This is preferable to rebuilding the uberjar and running that.
 
 ### Testing
 - Tests are organized by Mirth version in `test/mirthsync/mirth_*_test.clj`
@@ -31,6 +32,7 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - `lein test mirthsync.git-test` runs only git tests
 - `lein test mirthsync.cli-test` runs only CLI tests
 - Test data is extracted from `dev-resources/test-data.tar.gz` during prep tasks
+- ** NOTE ** - `lein test` will run the full test suite including integration tests. This spins up a real Mirth instance with our test-data to run full tests against. This will fail if you're already running your own mcserver or oieserver in the background. You will need to kill that process before running this. This full test suite should be run after completing any major functionality and before committing changes.
 
 ### Release Process
 - `make release` - Full release process (version updates, build, package, sign)
@@ -61,6 +63,9 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - **API Protocols**: Each Mirth entity type (channels, code templates, etc.) implements specific protocols
 - **Multimethods**: Used for dispatch based on entity types and operations
 - **XML Processing**: Extensive use of clojure.data.xml and zipper operations
+
+### Code Quality
+- Prefer refactoring duplicate code into a shared function rather than having duplicate functionality sprinkled throughout the application.
 
 ### Dependencies
 - Requires Java JRE/JDK version 8 or higher
