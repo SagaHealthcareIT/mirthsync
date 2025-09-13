@@ -90,5 +90,8 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - Built with Leiningen
 - Key libraries: clj-http, clojure.data.xml, tools.cli, slingshot, clj-jgit
 
+### Committing changes
+- Do not include Claude attributions - it's rude and noisy
+
 ### Environment Variables
 - `MIRTHSYNC_PASSWORD` - Alternative to --password command line option
