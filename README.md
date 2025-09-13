@@ -6,8 +6,8 @@ mirthSync is a command line tool for synchronizing Mirth Connect and Open Integr
 between servers by allowing you to push or pull channels, code
 templates, configuration map and global scripts. The tool includes
 built-in Git integration for version control of your integration platform code
-and configuration, and can also be integrated with other version
-control systems.
+and configuration, automatic orphaned file detection and cleanup,
+and can also be integrated with other version control systems.
 
 The only requirements are having credentials for the server that is
 being synced and the server also needs to support and allow access to
@@ -37,18 +37,28 @@ We extend our sincere gratitude to the maintainers and contributors of the [Open
 
 ## Current version
 
-The latest version of mirthSync is "3.2.0-SNAPSHOT". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.3.0-SNAPSHOT". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
 
-**Recent Git Integration Improvements:**
-- Enhanced git operations with comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull, push, reset)
-- Improved JGit API integration for better reliability and performance
-- Fixed reflection warnings and type safety issues
-- All git operations now work without requiring server credentials
+**Recent Improvements:**
+- **Enhanced Orphaned File Detection**: Always detects orphaned files during pull operations with clear user warnings and optional automatic deletion
+- **Improved User Experience**: Better code organization and elimination of duplicate orphan detection logic
+- **Enhanced Git Integration**: Comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull, push, reset)
+- **Improved JGit API**: Better reliability and performance with fixed reflection warnings
+- **Security**: Path validation and safety features for file operations
 
 ## Changes
+
+### 3.3.0-SNAPSHOT
+
+- **Enhanced Orphaned File Detection**: Always detects orphaned files during pull operations with clear user warnings
+- **Improved User Experience**: Better code organization and elimination of duplicate orphan detection logic  
+- **Safe Deletion Options**: Optional automatic deletion of orphaned files with interactive confirmation mode
+- **Better Documentation**: Comprehensive user guides and development best practices
+- **Code Quality**: Refactored orphan detection logic for better maintainability
+- **⚠️ SNAPSHOT Release**: This version contains new features that are still being tested. Use with caution in production environments.
 
 ### 3.1.0
 
@@ -154,12 +164,12 @@ group.
 
 ## Future plans
 
-- Support Mirth > version 3.11 (should be ready soon)
-- Extract javascript from xml (should be ready soon)
-- Support filtering pulls just like we currently are able to filter pushes.
-- Addressing reported issues.
-- Implement more tests.
-- Enhanced Open Integration Engine support and testing.
+- Support Mirth > version 3.12 and latest Open Integration Engine versions
+- Enhanced Open Integration Engine support and testing
+- Support filtering pulls just like we currently are able to filter pushes
+- Addressing reported issues
+- Implement more tests
+- Performance optimizations for large configurations
 
 
 ## Installation 
@@ -169,8 +179,7 @@ group.
 
 ## Prerequisites 
 
-Requires Java JRE or JDK version 8 (versions 9 and above are not
-currently supported)
+Requires Java JRE or JDK version 8 or higher (Java 8, 11, 17, 21, and other LTS versions are supported)
 
 ## For MacOS users
 To be able to run the script on MacOS, you need to install the following tools:
@@ -229,7 +238,7 @@ Options:
         configuration map in a push or pull. Default: false
       --skip-disabled                                   A boolean flag that indicates whether
         disabled channels should be pushed or pulled. Default: false
-  -d, --deploy                                         Deply channels on push
+  -d, --deploy                                         Deploy channels on push
         During a push, deploy each included channel immediately
         after saving the channel to Mirth.
   -I, --interactive                                    
@@ -239,6 +248,10 @@ Options:
       --git-email EMAIL                                      Git author email for commits
       --auto-commit                                          Automatically commit changes after pull/push operations
       --git-init                                             Initialize git repository in target directory if not present
+      --delete-orphaned                                      Delete orphaned local files during pull operations.
+        When pulling from remote, compare local files with remote files and
+        delete any local files that no longer exist on the remote server.
+        Use with --interactive to confirm deletions before they occur.
   -h, --help
 
 Actions:
@@ -266,27 +279,84 @@ Environment variables:
 How to pull Mirth Connect code from a Mirth Connect instance:
 
 ``` shell
-$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin pull -t /home/user/
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin pull -t ./mirth-config
 ```
-> Note that the -t parameter accepts absolute and relative paths.
+> Note that the -t parameter accepts absolute and relative paths. Always use a dedicated directory for mirthsync operations, never use your home directory or other system directories.
 
 Pulling code from a Mirth Connect instance allowing for overwriting existing files:
 
 ``` shell
-$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -f pull -t /home/user/
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin -f pull -t ./mirth-config
 ```
+
+Pull with orphaned file detection and cleanup:
+
+``` shell
+# Pull and show warnings about orphaned files (default behavior)
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin pull -t ./mirth-config
+
+# Pull and automatically delete orphaned files
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --delete-orphaned pull -t ./mirth-config
+
+# Pull with interactive confirmation before deleting orphaned files
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --delete-orphaned --interactive pull -t ./mirth-config
+```
+
 Pushing code to a Mirth Connect instance (doesn't have to be the same
 instance that the code was originally pulled from):
 
 ``` shell
-$ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin push -t /home/user/
+$ java -jar mirthsync-<version>-standalone.jar -s https://otherserver.localhost/api -u admin -p admin push -t ./mirth-config
 ```
 
-Pushing a channel group and its channels to a Mirth Connect instance
+Pushing a channel group and its channels to a Mirth Connect instance:
 
 ``` shell
-$ java -jar mirthsync.jar -s https://otherserver.localhost/api -u admin -p admin push -t /home/user/  -r "Channels/This is a group"
+$ java -jar mirthsync-<version>-standalone.jar -s https://otherserver.localhost/api -u admin -p admin push -t ./mirth-config -r "Channels/This is a group"
 ```
+
+### Orphaned File Management
+
+mirthSync includes comprehensive orphaned file detection and management capabilities to help keep your local filesystem synchronized with your Mirth Connect server.
+
+**What are orphaned files?**
+Orphaned files are local files that no longer exist on the remote Mirth Connect server. This can happen when:
+- Channels, code templates, or other resources are deleted from the server
+- Items are moved or renamed on the server
+- Server configurations are reset or restored from backup
+
+**Automatic Detection:**
+mirthSync automatically detects orphaned files during every pull operation, regardless of whether you use the `--delete-orphaned` flag. When orphaned files are found, you'll see clear warnings like:
+
+```
+WARNING: Found 3 orphaned local files that no longer exist on the remote server:
+  - Channels/Default Group/Old Channel.xml
+  - Code Templates/Unused Template.js
+  - Global Scripts/Deprecated Script.js
+
+To automatically delete these files, use the --delete-orphaned flag.
+To see this warning again, run the same command without --delete-orphaned.
+```
+
+**Safe Deletion Options:**
+
+``` shell
+# Show warnings but don't delete (default behavior)
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin pull -t ./mirth-config
+
+# Automatically delete orphaned files without confirmation
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --delete-orphaned pull -t ./mirth-config
+
+# Interactive mode - confirm each deletion
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --delete-orphaned --interactive pull -t ./mirth-config
+```
+
+**Best Practices:**
+- Always review the orphaned file warnings before using `--delete-orphaned`
+- Use `--interactive` mode in production environments for safety
+- Consider backing up your target directory before running with `--delete-orphaned`
+- Orphaned file detection works with all disk modes (backup, groups, items, code)
+- **Important**: Always use a dedicated directory for mirthsync operations (e.g., `./mirth-config`, `/opt/mirthsync/config`) - never use your home directory or other system directories
 
 ### Git Integration
 
@@ -298,85 +368,85 @@ mirthsync includes comprehensive built-in git integration for version control of
 
 **Initialize a git repository:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git init
+$ java -jar mirthsync.jar -t ./mirth-config git init
 ```
 
 **Check repository status:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git status
+$ java -jar mirthsync.jar -t ./mirth-config git status
 ```
 
 **Stage all changes:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git add
+$ java -jar mirthsync.jar -t ./mirth-config git add
 ```
 
 **Commit changes:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated channel configurations" git commit
+$ java -jar mirthsync.jar -t ./mirth-config --commit-message "Updated channel configurations" git commit
 ```
 
 **Commit with custom author information:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated configurations" --git-author "John Doe" --git-email "john@example.com" git commit
+$ java -jar mirthsync.jar -t ./mirth-config --commit-message "Updated configurations" --git-author "John Doe" --git-email "john@example.com" git commit
 ```
 
 **View differences:**
 ``` shell
 # Show unstaged changes (working directory vs index)
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff
+$ java -jar mirthsync.jar -t ./mirth-config git diff
 
 # Show staged changes (index vs HEAD)
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --staged
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --cached
+$ java -jar mirthsync.jar -t ./mirth-config git diff --staged
+$ java -jar mirthsync.jar -t ./mirth-config git diff --cached
 
 # Show changes between commits/branches
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff HEAD~1..HEAD
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff main..feature-branch
+$ java -jar mirthsync.jar -t ./mirth-config git diff HEAD~1..HEAD
+$ java -jar mirthsync.jar -t ./mirth-config git diff main..feature-branch
 ```
 
 **View commit history:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git log
-$ java -jar mirthsync.jar -t /home/user/mirth-config git log 5  # Show last 5 commits
+$ java -jar mirthsync.jar -t ./mirth-config git log
+$ java -jar mirthsync.jar -t ./mirth-config git log 5  # Show last 5 commits
 ```
 
 **List branches:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git branch
+$ java -jar mirthsync.jar -t ./mirth-config git branch
 ```
 
 **Switch branches:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git checkout develop
+$ java -jar mirthsync.jar -t ./mirth-config git checkout develop
 ```
 
 **List remotes:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git remote
+$ java -jar mirthsync.jar -t ./mirth-config git remote
 ```
 
 **Pull from remote:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git pull
+$ java -jar mirthsync.jar -t ./mirth-config git pull
 ```
 
 **Push to remote:**
 ``` shell
-$ java -jar mirthsync.jar -t /home/user/mirth-config git push
+$ java -jar mirthsync.jar -t ./mirth-config git push
 ```
 
 **Reset changes:**
 ``` shell
 # Reset staged changes (mixed mode - default)
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset
+$ java -jar mirthsync.jar -t ./mirth-config git reset
 
 # Soft reset - move HEAD but keep changes staged
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --soft HEAD~1
+$ java -jar mirthsync.jar -t ./mirth-config git reset --soft HEAD~1
 
 # Hard reset - discard all changes and reset to specific commit
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard HEAD~1
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard origin/main
+$ java -jar mirthsync.jar -t ./mirth-config git reset --hard HEAD~1
+$ java -jar mirthsync.jar -t ./mirth-config git reset --hard origin/main
 ```
 
 #### Enhanced Diff Functionality
@@ -386,29 +456,29 @@ mirthsync provides comprehensive diff capabilities to help you understand change
 **Show unstaged changes (working directory vs index):**
 ``` shell
 # Default behavior - shows files you've modified but not yet staged
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff
+$ java -jar mirthsync.jar -t ./mirth-config git diff
 ```
 
 **Show staged changes (index vs HEAD):**
 ``` shell
 # Shows changes that are staged and ready to commit
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --staged
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --cached  # Same as --staged
+$ java -jar mirthsync.jar -t ./mirth-config git diff --staged
+$ java -jar mirthsync.jar -t ./mirth-config git diff --cached  # Same as --staged
 ```
 
 **Show changes between commits/branches:**
 ``` shell
 # Compare two commits
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff HEAD~1..HEAD
+$ java -jar mirthsync.jar -t ./mirth-config git diff HEAD~1..HEAD
 
 # Compare current branch with another branch  
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff main..feature-branch
+$ java -jar mirthsync.jar -t ./mirth-config git diff main..feature-branch
 
 # Compare any two commits (using commit hashes)
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff abc123..def456
+$ java -jar mirthsync.jar -t ./mirth-config git diff abc123..def456
 
 # Show what changed from 3 commits ago to 1 commit ago
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff HEAD~3..HEAD~1
+$ java -jar mirthsync.jar -t ./mirth-config git diff HEAD~3..HEAD~1
 ```
 
 This enhanced diff functionality helps you:
@@ -425,37 +495,37 @@ mirthsync provides comprehensive git reset capabilities to help you undo changes
 **Reset staged changes (mixed mode - default):**
 ``` shell
 # Unstage all staged changes, keeping working directory unchanged
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset
+$ java -jar mirthsync.jar -t ./mirth-config git reset
 ```
 
 **Soft reset (move HEAD only):**
 ``` shell
 # Move HEAD to previous commit, keep index and working directory unchanged
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --soft HEAD~1
+$ java -jar mirthsync.jar -t ./mirth-config git reset --soft HEAD~1
 
 # Undo last commit but keep changes staged for recommit
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --soft HEAD~1
+$ java -jar mirthsync.jar -t ./mirth-config git reset --soft HEAD~1
 ```
 
 **Hard reset (reset everything):**
 ``` shell
 # Reset HEAD, index, and working directory to match the commit
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard
+$ java -jar mirthsync.jar -t ./mirth-config git reset --hard
 
 # Reset to a specific commit, discarding all changes
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard HEAD~2
+$ java -jar mirthsync.jar -t ./mirth-config git reset --hard HEAD~2
 
 # Reset to remote branch state
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard origin/main
+$ java -jar mirthsync.jar -t ./mirth-config git reset --hard origin/main
 ```
 
 **Reset to specific commits:**
 ``` shell
 # Reset to a specific commit hash
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --mixed abc1234
+$ java -jar mirthsync.jar -t ./mirth-config git reset --mixed abc1234
 
 # Reset to a tag
-$ java -jar mirthsync.jar -t /home/user/mirth-config git reset --hard v1.0.0
+$ java -jar mirthsync.jar -t ./mirth-config git reset --hard v1.0.0
 ```
 
 This git reset functionality helps you:
@@ -470,40 +540,40 @@ This git reset functionality helps you:
 **Complete workflow - pull from server, commit changes, and push to remote:**
 ``` shell
 # Pull latest from Mirth server
-$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /home/user/mirth-config pull
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t ./mirth-config pull
 
 # Check what changed
-$ java -jar mirthsync.jar -t /home/user/mirth-config git status
+$ java -jar mirthsync.jar -t ./mirth-config git status
 
 # View unstaged differences
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff
+$ java -jar mirthsync.jar -t ./mirth-config git diff
 
 # Stage changes for commit
-$ java -jar mirthsync.jar -t /home/user/mirth-config git add
+$ java -jar mirthsync.jar -t ./mirth-config git add
 
 # Review staged changes before commit
-$ java -jar mirthsync.jar -t /home/user/mirth-config git diff --staged
+$ java -jar mirthsync.jar -t ./mirth-config git diff --staged
 
 # Commit the changes
-$ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Updated from production server" git commit
+$ java -jar mirthsync.jar -t ./mirth-config --commit-message "Updated from production server" git commit
 
 # Push to remote repository
-$ java -jar mirthsync.jar -t /home/user/mirth-config git push
+$ java -jar mirthsync.jar -t ./mirth-config git push
 ```
 
 **Branch-based development workflow:**
 ``` shell
 # Create and switch to development branch
-$ java -jar mirthsync.jar -t /home/user/mirth-config git checkout -b feature/new-channel
+$ java -jar mirthsync.jar -t ./mirth-config git checkout -b feature/new-channel
 
 # Make changes and commit
-$ java -jar mirthsync.jar -t /home/user/mirth-config --commit-message "Added new channel configuration" git commit
+$ java -jar mirthsync.jar -t ./mirth-config --commit-message "Added new channel configuration" git commit
 
 # Switch back to main branch
-$ java -jar mirthsync.jar -t /home/user/mirth-config git checkout main
+$ java -jar mirthsync.jar -t ./mirth-config git checkout main
 
 # Merge feature branch (requires actual git command for merge)
-$ cd /home/user/mirth-config && git merge feature/new-channel
+$ cd ./mirth-config && git merge feature/new-channel
 ```
 
 ### Auto-Commit Integration
@@ -513,19 +583,19 @@ mirthsync can automatically commit changes after pull or push operations:
 Automatically commit changes after pulling from server:
 
 ``` shell
-$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /home/user/mirth-config --auto-commit pull
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t ./mirth-config --auto-commit pull
 ```
 
 Initialize git repository and auto-commit in one command:
 
 ``` shell
-$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /home/user/mirth-config --git-init --auto-commit --commit-message "Initial pull from production" pull
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t ./mirth-config --git-init --auto-commit --commit-message "Initial pull from production" pull
 ```
 
 Auto-commit with custom message and author:
 
 ``` shell
-$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t /home/user/mirth-config --auto-commit --commit-message "Sync from dev server" --git-author "CI System" --git-email "ci@company.com" pull
+$ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t ./mirth-config --auto-commit --commit-message "Sync from dev server" --git-author "CI System" --git-email "ci@company.com" pull
 ```
 
 ### Cron
@@ -547,14 +617,14 @@ Sample crontab...
 
 Pull/Push from a REPL.
 
-The following pulls code to a directory called 'tmp' (relative to the
+The following pulls code to a dedicated mirthsync directory (relative to the
 execution environment), overwriting existing files ("-f") and ignoring
 the validity of the server certificate ("-i"), and then pushes back to
 the local server from the same directory.
 
 ``` clj
-(mirthsync.core/main-func "-s" "https://localhost:8443/api" "-u" "admin" "-p" "admin" "-t" "target/tmp" "-f" "-i" "pull")
-(mirthsync.core/main-func "-s" "https://localhost:8443/api" "-u" "admin" "-p" "admin" "-t" "target/tmp" "-f" "-i" "push")
+(mirthsync.core/main-func "-s" "https://localhost:8443/api" "-u" "admin" "-p" "admin" "-t" "./mirth-config" "-f" "-i" "pull")
+(mirthsync.core/main-func "-s" "https://localhost:8443/api" "-u" "admin" "-p" "admin" "-t" "./mirth-config" "-f" "-i" "push")
 ```
 
 ## Build from Source
