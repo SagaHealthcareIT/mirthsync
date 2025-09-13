@@ -40,7 +40,8 @@
                 :commit-message "mirthsync commit",
                 :git-author (System/getProperty "user.name"),
                 :auto-commit false,
-                :git-init false}]
+                :git-init false,
+                :delete-orphaned false}]
       (is (= conf (config ["-s" "https://localhost:8443/api/" "-u" "admin" "-p" "password"  "-t" "./tmp/" "push"])))))
 
   (testing "Sensible pull defaults"
@@ -63,10 +64,19 @@
                 :commit-message "mirthsync commit",
                 :git-author (System/getProperty "user.name"),
                 :auto-commit false,
-                :git-init false}]
+                :git-init false,
+                :delete-orphaned false}]
       (is (= conf (config ["-f" "-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "pull"])))))
 
   (testing "Force defaults to nil"
-    (is (nil? (:force (config ["pull"]))))))
+    (is (nil? (:force (config ["pull"])))))
+
+  (testing "Delete-orphaned flag is parsed correctly"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--delete-orphaned" "pull"])]
+      (is (= true (:delete-orphaned conf)))))
+
+  (testing "Delete-orphaned defaults to false"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "pull"])]
+      (is (= false (:delete-orphaned conf))))))
 
 

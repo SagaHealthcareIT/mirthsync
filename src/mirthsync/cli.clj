@@ -106,6 +106,12 @@
    [nil "--git-init" "Initialize git repository in target directory if not present"
     :default false]
 
+   [nil "--delete-orphaned" "Delete orphaned local files during pull operations.
+        When pulling from remote, compare local files with remote files and
+        delete any local files that no longer exist on the remote server.
+        Use with --interactive to confirm deletions before they occur."
+    :default false]
+
    ["-h" "--help"]])
 
 (defn- usage [errors summary]

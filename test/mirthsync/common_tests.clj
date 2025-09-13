@@ -154,7 +154,20 @@
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
-                            "-i" "-m" "groups" "push")))))))
+                            "-i" "-m" "groups" "push"))))))
+
+  (testing "Delete-orphaned flag works correctly with fresh pull"
+    ;; Test that --delete-orphaned doesn't delete files from a fresh pull
+    (let [fresh-dir (str repo-dir "-fresh")]
+      (ensure-directory-exists fresh-dir)
+      ;; Pull to fresh directory with --delete-orphaned flag
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" fresh-dir
+                          "--delete-orphaned" "-i" "-f" "pull")))
+      ;; Verify that files were pulled and not deleted
+      (is (not (empty-directory? fresh-dir)))
+      ;; Clean up
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" fresh-dir))))
 
 
 ;;;;; original approach till the proper diff params were found

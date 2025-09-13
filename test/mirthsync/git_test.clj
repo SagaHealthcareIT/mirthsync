@@ -20,7 +20,8 @@
       (binding [*test-dir* temp-dir]
         (test-fn))
       (finally
-        (when (.exists (File. ^String temp-dir))
+        (when (and (.exists (File. ^String temp-dir))
+                   (.startsWith temp-dir "/tmp/mirthsync-git-test-"))
           (let [dir (File. ^String temp-dir)]
             (doseq [^File file (reverse (file-seq dir))]
               (.delete file))))))))
