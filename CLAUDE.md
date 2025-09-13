@@ -14,23 +14,27 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - `lein clean` - Clean build artifacts
 
 ### Running the Application
-- `java -jar mirthsync.jar -h` - Show help
-- `java -jar mirthsync.jar -s <server-url> -u <username> -p <password> pull -t <target-dir>` - Pull from server
-- `java -jar mirthsync.jar -s <server-url> -u <username> -p <password> push -t <target-dir>` - Push to server
-- `java -jar mirthsync.jar -t <target-dir> git init` - Initialize git repository
-- `java -jar mirthsync.jar -t <target-dir> git status` - Check git status
-- `java -jar mirthsync.jar -t <target-dir> --commit-message "msg" git commit` - Commit changes
-- `java -jar mirthsync.jar -s <server> -u <user> -p <pass> -t <dir> --auto-commit pull` - Auto-commit after pull
-- `java -jar mirthsync.jar -s <server> -u <user> -p <pass> -t <dir> --git-init --auto-commit push` - Auto-commit with repo init
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -h` - Show help
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -s <server-url> -u <username> -p <password> pull -t <target-dir>` - Pull from server
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -s <server-url> -u <username> -p <password> push -t <target-dir>` - Push to server
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -s <server> -u <user> -p <pass> -t <dir> --delete-orphaned pull` - Pull with orphaned file cleanup
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -s <server> -u <user> -p <pass> -t <dir> --delete-orphaned --interactive pull` - Pull with interactive orphan confirmation
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -t <target-dir> git init` - Initialize git repository
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -t <target-dir> git status` - Check git status
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -t <target-dir> --commit-message "msg" git commit` - Commit changes
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -s <server> -u <user> -p <pass> -t <dir> --auto-commit pull` - Auto-commit after pull
+- `java -jar target/uberjar/mirthsync-<version>-standalone.jar -s <server> -u <user> -p <pass> -t <dir> --git-init --auto-commit push` - Auto-commit with repo init
 - `lein run` - this is the quickest way to run the application for quick tests (be sure to add appropriate command line args). This is preferable to rebuilding the uberjar and running that.
 
 ### Testing
 - Tests are organized by Mirth version in `test/mirthsync/mirth_*_test.clj`
 - Git functionality tests are in `test/mirthsync/git_test.clj`
 - CLI tests are in `test/mirthsync/cli_test.clj`
+- Orphan detection tests are in `test/mirthsync/delete_orphaned_test.clj`
 - `lein test` runs all tests
 - `lein test mirthsync.git-test` runs only git tests
 - `lein test mirthsync.cli-test` runs only CLI tests
+- `lein test mirthsync.delete-orphaned-test` runs only orphan detection tests
 - Test data is extracted from `dev-resources/test-data.tar.gz` during prep tasks
 - ** NOTE ** - `lein test` will run the full test suite including integration tests. This spins up a real Mirth instance with our test-data to run full tests against. This will fail if you're already running your own mcserver or oieserver in the background. You will need to kill that process before running this. This full test suite should be run after completing any major functionality and before committing changes.
 
@@ -43,7 +47,7 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 ### Core Namespaces
 - `mirthsync.core` - Main entry point and application orchestration
 - `mirthsync.cli` - Command-line argument parsing and configuration
-- `mirthsync.actions` - Core push/pull operations (upload/download)
+- `mirthsync.actions` - Core push/pull operations (upload/download) and orphaned file cleanup
 - `mirthsync.apis` - API definitions and server interactions
 - `mirthsync.http-client` - HTTP client wrapper for Mirth API calls
 - `mirthsync.files` - File system operations and directory management
@@ -55,17 +59,31 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 1. CLI parsing in `mirthsync.cli/config`
 2. Authentication via `mirthsync.http-client/with-authentication`
 3. API iteration through `mirthsync.apis/iterate-apis`
-4. Action execution (push/pull) via `mirthsync.actions`
-5. File operations through `mirthsync.files`
+4. For pull operations: Pre-pull local file capture for orphan detection
+5. Action execution (push/pull) via `mirthsync.actions`
+6. For pull operations: Post-pull orphan detection and cleanup/warning
+7. File operations through `mirthsync.files`
 
 ### Key Concepts
 - **Disk Modes**: Controls granularity of file extraction (backup, groups, items, code)
 - **API Protocols**: Each Mirth entity type (channels, code templates, etc.) implements specific protocols
 - **Multimethods**: Used for dispatch based on entity types and operations
 - **XML Processing**: Extensive use of clojure.data.xml and zipper operations
+- **Orphan Detection**: Automatic detection of local files that no longer exist on remote server during pull operations
+- **Pre-pull State Capture**: Local files are captured before pull operations to enable accurate orphan detection
 
 ### Code Quality
-- Prefer refactoring duplicate code into a shared function rather than having duplicate functionality sprinkled throughout the application.
+- When implementing similar logic across multiple functions, extract shared helper functions to maintain DRY principles.
+- Remove dead code promptly when refactoring to avoid confusion and maintenance overhead.
+- Always verify that removed functions are not referenced elsewhere before deletion.
+- Use private helper functions (defn-) for internal implementation details that shouldn't be part of the public API.
+
+### Feature Development Best Practices
+- **Orphan Detection**: Always detect orphaned files during pull operations and warn users about them, even when automatic deletion is disabled.
+- **User Experience**: Provide clear warnings with file lists and actionable instructions when potentially destructive operations are available but not enabled.
+- **Safety First**: Implement confirmation prompts for destructive operations like file deletion, especially in interactive mode.
+- **Path Handling**: Use canonical paths when comparing file locations to handle symbolic links and path normalization correctly.
+- **Pre-operation State Capture**: For operations that need to compare before/after state, capture the initial state before making changes.
 
 ### Dependencies
 - Requires Java JRE/JDK version 8 or higher

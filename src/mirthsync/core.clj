@@ -34,13 +34,13 @@
                        app-conf
                        (fn []
                          (let [preprocessed-conf (api/iterate-apis app-conf (api/apis app-conf) api/preprocess-api)
-                               ;; For pull operations with delete-orphaned, capture local files before pull
-                               conf-with-pre-pull (if (and (= "pull" action) (:delete-orphaned preprocessed-conf))
+                               ;; For pull operations, always capture local files before pull for orphan detection
+                               conf-with-pre-pull (if (= "pull" action)
                                                      (api/iterate-apis preprocessed-conf (api/apis preprocessed-conf) act/capture-pre-pull-local-files)
                                                      preprocessed-conf)
                                processed-conf (api/iterate-apis conf-with-pre-pull (api/apis conf-with-pre-pull) action-fn)]
-                           ;; After pull, cleanup orphaned files if requested
-                           (if (and (= "pull" action) (:delete-orphaned processed-conf))
+                           ;; After pull, always check for orphaned files
+                           (if (= "pull" action)
                              (act/cleanup-orphaned-files-with-pre-pull processed-conf (api/apis processed-conf))
                              processed-conf))))]
         (log/info "Finished!")

@@ -132,18 +132,20 @@
                      (map first (mi/deconstruct-node app-conf-with-el (mi/file-path api app-conf-with-el) el-loc))))
                  remote-elements))))
 
-(defn find-orphaned-files
-  "Find local files that don't have corresponding remote elements.
-   This should be called AFTER the pull operation to compare current local files with expected paths."
-  [{:keys [api expected-paths] :as app-conf}]
-  (let [local-files (mi/api-files api (mi/local-path api (:target app-conf)))]
-    (log/info (str "Checking for orphaned files in " (mi/local-path api (:target app-conf))))
-    (log/info (str "Expected paths: " (count expected-paths) " files"))
-    (log/info (str "Local files: " (count local-files) " files"))
+(defn- find-orphaned-files-in-list
+  "Find files in the provided list that don't have corresponding expected paths.
+   Used internally by orphan cleanup functions."
+  [files expected-paths target-path]
+  (let [target-absolute-path (.getCanonicalPath (io/file target-path))]
     (filter (fn [^File file]
-              (let [file-path (.getAbsolutePath file)]
-                (not (contains? expected-paths file-path))))
-            local-files)))
+              (let [file-absolute-path (.getAbsolutePath file)
+                    ;; Convert absolute path to relative path starting with target
+                    file-relative-path (if (.startsWith file-absolute-path target-absolute-path)
+                                         (str target-path
+                                              (.substring file-absolute-path (.length target-absolute-path)))
+                                         file-absolute-path)]
+                (not (contains? expected-paths file-relative-path))))
+            files)))
 
 (defn confirm-deletion
   "Ask user for confirmation to delete orphaned files in interactive mode."
@@ -234,53 +236,28 @@
   (let [expected-paths (get-remote-expected-file-paths app-conf)]
     (assoc app-conf :expected-paths expected-paths)))
 
-(defn cleanup-orphaned-files
-  "Clean up orphaned local files that no longer exist on the remote server."
-  [{:keys [delete-orphaned] :as app-conf} apis]
-  (if delete-orphaned
-    (do
-      (log/info "Checking for orphaned files across all APIs...")
-      (let [all-orphaned-files (mapcat (fn [api]
-                                         (let [api-conf (assoc app-conf :api api)
-                                               local-path (mi/local-path api (:target app-conf))
-                                               all-local-files (mi/api-files api local-path)
-                                               expected-paths (get-remote-expected-file-paths api-conf)]
-                                           (log/info (str "Checking for orphaned files in " local-path))
-                                           (log/info (str "Expected paths: " (count expected-paths) " files"))
-                                           (log/info (str "Local files: " (count all-local-files) " files"))
-                                           (filter (fn [^File file]
-                                                     (let [file-path (.getAbsolutePath file)]
-                                                       (not (contains? expected-paths file-path))))
-                                                   all-local-files)))
-                                       apis)]
-        (delete-orphaned-files app-conf all-orphaned-files)))
-    app-conf))
 
 (defn cleanup-orphaned-files-with-pre-pull
   "Clean up orphaned local files using pre-pull captured files."
   [{:keys [delete-orphaned pre-pull-local-files] :as app-conf} apis]
-  (if delete-orphaned
-    (do
-      (log/info "Checking for orphaned files using pre-pull captured files...")
-      (let [all-expected-paths (set (mapcat (fn [api]
-                                              (let [api-conf (assoc app-conf :api api)]
-                                                (get-remote-expected-file-paths api-conf)))
-                                            apis))
-            target-absolute-path (.getCanonicalPath (io/file (:target app-conf)))
-            orphaned-files (filter (fn [^File file]
-                                     (let [file-absolute-path (.getAbsolutePath file)
-                                           ;; Convert absolute path to relative path starting with target
-                                           file-relative-path (if (.startsWith file-absolute-path target-absolute-path)
-                                                                (str (:target app-conf) 
-                                                                     (.substring file-absolute-path (.length target-absolute-path)))
-                                                                file-absolute-path)]
-                                       (not (contains? all-expected-paths file-relative-path))))
-                                   pre-pull-local-files)
-            ;; Remove duplicate files that may be captured by multiple APIs
-            unique-orphaned-files (distinct orphaned-files)]
-        (if (empty? unique-orphaned-files)
-          (do
-            (log/info "No orphaned files found.")
-            app-conf)
-          (delete-orphaned-files app-conf unique-orphaned-files))))
-    app-conf))
+  (log/info "Checking for orphaned files using pre-pull captured files...")
+  (let [all-expected-paths (set (mapcat (fn [api]
+                                          (let [api-conf (assoc app-conf :api api)]
+                                            (get-remote-expected-file-paths api-conf)))
+                                        apis))
+        orphaned-files (find-orphaned-files-in-list pre-pull-local-files all-expected-paths (:target app-conf))
+        ;; Remove duplicate files that may be captured by multiple APIs
+        unique-orphaned-files (distinct orphaned-files)]
+    (if (empty? unique-orphaned-files)
+      (do
+        (log/info "No orphaned files found.")
+        app-conf)
+      (if delete-orphaned
+        (delete-orphaned-files app-conf unique-orphaned-files)
+        (do
+          (log/info "WARNING: Found orphaned files that no longer exist on the remote server:")
+          (doseq [^File file unique-orphaned-files]
+            (log/info (str "  " (.getAbsolutePath file))))
+          (log/info (str "These " (count unique-orphaned-files) " orphaned files were not deleted."))
+          (log/info "Use the --delete-orphaned flag to automatically delete orphaned files during pull operations.")
+          app-conf)))))

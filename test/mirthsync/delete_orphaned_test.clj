@@ -16,21 +16,13 @@
       (is (= false (:delete-orphaned conf))))))
 
 (deftest actions-integration
-  (testing "cleanup-orphaned-files does nothing when flag is false"
-    (let [app-conf {:api :channels
-                    :delete-orphaned false
-                    :target "/tmp"}]
-      (is (= app-conf (cleanup-orphaned-files app-conf [])))))
-
-  (testing "find-orphaned-files detects files not in expected paths"
-    (let [app-conf {:api :channels
-                    :target "/tmp"
-                    :expected-paths #{"/tmp/channel1.xml"}}]
-      (with-redefs [mi/api-files (fn [_ _] [(java.io.File. "/tmp/channel1.xml") (java.io.File. "/tmp/channel2.xml")])
-                    mi/local-path (fn [_ _] "/tmp")]
-        (let [orphaned-files (find-orphaned-files app-conf)]
-          (is (= 1 (count orphaned-files)))
-          (is (= "/tmp/channel2.xml" (.getAbsolutePath (first orphaned-files)))))))))
+  (testing "orphan detection logic works correctly"
+    (let [files [(java.io.File. "/tmp/channel1.xml") (java.io.File. "/tmp/channel2.xml")]
+          expected-paths #{"/tmp/channel1.xml"}
+          target-path "/tmp"]
+      (let [orphaned-files (#'mirthsync.actions/find-orphaned-files-in-list files expected-paths target-path)]
+        (is (= 1 (count orphaned-files)))
+        (is (= "/tmp/channel2.xml" (.getAbsolutePath (first orphaned-files))))))))
 
 (deftest capture-pre-pull-files-test
   (testing "root-level APIs only capture managed files, not user files"
@@ -108,7 +100,24 @@
         (cleanup-orphaned-files-with-pre-pull app-conf apis)
         ; Should delete the genuinely orphaned file
         (is (= 1 (count @deleted-files)))
-        (is (= orphaned-file (first @deleted-files)))))))
+        (is (= orphaned-file (first @deleted-files))))))
+
+  (testing "shows warning when delete-orphaned is false"
+    (let [orphaned-file (io/file "/tmp/test/Channels/orphaned.xml")
+          app-conf {:delete-orphaned false
+                    :target "/tmp/test"
+                    :pre-pull-local-files [orphaned-file]}
+          apis [:channels]
+          deleted-files (atom [])]
+      (with-redefs [get-remote-expected-file-paths (fn [_] #{"/tmp/test/Channels/valid.xml"})
+                    delete-orphaned-files (fn [conf files]
+                                           (reset! deleted-files files)
+                                           conf)]
+        (let [result (cleanup-orphaned-files-with-pre-pull app-conf apis)]
+          ; Should not call delete-orphaned-files
+          (is (= 0 (count @deleted-files)))
+          ; Should return original app-conf unchanged
+          (is (= app-conf result)))))))
 
 (deftest safe-delete-file-test
   (let [safe-delete-file? #'mirthsync.actions/safe-delete-file?]  ; Access private function
