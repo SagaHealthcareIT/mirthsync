@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         java: [ '21' ]
-        os: [ ubuntu-latest ] #, windows-latest ]
+        os: [ ubuntu-latest, windows-latest ]
 
     steps:
     - name: Checkout code
