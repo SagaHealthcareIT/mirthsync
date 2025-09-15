@@ -34,7 +34,7 @@
                             ;; Allow deletion of git test directories in target
                             (re-matches #".*target/mirthsync-git-test-\d+" file) "target"
                             ;; For relative paths in current directory, use current directory
-                            (not (str/starts-with? file "/")) "."
+                            (not (str/starts-with? file (str java.io.File/separator))) "."
                             ;; Otherwise, not allowed
                             :else nil)]
           (if allowed-dir
@@ -92,32 +92,32 @@
   (cpu/mkdir-p mirths-dir))
 
 (defn mirth-base-dir [mirth]
-  (str mirths-dir "/" (mirth-name mirth)))
+  (str mirths-dir java.io.File/separator (mirth-name mirth)))
 
 (defn mirth-db-dir [mirth]
-  (str (mirth-base-dir mirth) "/appdata/mirthdb"))
+  (str (mirth-base-dir mirth) java.io.File/separator "appdata" java.io.File/separator "mirthdb"))
 
 (defn mirth-unpacked? [mirth]
   (cpu/directory? (mirth-base-dir mirth)))
 
 (defn mirth-tgz-here? [mirth]
-  (cpu/file-exists? (str mirths-dir "/" (mirth-targz mirth))))
+  (cpu/file-exists? (str mirths-dir java.io.File/separator (mirth-targz mirth))))
 
 (defn validate-mirth [mirth]
-  (let [archive-path (str mirths-dir "/" (mirth-targz mirth))
+  (let [archive-path (str mirths-dir java.io.File/separator (mirth-targz mirth))
         expected-checksum (:sha256 mirth)]
     (cpu/validate-checksum archive-path expected-checksum)))
 
 (defn unpack-mirth [mirth]
-  (let [archive-path (str mirths-dir "/" (mirth-targz mirth))
-        dest-dir (str mirths-dir "/" (mirth-name mirth))
+  (let [archive-path (str mirths-dir java.io.File/separator (mirth-targz mirth))
+        dest-dir (str mirths-dir java.io.File/separator (mirth-name mirth))
         is-zip? (.endsWith archive-path ".zip")]
     (if is-zip?
       (cpu/unpack-zip archive-path dest-dir :strip-components 1)
       (cpu/unpack-tar-gz archive-path dest-dir :strip-components 1))))
 
 (defn download-mirth [mirth]
-  (let [dest-path (str mirths-dir "/" (mirth-targz mirth))]
+  (let [dest-path (str mirths-dir java.io.File/separator (mirth-targz mirth))]
     (cpu/download-file (mirth-url mirth) dest-path
                        :progress-fn #(println "Downloaded:" %))))
 

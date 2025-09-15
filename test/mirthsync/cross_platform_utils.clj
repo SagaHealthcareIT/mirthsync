@@ -174,7 +174,7 @@
                 stripped-parts (if (> (count path-parts) strip-count)
                                  (drop strip-count path-parts)
                                  path-parts)
-                stripped-name (str/join "/" stripped-parts)]
+                stripped-name (str/join java.io.File/separator stripped-parts)]
             (when (not (str/blank? stripped-name))
               (let [dest-file (io/file dest-dir stripped-name)]
                 (if (.isDirectory entry)
@@ -205,7 +205,7 @@
                 stripped-parts (if (> (count path-parts) strip-count)
                                  (drop strip-count path-parts)
                                  path-parts)
-                stripped-name (str/join "/" stripped-parts)]
+                stripped-name (str/join java.io.File/separator stripped-parts)]
             (when (not (str/blank? stripped-name))
               (let [dest-file (io/file dest-dir stripped-name)]
                 (if (.isDirectory entry)
