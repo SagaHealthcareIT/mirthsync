@@ -5,35 +5,47 @@
             [clojure.string :as cs]
             [clj-http.client :as client]
             [mirthsync.core :refer :all]
-            [me.raynes.conch :refer [programs with-programs let-programs]]
+            [mirthsync.cross-platform-utils :as cpu]
             [me.raynes.conch.low-level :as sh]))
 
-;;; note that these tests will only work in unix'ish environments with
-;;; appropriate commands in the path
+;;; Cross-platform test utilities - no longer requires Unix-specific commands
 
-;;Check if the os is MAcOS
-(defn is-macos? []
-  (= "Mac OS X" (System/getProperty "os.name")))
-
-(if (is-macos?)
-  (do (programs mkdir sha256sum curl tar cp rm rmdir diff ps java find gsed)
-      (def sed gsed))
-  (programs mkdir sha256sum curl tar cp rm rmdir diff ps java find sed))
+;; Export cross-platform command functions
+(def diff cpu/diff-directories)
+(defn rm [& args]
+  "Cross-platform rm command equivalent with safety checks"
+  ;; Parse rm arguments and map to appropriate delete operation
+  (let [options (take-while #(str/starts-with? % "-") args)
+        files (drop-while #(str/starts-with? % "-") args)
+        recursive? (some #(str/includes? % "r") options)]
+    (doseq [file files]
+      (when (cpu/file-exists? file)
+        ;; Determine allowed directory based on the file path
+        ;; For test files, we restrict to safe test directories
+        (let [allowed-dir (cond
+                            ;; Allow deletion in target directory (build artifacts and test temp files)
+                            (str/starts-with? file "target/") "target"
+                            ;; Allow deletion of git test directories in target
+                            (re-matches #".*target/mirthsync-git-test-\d+" file) "target"
+                            ;; For relative paths in current directory, use current directory
+                            (not (str/starts-with? file "/")) "."
+                            ;; Otherwise, not allowed
+                            :else nil)]
+          (if allowed-dir
+            (if recursive?
+              (cpu/delete-recursive file :allowed-dir allowed-dir)
+              (cpu/delete-file file :allowed-dir allowed-dir))
+            (throw (ex-info (str "Unsafe file deletion attempted: " file)
+                           {:file file :reason "File outside allowed directories"}))))))))
 
 (defn update-all-xml [path]
-  (as-> (find path "-type" "f" "-iname" "*.xml") v
-    (cs/split v #"\n")
-    (reduce (fn [_ file]
-              (sed "-i"
-                   "-e" "s/<revision>.*/<revision>98<\\/revision>/g"
-                   "-e" "s/<time>.*<\\/time>/<time>1056232311111<\\/time>/g"
-                   "-e" "s/<description\\/>/<description>a description<\\/description>/g" file)) nil v)))
+  (cpu/update-xml-files path))
 
 (defn ensure-directory-exists [path]
-  (mkdir "-p" path))
+  (cpu/mkdir-p path))
 
 (defn empty-directory? [path]
-  (= (find path) (str path "\n")))
+  (cpu/empty-directory? path))
 
 ;;;; starting data and accessor fns
 (def mirths-dir "vendor/mirths")
@@ -58,7 +70,7 @@
 
 ;;;; impure actions and checks
 (defn ensure-target-dir []
-  (mkdir "-p" mirths-dir))
+  (cpu/mkdir-p mirths-dir))
 
 (defn mirth-base-dir [mirth]
   (str mirths-dir "/" (mirth-name mirth)))
@@ -67,53 +79,57 @@
   (str (mirth-base-dir mirth) "/appdata/mirthdb"))
 
 (defn mirth-unpacked? [mirth]
-  (.isDirectory (io/file (mirth-base-dir mirth))))
+  (cpu/directory? (mirth-base-dir mirth)))
 
 (defn mirth-tgz-here? [mirth]
-  (.exists (io/file (str mirths-dir "/" (mirth-targz mirth)))))
+  (cpu/file-exists? (str mirths-dir "/" (mirth-targz mirth))))
 
 (defn validate-mirth [mirth]
-  (sha256sum "-c" {:dir mirths-dir :in (mirth-checksum mirth)}))
+  (let [archive-path (str mirths-dir "/" (mirth-targz mirth))
+        expected-checksum (:sha256 mirth)]
+    (cpu/validate-checksum archive-path expected-checksum)))
 
 (defn unpack-mirth [mirth]
-  (mkdir (mirth-name mirth) {:dir mirths-dir})
-  (tar "-xzf" (mirth-targz mirth) (str "--directory=" (mirth-name mirth)) "--strip-components=1"
-         {:dir mirths-dir}))
+  (let [archive-path (str mirths-dir "/" (mirth-targz mirth))
+        dest-dir (str mirths-dir "/" (mirth-name mirth))]
+    (cpu/unpack-tar-gz archive-path dest-dir :strip-components 1)))
 
 (defn download-mirth [mirth]
-  (curl "-O" "-J" "-L" "-k" "--progress-bar" "--stderr" "-" (mirth-url mirth) {:dir mirths-dir}))
+  (let [dest-path (str mirths-dir "/" (mirth-targz mirth))]
+    (cpu/download-file (mirth-url mirth) dest-path
+                       :progress-fn #(println "Downloaded:" %))))
 
 (defn select-jvm-options [mirth]
-  (java "-version" {:seq true :redirect-err true})
-  (when-not (re-matches #".*version.\"(1\.)?8.*" (first (java "-version" {:seq true :redirect-err true})))
+  (when-not (cpu/is-java8?)
     (if (:oie? mirth)
       ;; OIE may have different JVM options file structure, skip for now
       (println "Skipping JVM options selection for OIE")
       ;; Standard Mirth Connect JVM options
-      (cp "docs/mcservice-java9+.vmoptions" "mcserver.vmoptions"
-          {:dir (mirth-base-dir mirth)}))))
+      (let [src-file (str (mirth-base-dir mirth) "/docs/mcservice-java9+.vmoptions")
+            dest-file (str (mirth-base-dir mirth) "/mcserver.vmoptions")]
+        (when (cpu/file-exists? src-file)
+          (cpu/copy-file src-file dest-file))))))
 
 (defn remove-mirth-db [mirth]
-  (let-programs [system-test "test"]
-    (let [dbdir (mirth-db-dir mirth)]
-      (and (clojure.string/ends-with? dbdir "mirthdb")
-           (= 0 @(:exit-code (system-test "-d" dbdir {:throw false :verbose true})))
-           (rm "-f" "--preserve-root" "--one-file-system" "-r" dbdir)))))
+  (let [dbdir (mirth-db-dir mirth)]
+    (and (clojure.string/ends-with? dbdir "mirthdb")
+         (cpu/directory? dbdir)
+         (do (cpu/delete-recursive dbdir :allowed-dir "vendor") true))))
 
 (defn delete-dir? [dir]
   (and
-   (.exists (io/file dir))
+   (cpu/file-exists? dir)
    (clojure.string/starts-with? dir "target") ;; not sure if this is needed, already defined as parameter to find
    (not (clojure.string/includes? dir " "))
    (not (clojure.string/includes? dir "\n"))))
 
 (defn delete-temp-dirs [version]
-  (let [dirs-pattern (str "tmp-" version "*")
-        temp-dirs-string (find "target" "-type" "d" "-name" dirs-pattern)
+  (let [dirs-pattern (str "tmp-" version)
+        temp-dirs-string (cpu/find-files "target" :type "d" :name dirs-pattern)
         temp-dirs (str/split temp-dirs-string #"\n")
         dirs (filter delete-dir? temp-dirs)]
     (when (seq dirs)
-      (mapv #(rm "-rf" "--preserve-root" "--one-file-system" %) dirs))))
+      (mapv #(cpu/delete-recursive % :allowed-dir "target") dirs))))
 
 ;;;; A couple of helper functions to track the flow of
 ;;;; tracking the flow and outcomes

@@ -45,7 +45,12 @@
                  [environ "1.2.0"]
                  
                  ;; git integration
-                 [clj-jgit "1.1.0"]]
+                 [clj-jgit "1.1.0"]
+
+                 ;; Cross-platform file operations and compression
+                 [commons-io/commons-io "2.11.0"]
+                 [org.apache.commons/commons-compress "1.26.0"]
+                 [commons-codec/commons-codec "1.16.0"]]
 
                  ;;;; don't need this for now
                  ;; [com.fasterxml.jackson.core/jackson-core "2.9.6"]

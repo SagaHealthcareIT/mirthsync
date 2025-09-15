@@ -14,14 +14,14 @@
 (defn temp-dir-fixture
   "Creates a temporary directory for testing and cleans it up"
   [test-fn]
-  (let [temp-dir (str "/tmp/mirthsync-git-test-" (System/currentTimeMillis))]
+  (let [temp-dir (str "target/mirthsync-git-test-" (System/currentTimeMillis))]
     (try
       (.mkdirs (File. ^String temp-dir))
       (binding [*test-dir* temp-dir]
         (test-fn))
       (finally
         (when (and (.exists (File. ^String temp-dir))
-                   (.startsWith temp-dir "/tmp/mirthsync-git-test-"))
+                   (.startsWith temp-dir "target/mirthsync-git-test-"))
           (let [dir (File. ^String temp-dir)]
             (doseq [^File file (reverse (file-seq dir))]
               (.delete file))))))))
@@ -160,7 +160,7 @@
         (is (empty? (:added status))))))
 
   (testing "git-operation handles commit subcommand with no staged changes"
-    (let [test-dir (str (System/getProperty "java.io.tmpdir") "/mirthsync-git-test-" (System/currentTimeMillis))]
+    (let [test-dir (str "target/mirthsync-git-test-" (System/currentTimeMillis))]
       (ensure-git-repo test-dir)
       ;; Configure git for testing
       (let [repo (git/load-repo test-dir)]
@@ -243,7 +243,7 @@
       (is (= 0 (:exit-code result)))))
 
   (testing "git-operation handles reset with --soft flag"
-    (let [test-dir (str (System/getProperty "java.io.tmpdir") "/mirthsync-git-test-reset-soft-" (System/currentTimeMillis))]
+    (let [test-dir (str "target/mirthsync-git-test-reset-soft-" (System/currentTimeMillis))]
       (ensure-git-repo test-dir)
       (spit (File. ^String test-dir "test.txt") "initial test content")
       ;; Configure git for testing
@@ -293,7 +293,7 @@
       (is (= 0 (:exit-code result)))))
 
   (testing "git-operation handles reset with target commit"
-    (let [test-dir (str (System/getProperty "java.io.tmpdir") "/mirthsync-git-test-reset-target-" (System/currentTimeMillis))]
+    (let [test-dir (str "target/mirthsync-git-test-reset-target-" (System/currentTimeMillis))]
       (ensure-git-repo test-dir)
       (spit (File. ^String test-dir "test.txt") "test content")
       ;; Configure git for testing
@@ -316,7 +316,7 @@
         (is (= 0 (:exit-code result))))))
 
   (testing "git-operation handles reset without git repository"
-    (let [non-git-dir (str "/tmp/mirthsync-no-git-" (System/currentTimeMillis))]
+    (let [non-git-dir (str "target/mirthsync-no-git-" (System/currentTimeMillis))]
       (.mkdirs (File. ^String non-git-dir))
       (try
         (let [app-conf {:target non-git-dir}
@@ -364,7 +364,7 @@
 
   (testing "auto-commit-after-operation without git repo warns"
     ;; Use a different temp directory to isolate this test
-    (let [temp-dir (str "/tmp/mirthsync-git-test-warn-" (System/currentTimeMillis))
+    (let [temp-dir (str "target/mirthsync-git-test-warn-" (System/currentTimeMillis))
           app-conf {:target temp-dir :auto-commit true :action "pull" :server "test-server"}]
       (try
         (.mkdirs (java.io.File. ^String temp-dir))
@@ -380,7 +380,7 @@
 
   (testing "auto-commit-after-operation disabled does nothing"
     ;; Use a different temp directory to isolate this test
-    (let [temp-dir (str "/tmp/mirthsync-git-test-disabled-" (System/currentTimeMillis))
+    (let [temp-dir (str "target/mirthsync-git-test-disabled-" (System/currentTimeMillis))
           app-conf {:target temp-dir :action "pull" :server "test-server"}]
       (try
         (.mkdirs (java.io.File. ^String temp-dir))
@@ -795,14 +795,14 @@
 
   (testing "git-pull works correctly with a remote"
     ;; 1. Set up a bare "remote" repository
-    (let [remote-dir (io/file (str "/tmp/mirthsync-git-test-remote-" (System/currentTimeMillis)))]
+    (let [remote-dir (io/file (str "target/mirthsync-git-test-remote-" (System/currentTimeMillis)))]
       (try
         (.mkdirs remote-dir)
         (git/git-init :dir (.getPath remote-dir) :bare true)
 
         ;; 2. Clone the remote to a fresh test directory
-        (let [clone-dir (str "/tmp/mirthsync-git-test-clone-" (System/currentTimeMillis))]
-          (git/git-clone (str "file://" (.getPath remote-dir)) :dir clone-dir)
+        (let [clone-dir (str "target/mirthsync-git-test-clone-" (System/currentTimeMillis))]
+          (git/git-clone (str "file://" (.getAbsolutePath remote-dir)) :dir clone-dir)
           
           ;; Configure git for the clone
           (let [clone-repo (git/load-repo clone-dir)]
@@ -813,9 +813,9 @@
                 (git/git-config-save)))
 
           ;; 3. Make a commit in a temporary clone of the remote to simulate a change
-          (let [temp-clone-dir (io/file (str "/tmp/mirthsync-git-test-temp-clone-" (System/currentTimeMillis)))]
+          (let [temp-clone-dir (io/file (str "target/mirthsync-git-test-temp-clone-" (System/currentTimeMillis)))]
             (try
-              (git/git-clone (str "file://" (.getPath remote-dir)) :dir (.getPath temp-clone-dir))
+              (git/git-clone (str "file://" (.getAbsolutePath remote-dir)) :dir (.getPath temp-clone-dir))
               (spit (io/file temp-clone-dir "remote_file.txt") "from remote")
               (let [temp-repo (git/load-repo (.getPath temp-clone-dir))]
                 (-> (git/git-config-load temp-repo)
