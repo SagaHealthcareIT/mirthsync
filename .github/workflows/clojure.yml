@@ -137,13 +137,17 @@ jobs:
         git config --global init.defaultBranch main
 
     - name: Clean project
+      shell: cmd
       run: lein clean
 
     - name: Install dependencies
+      shell: cmd
       run: lein deps
 
     - name: Run tests
+      shell: cmd
       run: lein test
 
     - name: Build uberjar
+      shell: cmd
       run: lein uberjar
