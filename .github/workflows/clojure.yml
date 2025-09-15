@@ -85,11 +85,11 @@ jobs:
         git config --global user.name "Test User"
         git config --global init.defaultBranch main
 
-    - name: Clean project
-      run: lein clean
-
     - name: Install dependencies
       run: lein deps
+
+    - name: Clean project
+      run: lein clean
 
     - name: Run tests
       run: lein test
