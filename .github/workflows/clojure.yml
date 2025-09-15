@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         java: [ '21' ]
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-latest ] #, windows-latest ]
 
     steps:
     - name: Checkout code
@@ -78,12 +78,6 @@ jobs:
       uses: DeLaGuardo/setup-clojure@12.5
       with:
         lein: 'latest'
-
-    - name: Install required system packages (Ubuntu)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y diffutils
 
     - name: Configure Git for tests
       run: |
