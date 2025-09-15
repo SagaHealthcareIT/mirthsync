@@ -187,8 +187,12 @@
                           (let [bytes-read (.read tis buffer)]
                             (when (> bytes-read 0)
                               (.write fos buffer 0 bytes-read)
-                              (recur))))))))))
-          (recur)))))))
+                              (recur))))))
+                    ;; Set file permissions based on tar entry mode
+                    (let [mode (.getMode entry)]
+                      (when (and mode (not= 0 (bit-and mode 0100))) ; Check if owner execute bit is set
+                        (.setExecutable dest-file true))))))))
+          (recur))))))
 
 (defn unpack-zip
   "Cross-platform ZIP extraction"
