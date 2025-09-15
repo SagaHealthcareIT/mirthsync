@@ -7,13 +7,12 @@ on:
     branches: [ master, main ]
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  test-unix:
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
         java: [ '21' ]
-        os: [ ubuntu-latest, windows-latest ]
 
     steps:
     - name: Checkout code
@@ -23,14 +22,7 @@ jobs:
       run: |
         echo "Running on: ${{ runner.os }}"
         echo "Java version: ${{ matrix.java }}"
-
-    - name: Display OS info (Unix)
-      if: runner.os != 'Windows'
-      run: uname -a
-
-    - name: Display OS info (Windows)
-      if: runner.os == 'Windows'
-      run: systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+        uname -a
 
     - name: Cache Leiningen dependencies
       uses: actions/cache@v4
@@ -42,8 +34,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    - name: Cache Mirth Connect servers (Unix)
-      if: runner.os != 'Windows'
+    - name: Cache Mirth Connect servers
       uses: actions/cache@v4
       with:
         path: |
@@ -55,8 +46,68 @@ jobs:
           vendor/mirths/oie_unix_4_5_2.tar.gz
         key: ${{ runner.os }}-mirthconnect-servers-v2
 
-    - name: Cache Mirth Connect servers (Windows)
-      if: runner.os == 'Windows'
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ matrix.java }}
+
+    - name: Set up Clojure environment
+      uses: DeLaGuardo/setup-clojure@13.4
+      with:
+        lein: '2.9.1'
+
+    - name: Install required system packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y diffutils
+
+    - name: Configure Git for tests
+      run: |
+        git config --global user.email "test@example.com"
+        git config --global user.name "Test User"
+        git config --global init.defaultBranch main
+
+    - name: Clean project
+      run: lein clean
+
+    - name: Install dependencies
+      run: lein deps
+
+    - name: Run tests
+      run: lein test
+
+    - name: Build uberjar
+      run: lein uberjar
+
+  test-windows:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        java: [ '21' ]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Display environment info
+      run: |
+        echo "Running on: ${{ runner.os }}"
+        echo "Java version: ${{ matrix.java }}"
+        systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+
+    - name: Cache Leiningen dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.m2/repository
+          ~/.lein
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Cache Mirth Connect servers
       uses: actions/cache@v4
       with:
         path: |
