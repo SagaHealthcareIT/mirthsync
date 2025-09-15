@@ -173,7 +173,101 @@
       ;; Verify that files were pulled and not deleted
       (is (not (empty-directory? fresh-dir)))
       ;; Clean up
-      (rm "-f" "--preserve-root" "--one-file-system" "-r" fresh-dir))))
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" fresh-dir)))
+
+  (testing "Issue #73: Configuration map push works in backup mode with include-configuration-map"
+    ;; This test reproduces issue #73 where configuration map data is pulled in FullBackup.xml
+    ;; but not pushed back to the server when using backup mode with --include-configuration-map
+    (let [issue73-dir (str repo-dir "-issue73")
+          verify-dir (str issue73-dir "-verify")]
+      ;; Clean up from any previous test runs first
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" issue73-dir)
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" verify-dir)
+      ;; Pull with backup mode and include-configuration-map
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" issue73-dir
+                          "-i" "-m" "backup" "--include-configuration-map" "pull")))
+
+      ;; Verify FullBackup.xml was created
+      (is (.exists (java.io.File. (str issue73-dir "/FullBackup.xml")))
+          "FullBackup.xml should be created in backup mode")
+
+      ;; Modify the configuration map in FullBackup.xml by adding a test entry
+      (let [backup-file (str issue73-dir "/FullBackup.xml")
+            original-content (slurp backup-file)
+            ;; Add a test configuration map entry with proper syntax
+            modified-content (clojure.string/replace
+                              original-content
+                              #"</configurationMap>"
+                              "    <entry>\n      <string>MIRTHSYNC_TEST_KEY_73</string>\n      <com.mirth.connect.util.ConfigurationProperty>\n        <value>test_value_for_issue_73</value>\n        <comment>Test entry for issue #73</comment>\n      </com.mirth.connect.util.ConfigurationProperty>\n    </entry>\n  </configurationMap>")]
+        (spit backup-file modified-content)
+
+        ;; Push the modified backup back to server
+        (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" issue73-dir
+                            "-i" "-m" "backup" "--include-configuration-map" "-f" "push")))
+
+        ;; Pull again to verify the configuration map change persisted
+        (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" verify-dir
+                            "-i" "-m" "backup" "--include-configuration-map" "pull")))
+
+        ;; Check if our test configuration map entry exists in the pulled backup
+        (let [pulled-content (slurp (str verify-dir "/FullBackup.xml"))]
+          (is (clojure.string/includes? pulled-content "MIRTHSYNC_TEST_KEY_73")
+              "Configuration map changes should persist after push and pull in backup mode")
+          (is (clojure.string/includes? pulled-content "test_value_for_issue_73")
+              "Configuration map values should persist after push and pull in backup mode"))
+
+        ;; Leave directories for analysis - cleanup moved to beginning of test
+        )))
+
+  (testing "Issue #73: Configuration map is NOT overwritten in backup mode when include-configuration-map is false"
+    ;; This test verifies that --include-configuration-map=false is respected in backup mode
+    (let [issue73-false-dir (str repo-dir "-issue73-false")
+          verify-false-dir (str issue73-false-dir "-verify")]
+      ;; Clean up from any previous test runs first
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" issue73-false-dir)
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" verify-false-dir)
+
+      ;; Pull with backup mode but include-configuration-map=false
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" issue73-false-dir
+                          "-i" "-m" "backup" "pull")))
+
+      ;; Verify FullBackup.xml was created
+      (is (.exists (java.io.File. (str issue73-false-dir "/FullBackup.xml")))
+          "FullBackup.xml should be created in backup mode")
+
+      ;; Modify the configuration map in FullBackup.xml by adding a test entry
+      (let [backup-file (str issue73-false-dir "/FullBackup.xml")
+            original-content (slurp backup-file)
+            ;; Add a test configuration map entry with proper syntax
+            modified-content (clojure.string/replace
+                              original-content
+                              #"</configurationMap>"
+                              "    <entry>\n      <string>MIRTHSYNC_TEST_KEY_73_FALSE</string>\n      <com.mirth.connect.util.ConfigurationProperty>\n        <value>should_not_persist</value>\n        <comment>Test entry that should NOT persist when include-configuration-map is false</comment>\n      </com.mirth.connect.util.ConfigurationProperty>\n    </entry>\n  </configurationMap>")]
+        (spit backup-file modified-content)
+
+        ;; Push the modified backup back to server WITHOUT include-configuration-map flag
+        (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" issue73-false-dir
+                            "-i" "-m" "backup" "-f" "push")))
+
+        ;; Pull again to verify the configuration map change did NOT persist
+        (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" verify-false-dir
+                            "-i" "-m" "backup" "pull")))
+
+        ;; Check that our test configuration map entry does NOT exist in the pulled backup
+        (let [pulled-content (slurp (str verify-false-dir "/FullBackup.xml"))]
+          (is (not (clojure.string/includes? pulled-content "MIRTHSYNC_TEST_KEY_73_FALSE"))
+              "Configuration map changes should NOT persist when include-configuration-map is false")
+          (is (not (clojure.string/includes? pulled-content "should_not_persist"))
+              "Configuration map values should NOT persist when include-configuration-map is false"))
+
+        ;; Leave directories for analysis - cleanup moved to beginning of test
+        ))))
 
 
 ;;;;; original approach till the proper diff params were found

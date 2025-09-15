@@ -85,6 +85,14 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - **Path Handling**: Use canonical paths when comparing file locations to handle symbolic links and path normalization correctly.
 - **Pre-operation State Capture**: For operations that need to compare before/after state, capture the initial state before making changes.
 
+### Debugging and Troubleshooting Best Practices
+- **Integration Tests for API Issues**: When troubleshooting API-related problems, prefer integration tests that spin up real Mirth instances over unit tests. Integration tests catch actual API behavior that unit tests may miss.
+- **API Investigation Process**: Always check OpenAPI/Swagger specifications when API calls aren't working as expected. Compare what the code sends vs what the API documentation requires - query parameters and request structure are often critical.
+- **Mirth Configuration Map Structure**: Configuration map entries require specific XML structure with ConfigurationProperty objects containing `<value>` and `<comment>` elements. Simple string values will not work.
+- **Server Process Management**: Integration tests require clean server state. Kill any manually running Mirth servers (mcserver/oieserver) before running the full test suite to avoid conflicts.
+- **CLI Flag Consistency**: Ensure CLI arguments are respected across all disk modes. For example, backup mode should still honor user preferences like `--include-configuration-map`.
+- **Complex Conditional Logic**: In boolean filtering logic, add comments to clarify intent and review conditions for logical redundancy. Complex chains of `and`/`or` conditions can become hard to read and may contain unnecessary clauses.
+
 ### Dependencies
 - Requires Java JRE/JDK version 8 or higher
 - Built with Leiningen

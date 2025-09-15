@@ -156,9 +156,9 @@
 
 (defn apis [{:keys [disk-mode include-configuration-map] :as app-conf}]
   (filter #(cond
-             (and (= :server-configuration %) (not= "backup" disk-mode)) false
-             (and (not= :server-configuration %) (= "backup" disk-mode)) false
-             (and (= :configuration-map %) (not include-configuration-map)) false
+             (and (= :server-configuration %) (not= "backup" disk-mode)) false  ; exclude server-configuration when NOT in backup mode
+             (and (not= :server-configuration %) (= "backup" disk-mode)) false  ; exclude everything EXCEPT server-configuration when in backup mode
+             (and (= :configuration-map %) (not include-configuration-map)) false  ; exclude configuration-map when include-configuration-map is false
              :else true)
 
           [:server-configuration
@@ -182,6 +182,9 @@
 (defmethod mi/query-params :code-templates [_ app-conf] (override-params (app-conf :force)))
 (defmethod mi/query-params :channel-groups [_ app-conf] (override-params (app-conf :force)))
 (defmethod mi/query-params :channels [_ app-conf] (override-params (app-conf :force)))
+(defmethod mi/query-params :server-configuration [_ app-conf]
+  (when (:include-configuration-map app-conf)
+    {"overwriteConfigMap" "true"}))
 
 (defmethod mi/push-params :default [_ _] nil)
 (defmethod mi/push-params :code-template-libraries [_ app-conf]
