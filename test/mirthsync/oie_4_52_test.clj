@@ -7,8 +7,8 @@
 (use-fixtures :once oie-4-52-fixture)
 
 (def version "oie-4-52")
-(def baseline-dir (str "target/test-data/oie-" version "-baseline"))
-(def repo-dir (str "target/tmp-" version))
+(def baseline-dir (build-path "target" "test-data" (str "oie-" version "-baseline")))
+(def repo-dir (build-path "target" (str "tmp-" version)))
 
 (deftest integration-with-oie-4-52
   (test-integration repo-dir baseline-dir version))

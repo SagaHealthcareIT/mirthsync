@@ -4,7 +4,9 @@
             [clojure.test :as ct]
             [clojure.zip :as cz]
             [mirthsync.apis :as ma]
+            [mirthsync.cross-platform-utils :as cpu]
             [mirthsync.files :as mf]
+            [mirthsync.fixture-tools :refer [build-path]]
             [mirthsync.xml :as mx]))
 
 (defn update-id [loc]
@@ -55,13 +57,13 @@
   </channelGroup>
 </set>"))
 
-(def channel-group-loc (mx/to-zip (slurp "target/test-data/mirth-3-11-baseline/Channels/This is a group/index.xml")))
+(def channel-group-loc (mx/to-zip (slurp (build-path "target" "test-data" "mirth-3-11-baseline" "Channels" "This is a group" "index.xml"))))
 
 (def channel-in-group-loc
-  (mx/to-zip (slurp "target/test-data/mirth-3-11-baseline/Channels/This is a group/Http Hello2 3081.xml")))
+  (mx/to-zip (slurp (build-path "target" "test-data" "mirth-3-11-baseline" "Channels" "This is a group" "Http Hello2 3081.xml"))))
 
 (def channel-without-group-loc
-  (mx/to-zip (slurp "target/test-data/mirth-3-11-baseline/Channels/Default Group/Http 3080.xml")))
+  (mx/to-zip (slurp (build-path "target" "test-data" "mirth-3-11-baseline" "Channels" "Default Group" "Http 3080.xml"))))
 
 (def updated-channel-group-loc
   (update-id channel-group-loc))
@@ -116,13 +118,13 @@
 </list>"))
 
 (def codetemplate-library-loc
-  (mx/to-zip (slurp "target/test-data/mirth-3-11-baseline/CodeTemplates/Library 2/index.xml")))
+  (mx/to-zip (slurp (build-path "target" "test-data" "mirth-3-11-baseline" "CodeTemplates" "Library 2" "index.xml"))))
 
 (def updated-codetemplate-library-loc
   (update-id codetemplate-library-loc))
 
 (def codetemplate-loc
-  (mx/to-zip (slurp "target/test-data/mirth-3-11-baseline/CodeTemplates/Library 2/Template 2.xml")))
+  (mx/to-zip (slurp (build-path "target" "test-data" "mirth-3-11-baseline" "CodeTemplates" "Library 2" "Template 2.xml"))))
 
 ;;;; keeping this here for now as an alternate specter based implementation of
 ;;;; our add/update function in api.clj.
@@ -141,9 +143,10 @@
 ;;       (setval [:content AFTER-ELEM] child root)
 ;;       new-root)))
 
+
 (ct/deftest test-nested-file-path
   (ct/testing "Nested channel path is valid"
-    (ct/is (= "target/Channels/This is a group/Http Hello2 3081.xml"
+    (ct/is (= (build-path "target" "Channels" "This is a group" "Http Hello2 3081.xml")
               (ma/nested-file-path channel-groups-loc
                                    [:channelGroup :channels :channel]
                                    {:target "target"
@@ -151,7 +154,7 @@
                                     :api :channels}))))
 
   (ct/testing "Default Group channel path is valid"
-    (ct/is (= "target/Channels/Default Group/Http 3080.xml"
+    (ct/is (= (build-path "target" "Channels" "Default Group" "Http 3080.xml")
               (ma/nested-file-path channel-groups-loc
                                    [:channelGroup :channels :channel]
                                    {:target "target"
@@ -159,7 +162,7 @@
                                     :api :channels}))))
 
   (ct/testing "Nested code template path is valid"
-    (ct/is (= "target/CodeTemplates/Library 2/Template 2.xml"
+    (ct/is (= (build-path "target" "CodeTemplates" "Library 2" "Template 2.xml")
               (ma/nested-file-path codetemplate-libraries-loc
                                    [:codeTemplateLibrary :codeTemplates :codeTemplate]
                                    {:target "target"

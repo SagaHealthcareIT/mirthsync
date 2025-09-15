@@ -17,19 +17,19 @@
               ;; single group from the baseline so that the following
               ;; single channel push ends up in the group for
               ;; subsequent pulling
-              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/index.xml"
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" (build-path "Channels" "This is a group" "index.xml")
                          "-u" "admin" "-p" "admin" "-t" baseline-dir "-i" "-f" "push")
 
               ;; this should push nothing to an empty mirth because it's the first
               ;; test and we're restricting the path to a single disabled channel
               ;; with skip-disabled set
-              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" (build-path "Channels" "This is a group" "Http Hello2 3081")
                          "--skip-disabled" "-u" "admin" "-p" "admin" "-t" baseline-dir
                          "-i" "-f" "push")
 
               ;; to verify that there's nothing we'll pull everything from the empty
               ;; mirth and check to see if the target directory is empty
-              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" (build-path "Channels" "This is a group" "Http Hello2 3081")
                          "-u" "admin" "-p" "admin" "-t" repo-dir "--include-configuration-map"
                          "-i" "-f" "pull")
 
@@ -39,13 +39,13 @@
 
               ;; now we'll push the single channel from the baseline directory
               ;; without skip disabled and it should show up in mirth
-              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" (build-path "Channels" "This is a group" "Http Hello2 3081")
                          "-u" "admin" "-p" "admin" "-t" baseline-dir
                          "-i" "-f" "push")
 
               ;; now let's pull again with skip-enabled and we should still have
               ;; nothing in the target directory
-              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" (build-path "Channels" "This is a group" "Http Hello2 3081")
                          "--skip-disabled" "-u" "admin" "-p" "admin" "-t" repo-dir
                          "--include-configuration-map" "-i" "-f" "pull")
 
@@ -54,7 +54,7 @@
 
               ;; pull without skipping disabled and the target directory should not
               ;; be empty
-              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/"
+              (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" (build-path "Channels")
                          "-u" "admin" "-p" "admin" "-t" repo-dir "-i" "-f"
                          "--include-configuration-map" "pull")
 
@@ -73,7 +73,7 @@
                         "-i" "-f" "pull"))))
 
   (testing "Pushing/pulling using restrict-to-path and skip-disabled behaves properly."
-    (is (= 0 (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" "Channels/This is a group/Http Hello2 3081"
+    (is (= 0 (main-func "-s" "https://localhost:8443/api" "--restrict-to-path" (build-path "Channels" "This is a group" "Http Hello2 3081")
                         "--skip-disabled" "-u" "admin" "-p" "admin" "-t" baseline-dir
                         "-i" "-f" "push"))))
 
@@ -108,28 +108,28 @@
                (update-all-xml repo-dir)
                (main-func "-s" "https://localhost:8443/api"
                           "-u" "admin" "-p" "admin" "-t" repo-dir
-                          "-i" "--restrict-to-path" "CodeTemplates" "push")))))
+                          "-i" "--restrict-to-path" (build-path "CodeTemplates") "push")))))
 
   (testing "Code template push succeeds wth changes and --force enabled."
     (is (= 0 (do
                (update-all-xml repo-dir)
                (main-func "-s" "https://localhost:8443/api"
                           "-u" "admin" "-p" "admin" "-t" repo-dir
-                          "-i" "--restrict-to-path" "CodeTemplates" "-f" "push")))))
+                          "-i" "--restrict-to-path" (build-path "CodeTemplates") "-f" "push")))))
 
   (testing "Channel push fails wth changes and --force not enabled."
     (is (= 1 (do
                (update-all-xml repo-dir)
                (main-func "-s" "https://localhost:8443/api"
                           "-u" "admin" "-p" "admin" "-t" repo-dir
-                          "-i" "--restrict-to-path" "Channels" "push")))))
+                          "-i" "--restrict-to-path" (build-path "Channels") "push")))))
 
   (testing "Channel push succeeds wth changes and --force enabled."
     (is (= 0 (do
                (update-all-xml repo-dir)
                (main-func "-s" "https://localhost:8443/api"
                           "-u" "admin" "-p" "admin" "-t" repo-dir
-                          "-i" "--restrict-to-path" "Channels" "-f" "push")))))
+                          "-i" "--restrict-to-path" (build-path "Channels") "-f" "push")))))
 
   (testing "Disk mode 0 pull and push works"
     (let [repo-dir (str repo-dir "-0")]

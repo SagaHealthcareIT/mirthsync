@@ -8,25 +8,42 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
         java: [ '21' ]
+        os: [ ubuntu-latest, windows-latest ]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Display environment info
+      run: |
+        echo "Running on: ${{ runner.os }}"
+        echo "Java version: ${{ matrix.java }}"
+
+    - name: Display OS info (Unix)
+      if: runner.os != 'Windows'
+      run: uname -a
+
+    - name: Display OS info (Windows)
+      if: runner.os == 'Windows'
+      run: systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+
     - name: Cache Leiningen dependencies
       uses: actions/cache@v4
       with:
-        path: ~/.m2/repository
+        path: |
+          ~/.m2/repository
+          ~/.lein
         key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    - name: Cache Mirth Connect servers
+    - name: Cache Mirth Connect servers (Unix)
+      if: runner.os != 'Windows'
       uses: actions/cache@v4
       with:
         path: |
@@ -36,6 +53,19 @@ jobs:
           vendor/mirths/mirthconnect-3.9.0.b2526-unix.tar.gz
           vendor/mirths/mirthconnect-3.8.0.b2464-unix.tar.gz
           vendor/mirths/oie_unix_4_5_2.tar.gz
+        key: ${{ runner.os }}-mirthconnect-servers-v2
+
+    - name: Cache Mirth Connect servers (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: |
+          vendor/mirths/mirthconnect-4.0.1.b293-windows.zip
+          vendor/mirths/mirthconnect-3.12.0.b2650-windows.zip
+          vendor/mirths/mirthconnect-3.11.0.b2609-windows.zip
+          vendor/mirths/mirthconnect-3.9.0.b2526-windows.zip
+          vendor/mirths/mirthconnect-3.8.0.b2464-windows.zip
+          vendor/mirths/oie_windows_4_5_2.zip
         key: ${{ runner.os }}-mirthconnect-servers-v2
 
     - name: Set up JDK ${{ matrix.java }}
@@ -49,7 +79,8 @@ jobs:
       with:
         lein: 'latest'
 
-    - name: Install required system packages
+    - name: Install required system packages (Ubuntu)
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
         sudo apt-get install -y diffutils

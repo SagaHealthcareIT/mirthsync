@@ -25,3 +25,4 @@ pom.xml.asc
 /home/
 DS_Store
 .aider*
+.claude/settings.local.json
