@@ -22,7 +22,7 @@
           target-path "target/test"]
       (let [orphaned-files (#'mirthsync.actions/find-orphaned-files-in-list files expected-paths target-path)]
         (is (= 1 (count orphaned-files)))
-        (is (= (.getAbsolutePath (java.io.File. "target/test/channel2.xml")) (.getAbsolutePath (first orphaned-files))))))))
+        (is (= (.getAbsolutePath (java.io.File. "target/test/channel2.xml")) (.getAbsolutePath ^java.io.File (first orphaned-files))))))))
 
 (deftest capture-pre-pull-files-test
   (testing "root-level APIs only capture managed files, not user files"

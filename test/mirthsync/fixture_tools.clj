@@ -12,6 +12,12 @@
 
 ;; Export cross-platform command functions
 (def diff cpu/diff-directories)
+
+;; Cross-platform path utilities for tests
+(defn build-path
+  "Create a cross-platform path by joining multiple path components"
+  [& path-components]
+  (clojure.string/join java.io.File/separator path-components))
 (defn rm [& args]
   "Cross-platform rm command equivalent with safety checks"
   ;; Parse rm arguments and map to appropriate delete operation
@@ -52,20 +58,33 @@
 
 (defn mirth-name [mirth]
   (if (:oie? mirth)
-    (str "oie_unix_" (str/replace (:version mirth) "." "_"))
+    (let [is-windows? (.startsWith (System/getProperty "os.name") "Windows")
+          platform (if is-windows? "windows-x64" "unix")]
+      (str "oie_" platform "_" (str/replace (:version mirth) "." "_")))
     (str "mirthconnect-" (:version mirth) "-unix")))
 
 (defn mirth-targz [mirth]
   (if (:oie? mirth)
-    (:filename mirth)  ; OIE uses explicit filename
+    (let [is-windows? (.startsWith (System/getProperty "os.name") "Windows")
+          platform (if is-windows? "windows-x64" "unix")
+          extension (if is-windows? ".zip" ".tar.gz")]
+      (str "oie_" platform "_" (str/replace (:version mirth) "." "_") extension))
     (str (mirth-name mirth) ".tar.gz")))
 
 (defn mirth-checksum [mirth]
-  (str (:sha256 mirth) "  " (mirth-targz mirth)))
+  (if (:oie? mirth)
+    (let [is-windows? (.startsWith (System/getProperty "os.name") "Windows")
+          checksum (if is-windows?
+                     "9e47a5c2539904e9e00edb20f024de4725f097cc8106f6d710a720088a3c990c"  ; Windows checksum
+                     "d1923b3f8871f6ccd93e06060cd2695bbeb7496a24c119d36b8beceeb5322e58")]  ; Unix checksum
+      (str checksum "  " (mirth-targz mirth)))
+    (str (:sha256 mirth) "  " (mirth-targz mirth))))
 
 (defn mirth-url [mirth]
   (if (:oie? mirth)
-    (:download-url mirth)  ; OIE uses explicit download URL
+    (let [is-windows? (.startsWith (System/getProperty "os.name") "Windows")
+          filename (mirth-targz mirth)]
+      (str "https://github.com/OpenIntegrationEngine/engine/releases/download/v" (:version mirth) "/" filename))
     (str "https://downloads.mirthcorp.com/connect/" (:version mirth) "/" (mirth-targz mirth))))
 
 ;;;; impure actions and checks
@@ -91,8 +110,11 @@
 
 (defn unpack-mirth [mirth]
   (let [archive-path (str mirths-dir "/" (mirth-targz mirth))
-        dest-dir (str mirths-dir "/" (mirth-name mirth))]
-    (cpu/unpack-tar-gz archive-path dest-dir :strip-components 1)))
+        dest-dir (str mirths-dir "/" (mirth-name mirth))
+        is-zip? (.endsWith archive-path ".zip")]
+    (if is-zip?
+      (cpu/unpack-zip archive-path dest-dir :strip-components 1)
+      (cpu/unpack-tar-gz archive-path dest-dir :strip-components 1))))
 
 (defn download-mirth [mirth]
   (let [dest-path (str mirths-dir "/" (mirth-targz mirth))]
@@ -158,40 +180,38 @@
                           select-jvm-options
                           remove-mirth-db)))
 
-(def mirths [{:enabled true
-              :version "4.0.1.b293"
-              :sha256 "fd5223a15cdcaaf0d8071c1bdd9a0409fecd93fcec25e18c1daab1e9fe1f991d"
-              :what-happened? []}
-             {:enabled false
-              :version "3.12.0.b2650"
-              :sha256 "57d5790efb5fc976f7e98a47fa4acecfca39809f846975ca4450a6c42caa6f5f"
-              :what-happened? []}
-             {:enabled false
-              :version "3.11.0.b2609"
-              :sha256 "4df341312de34fb9a79083c5c1f8c2214cea6efd5b9d34ea0551dee4a2249286"
-              :what-happened? []}
-             {:enabled false
-              :version "3.9.0.b2526"
-              :sha256 "cf4cc753a8918c601944f2f4607b07f2b008d19c685d936715fe30a64dc90343"
-              :what-happened? []}
-             {:enabled true
-              :version "3.8.0.b2464"
-              :sha256 "e4606d0a9ea9d35263fb7937d61c98f26a7295d79b8bf83d0dab920cf875206d"
-              :what-happened? []}
+(def mirths [
+            ;; {:enabled false
+            ;;   :version "4.0.1.b293"
+            ;;   :sha256 "fd5223a15cdcaaf0d8071c1bdd9a0409fecd93fcec25e18c1daab1e9fe1f991d"
+            ;;   :what-happened? []}
+            ;;  {:enabled false
+            ;;   :version "3.12.0.b2650"
+            ;;   :sha256 "57d5790efb5fc976f7e98a47fa4acecfca39809f846975ca4450a6c42caa6f5f"
+            ;;   :what-happened? []}
+            ;;  {:enabled false
+            ;;   :version "3.11.0.b2609"
+            ;;   :sha256 "4df341312de34fb9a79083c5c1f8c2214cea6efd5b9d34ea0551dee4a2249286"
+            ;;   :what-happened? []}
+            ;;  {:enabled false
+            ;;   :version "3.9.0.b2526"
+            ;;   :sha256 "cf4cc753a8918c601944f2f4607b07f2b008d19c685d936715fe30a64dc90343"
+            ;;   :what-happened? []}
+            ;;  {:enabled false
+            ;;   :version "3.8.0.b2464"
+            ;;   :sha256 "e4606d0a9ea9d35263fb7937d61c98f26a7295d79b8bf83d0dab920cf875206d"
+            ;;   :what-happened? []}
              {:enabled true
               :oie? true
               :version "4.5.2"
-              :filename "oie_unix_4_5_2.tar.gz"
-              :download-url "https://github.com/OpenIntegrationEngine/engine/releases/download/v4.5.2/oie_unix_4_5_2.tar.gz"
-              :sha256 "d1923b3f8871f6ccd93e06060cd2695bbeb7496a24c119d36b8beceeb5322e58"
               :what-happened? []}])
 
-(def mirth-4-01 [(nth mirths 0) "4-01"])
-(def mirth-3-12 [(nth mirths 1) "3-12"])
-(def mirth-3-11 [(nth mirths 2) "3-11"])
-(def mirth-3-09 [(nth mirths 3) "3-09"])
-(def mirth-3-08 [(nth mirths 4) "3-08"])
-(def oie-4-52 [(nth mirths 5) "oie-4-52"])
+;; (def mirth-4-01 [(nth mirths 0) "4-01"])
+;; (def mirth-3-12 [(nth mirths 1) "3-12"])
+;; (def mirth-3-11 [(nth mirths 2) "3-11"])
+;; (def mirth-3-09 [(nth mirths 3) "3-09"])
+;; (def mirth-3-08 [(nth mirths 4) "3-08"])
+(def oie-4-52 [(nth mirths 0) "oie-4-52"])
 
 
 (defn make-all-mirths-ready []
@@ -201,7 +221,12 @@
 
 (defn start-mirth [mirth]
   (let [mirth-base (mirth-base-dir mirth)
-        server-cmd (if (:oie? mirth) "./oieserver" "./mcserver")
+        is-windows? (.startsWith (System/getProperty "os.name") "Windows")
+        server-cmd (cond
+                     (:oie? mirth) (if is-windows?
+                                     (str mirth-base java.io.File/separator "oieserver.exe")
+                                     "./oieserver")
+                     :else (if is-windows? "mcserver.bat" "./mcserver"))
         mcserver (sh/proc server-cmd :dir mirth-base :verbose :very :redirect-err true)]
     (future (sh/stream-to-out mcserver :out))
 

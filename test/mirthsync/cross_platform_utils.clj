@@ -5,7 +5,7 @@
   (:import [java.io File FileInputStream ByteArrayOutputStream]
            [java.nio.file Files Paths StandardCopyOption LinkOption FileVisitOption]
            [java.nio.file.attribute BasicFileAttributes]
-           [java.util.zip GZIPInputStream]
+           [java.util.zip GZIPInputStream ZipInputStream ZipEntry]
            [java.security MessageDigest]
            [org.apache.commons.io FileUtils]
            [org.apache.commons.compress.archivers.tar TarArchiveInputStream TarArchiveEntry]
@@ -143,11 +143,17 @@
   "Cross-platform file download with progress indication"
   [url dest-path & {:keys [progress-fn]}]
   (let [url-obj (URL. url)
-        rbc (Channels/newChannel (.openStream url-obj))
         dest-file (io/file dest-path)]
-    (with-open [fos (io/output-stream dest-file)]
-      (let [channel (.getChannel fos)]
-        (.transferFrom channel rbc 0 Long/MAX_VALUE)))
+    ;; Ensure parent directory exists
+    (.mkdirs (.getParentFile dest-file))
+    (let [conn (.openConnection url-obj)]
+      ;; Follow redirects
+      (when (instance? java.net.HttpURLConnection conn)
+        (.setInstanceFollowRedirects ^java.net.HttpURLConnection conn true))
+      (with-open [in (.getInputStream conn)
+                  out (java.io.FileOutputStream. dest-file)]
+        ;; Use simple copy instead of NIO channels for better compatibility
+        (io/copy in out)))
     (when progress-fn (progress-fn dest-path))
     dest-path))
 
@@ -164,7 +170,10 @@
         (when-let [entry (.getNextTarEntry tis)]
           (let [name (.getName entry)
                 path-parts (str/split name #"/")
-                stripped-parts (drop strip-count path-parts)
+                ;; Only strip if we have enough parts to strip
+                stripped-parts (if (> (count path-parts) strip-count)
+                                 (drop strip-count path-parts)
+                                 path-parts)
                 stripped-name (str/join "/" stripped-parts)]
             (when (not (str/blank? stripped-name))
               (let [dest-file (io/file dest-dir stripped-name)]
@@ -180,6 +189,37 @@
                               (.write fos buffer 0 bytes-read)
                               (recur))))))))))
           (recur)))))))
+
+(defn unpack-zip
+  "Cross-platform ZIP extraction"
+  [archive-path dest-dir & {:keys [strip-components]}]
+  (mkdir-p dest-dir)
+  (let [strip-count (or strip-components 0)]
+    (with-open [fis (FileInputStream. archive-path)
+                zis (ZipInputStream. fis)]
+      (loop []
+        (when-let [entry (.getNextEntry zis)]
+          (let [name (.getName entry)
+                path-parts (str/split name #"/")
+                ;; Only strip if we have enough parts to strip
+                stripped-parts (if (> (count path-parts) strip-count)
+                                 (drop strip-count path-parts)
+                                 path-parts)
+                stripped-name (str/join "/" stripped-parts)]
+            (when (not (str/blank? stripped-name))
+              (let [dest-file (io/file dest-dir stripped-name)]
+                (if (.isDirectory entry)
+                  (.mkdirs dest-file)
+                  (do
+                    (.mkdirs (.getParentFile dest-file))
+                    (with-open [fos (io/output-stream dest-file)]
+                      (let [buffer (byte-array 4096)]
+                        (loop []
+                          (let [bytes-read (.read zis buffer)]
+                            (when (> bytes-read 0)
+                              (.write fos buffer 0 bytes-read)
+                              (recur)))))))))))
+          (recur))))))
 
 ;; Process operations
 (defn java-version
@@ -332,14 +372,14 @@
               only-in-1 (clojure.set/difference files1 files2)
               only-in-2 (clojure.set/difference files2 files1)
               different-files (filter #(not (compare-files
-                                           (str file1 "/" %)
-                                           (str file2 "/" %)
+                                           (str file1 File/separator %)
+                                           (str file2 File/separator %)
                                            ignore-patterns))
                                      common-files)]
           (let [differences (concat
                            (map #(str "Only in " file1 ": " %) only-in-1)
                            (map #(str "Only in " file2 ": " %) only-in-2)
-                           (map #(str "Files " file1 "/" % " and " file2 "/" % " differ") different-files))]
+                           (map #(str "Files " file1 File/separator % " and " file2 File/separator % " differ") different-files))]
             (if (and (empty? differences) suppress-common?)
               ""
               (str/join "\n" differences))))
