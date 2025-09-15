@@ -1,4 +1,4 @@
-VERSION := 3.3.0-SNAPSHOT
+VERSION := 3.4.0-SNAPSHOT
 
 default:
 	echo "use lein directly or read the README.md file"
