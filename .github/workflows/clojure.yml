@@ -75,9 +75,9 @@ jobs:
         java-version: ${{ matrix.java }}
 
     - name: Set up Clojure environment
-      uses: DeLaGuardo/setup-clojure@12.5
+      uses: DeLaGuardo/setup-clojure@13.4
       with:
-        lein: 'latest'
+        lein: '2.9.1'
 
     - name: Configure Git for tests
       run: |
@@ -85,11 +85,11 @@ jobs:
         git config --global user.name "Test User"
         git config --global init.defaultBranch main
 
-    - name: Install dependencies
-      run: lein deps
-
     - name: Clean project
       run: lein clean
+
+    - name: Install dependencies
+      run: lein deps
 
     - name: Run tests
       run: lein test
