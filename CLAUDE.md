@@ -88,6 +88,7 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 ### Debugging and Troubleshooting Best Practices
 - **Integration Tests for API Issues**: When troubleshooting API-related problems, prefer integration tests that spin up real Mirth instances over unit tests. Integration tests catch actual API behavior that unit tests may miss.
 - **API Investigation Process**: Always check OpenAPI/Swagger specifications when API calls aren't working as expected. Compare what the code sends vs what the API documentation requires - query parameters and request structure are often critical.
+- **API Documentation Access**: When the Mirth server (oieserver) is running, the OpenAPI specification is available at `https://localhost:8443/api/openapi.json` for reviewing API endpoints and request/response formats.
 - **Mirth Configuration Map Structure**: Configuration map entries require specific XML structure with ConfigurationProperty objects containing `<value>` and `<comment>` elements. Simple string values will not work.
 - **Server Process Management**: Integration tests require clean server state. Kill any manually running Mirth servers (mcserver/oieserver) before running the full test suite to avoid conflicts.
 - **CLI Flag Consistency**: Ensure CLI arguments are respected across all disk modes. For example, backup mode should still honor user preferences like `--include-configuration-map`.

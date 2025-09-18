@@ -219,7 +219,8 @@
 (defmethod mi/after-push :channels [api app-conf result]
   (if (true-200 result)
     (do
-      (when (:deploy app-conf)
+      (cond
+        (:deploy app-conf)
         (try+
          (mhttp/post-xml
           app-conf
@@ -229,7 +230,12 @@
           false)
          (catch Object {:keys [body]}
            (log/warn (str "There was an error deploying the channel.
-" body)))))
+" body))))
+
+        (:deploy-all app-conf)
+        (let [channel-id (mi/find-id api (:el-loc app-conf))]
+          (log/infof "Collecting channel ID for bulk deployment: %s" channel-id)
+          (swap! (:bulk-deploy-channels app-conf) conj channel-id)))
       true)
     (do (log/error (str "Unable to save the channel."
                         (when-not (app-conf :force) " There may be remote changes or the remote version does not match the local version. If you want to push the local changes anyway you can use the \"-f\" flag to force an overwrite.")))
@@ -238,6 +244,27 @@
 
 (defmethod mi/after-push :alerts [_ app-conf result] (null-204 result))
 (defmethod mi/after-push :server-configuration [_ app-conf result] (null-204 result))
+
+(defn deploy-all-channels
+  "Deploy all collected channels in one API call."
+  [app-conf]
+  (when-let [channel-ids @(:bulk-deploy-channels app-conf)]
+    (when (seq channel-ids)
+      (log/infof "Deploying %d channels in bulk: %s" (count channel-ids) (pr-str channel-ids))
+      (try+
+       (let [channel-set (apply str "<set>"
+                               (map #(str "<string>" % "</string>") channel-ids)
+                               "</set>")]
+         (mhttp/post-xml
+          app-conf
+          "/channels/_deploy"
+          channel-set
+          {:returnErrors "true" :debug "false"}
+          false)
+         (log/info "Bulk channel deployment completed successfully"))
+       (catch Object {:keys [body]}
+         (log/error (str "Error during bulk channel deployment: " body))
+         false)))))
 
 (defmethod mi/pre-node-action :default [_ app-conf] app-conf)
 (defmethod mi/pre-node-action :code-template-libraries [_ app-conf]

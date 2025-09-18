@@ -38,7 +38,14 @@
                                conf-with-pre-pull (if (= "pull" action)
                                                      (api/iterate-apis preprocessed-conf (api/apis preprocessed-conf) act/capture-pre-pull-local-files)
                                                      preprocessed-conf)
-                               processed-conf (api/iterate-apis conf-with-pre-pull (api/apis conf-with-pre-pull) action-fn)]
+                               ;; Initialize bulk deployment atom if needed
+                               conf-with-bulk-deploy (if (and (= "push" action) (:deploy-all conf-with-pre-pull))
+                                                        (assoc conf-with-pre-pull :bulk-deploy-channels (atom []))
+                                                        conf-with-pre-pull)
+                               processed-conf (api/iterate-apis conf-with-bulk-deploy (api/apis conf-with-bulk-deploy) action-fn)]
+                           ;; After push with --deploy-all, deploy all channels
+                           (when (and (= "push" action) (:deploy-all processed-conf))
+                             (api/deploy-all-channels processed-conf))
                            ;; After pull, always check for orphaned files
                            (if (= "pull" action)
                              (act/cleanup-orphaned-files-with-pre-pull processed-conf (api/apis processed-conf))
