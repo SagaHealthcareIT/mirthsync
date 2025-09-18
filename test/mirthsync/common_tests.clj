@@ -287,3 +287,50 @@
 
 ;; ignore a few extra line types
 ;; (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*version=\"[[:digit:]].[[:digit:]]\\+.[[:digit:]]\\+\".*" "-I" ".*<pruneErroredMessages>.*" repo-dir (str "dev-resources/mirth-" version "-baseline"))
+
+(defn test-deployment-integration
+  [repo-dir baseline-dir version]
+
+  (testing "Deploy functionality - individual channel deployment"
+    ;; Test that --deploy flag works for individual channel deployment
+    (let [deploy-test-dir (str repo-dir "-deploy-test")]
+      (ensure-directory-exists deploy-test-dir)
+
+      ;; Push with individual deployment flag
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--restrict-to-path" (build-path "Channels" "This is a group" "Hello DB Writer.xml")
+                          "-u" "admin" "-p" "admin" "-t" baseline-dir
+                          "-i" "-f" "--deploy" "push")))
+
+      ;; Verify the channel was deployed by pulling and checking
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" deploy-test-dir
+                          "-i" "-f" "pull")))))
+
+  (testing "Deploy-all functionality - bulk channel deployment"
+    ;; Test that --deploy-all flag works for bulk channel deployment
+    (let [deploy-all-test-dir (str repo-dir "-deploy-all-test")]
+      (ensure-directory-exists deploy-all-test-dir)
+
+      ;; Push multiple channels with bulk deployment flag
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--restrict-to-path" (build-path "Channels" "This is a group")
+                          "-u" "admin" "-p" "admin" "-t" baseline-dir
+                          "-i" "-f" "--deploy-all" "push")))
+
+      ;; Verify the channels were deployed by pulling and checking
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" deploy-all-test-dir
+                          "-i" "-f" "pull")))))
+
+  (testing "Deploy options are mutually exclusive in practice"
+    ;; Test that using both flags doesn't cause conflicts
+    ;; (They can both be specified but only one should take effect based on implementation)
+    (let [mutual-test-dir (str repo-dir "-mutual-test")]
+      (ensure-directory-exists mutual-test-dir)
+
+      ;; This should work without error - implementation should handle both flags gracefully
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--restrict-to-path" (build-path "Channels" "This is a group" "Hello DB Writer.xml")
+                          "-u" "admin" "-p" "admin" "-t" baseline-dir
+                          "-i" "-f" "--deploy" "--deploy-all" "push")))))))

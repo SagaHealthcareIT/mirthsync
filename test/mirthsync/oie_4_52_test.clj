@@ -12,3 +12,6 @@
 
 (deftest integration-with-oie-4-52
   (test-integration repo-dir baseline-dir version))
+
+(deftest deployment-integration-with-oie-4-52
+  (test-deployment-integration repo-dir baseline-dir version))
