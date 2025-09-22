@@ -333,4 +333,4 @@
       (is (= 0 (main-func "-s" "https://localhost:8443/api"
                           "--restrict-to-path" (build-path "Channels" "This is a group" "Hello DB Writer.xml")
                           "-u" "admin" "-p" "admin" "-t" baseline-dir
-                          "-i" "-f" "--deploy" "--deploy-all" "push")))))))
+                          "-i" "-f" "--deploy" "--deploy-all" "push"))))))
