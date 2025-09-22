@@ -84,9 +84,13 @@
         disabled channels should be pushed or pulled. Default: false"
     :default false]
 
-   ["-d" "--deploy" "Deply channels on push
+   ["-d" "--deploy" "Deploy channels on push
         During a push, deploy each included channel immediately
         after saving the channel to Mirth."]
+
+   [nil "--deploy-all" "Deploy all channels in one API call at the end
+        During a push, collect all channel IDs and deploy them together
+        at the end, allowing Mirth's dependency logic to control order."]
 
    ["-I" "--interactive" "
         Allow for console prompts for user input"]

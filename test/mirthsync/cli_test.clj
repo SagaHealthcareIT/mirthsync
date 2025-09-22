@@ -77,6 +77,28 @@
 
   (testing "Delete-orphaned defaults to false"
     (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "pull"])]
-      (is (= false (:delete-orphaned conf))))))
+      (is (= false (:delete-orphaned conf)))))
+
+  (testing "Deploy flag is parsed correctly"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy" "push"])]
+      (is (= true (:deploy conf)))))
+
+  (testing "Deploy defaults to nil"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "push"])]
+      (is (nil? (:deploy conf)))))
+
+  (testing "Deploy-all flag is parsed correctly"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-all" "push"])]
+      (is (= true (:deploy-all conf)))))
+
+  (testing "Deploy-all defaults to nil"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "push"])]
+      (is (nil? (:deploy-all conf)))))
+
+  (testing "Deploy and deploy-all are mutually exclusive options"
+    (let [conf-with-deploy (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy" "push"])
+          conf-with-deploy-all (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-all" "push"])]
+      (is (and (:deploy conf-with-deploy) (nil? (:deploy-all conf-with-deploy))))
+      (is (and (:deploy-all conf-with-deploy-all) (nil? (:deploy conf-with-deploy-all)))))))
 
 

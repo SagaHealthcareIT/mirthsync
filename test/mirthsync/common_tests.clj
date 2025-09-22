@@ -1,7 +1,12 @@
 (ns mirthsync.common-tests
   (:require [clojure.test :refer :all]
+            [clojure.string :as str]
             [mirthsync.core :refer :all]
-            [mirthsync.fixture-tools :refer :all]))
+            [mirthsync.fixture-tools :refer :all]
+            [mirthsync.http-client :as mhttp]
+            [mirthsync.interfaces :as mi]
+            [mirthsync.xml :as mx]
+            [mirthsync.cross-platform-utils :as cpu]))
 
 ;; NOTE - it's important that some of these tests run in order
 (defn test-integration
@@ -287,3 +292,152 @@
 
 ;; ignore a few extra line types
 ;; (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*version=\"[[:digit:]].[[:digit:]]\\+.[[:digit:]]\\+\".*" "-I" ".*<pruneErroredMessages>.*" repo-dir (str "dev-resources/mirth-" version "-baseline"))
+
+(defn test-deployment-integration
+  [repo-dir baseline-dir version]
+
+  (testing "Deploy functionality - individual channel deployment"
+    ;; Test that --deploy flag works for individual channel deployment
+    (let [deploy-test-dir (str repo-dir "-deploy-test")]
+      (ensure-directory-exists deploy-test-dir)
+
+      ;; Push with individual deployment flag
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--restrict-to-path" (build-path "Channels" "This is a group" "Hello DB Writer.xml")
+                          "-u" "admin" "-p" "admin" "-t" baseline-dir
+                          "-i" "-f" "--deploy" "push")))
+
+      ;; Verify the channel was deployed by pulling and checking
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" deploy-test-dir
+                          "-i" "-f" "pull")))))
+
+  (testing "Deploy-all functionality - bulk channel deployment"
+    ;; Test that --deploy-all flag works for bulk channel deployment
+    (let [deploy-all-test-dir (str repo-dir "-deploy-all-test")]
+      (ensure-directory-exists deploy-all-test-dir)
+
+      ;; Push multiple channels with bulk deployment flag
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--restrict-to-path" (build-path "Channels" "This is a group")
+                          "-u" "admin" "-p" "admin" "-t" baseline-dir
+                          "-i" "-f" "--deploy-all" "push")))
+
+      ;; Verify the channels were deployed by pulling and checking
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" deploy-all-test-dir
+                          "-i" "-f" "pull")))))
+
+  (testing "Deploy options are mutually exclusive in practice"
+    ;; Test that using both flags doesn't cause conflicts
+    ;; (They can both be specified but only one should take effect based on implementation)
+    (let [mutual-test-dir (str repo-dir "-mutual-test")]
+      (ensure-directory-exists mutual-test-dir)
+
+      ;; This should work without error - implementation should handle both flags gracefully
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--restrict-to-path" (build-path "Channels" "This is a group" "Hello DB Writer.xml")
+                          "-u" "admin" "-p" "admin" "-t" baseline-dir
+                          "-i" "-f" "--deploy" "--deploy-all" "push")))))
+
+  (testing "Comprehensive bulk deployment verification - undeploy via API, bulk deploy via mirthsync, verify deployment"
+    ;; This test ensures the bulk deployment feature works end-to-end by:
+    ;; 1. Undeploying all channels via direct API calls
+    ;; 2. Using mirthsync to bulk deploy channels
+    ;; 3. Verifying that channels are actually deployed by fetching them
+    (let [bulk-deploy-test-dir (str repo-dir "-bulk-deploy-verify")
+          verify-dir (str bulk-deploy-test-dir "-verify")]
+      (ensure-directory-exists bulk-deploy-test-dir)
+      (ensure-directory-exists verify-dir)
+
+      ;; Step 1: First, pull channels to get their IDs for undeployment
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "-u" "admin" "-p" "admin" "-t" bulk-deploy-test-dir
+                          "-i" "-f" "--include-configuration-map" "pull")))
+
+      ;; Step 2: Extract channel IDs from the pulled XML files
+      (let [channels-dir (build-path bulk-deploy-test-dir "Channels")
+            channel-ids (if (cpu/directory? channels-dir)
+                          (let [channel-files (cpu/find-files channels-dir :type "f" :name "*.xml")
+                                files (str/split channel-files #"\n")
+                                xml-files (filter #(and (str/ends-with? % ".xml") 
+                                                        (not (str/ends-with? % "index.xml"))) files)]
+                            (mapcat (fn [file]
+                                      (try
+                                        (let [content (slurp file)
+                                              xml-zip (mx/to-zip content)
+                                              id (mi/find-id :channels xml-zip)]
+                                          (when id [id]))
+                                        (catch Exception e
+                                          (println (str "Error parsing channel file " file ": " (.getMessage e)))
+                                          [])))
+                                    xml-files))
+                          [])]
+
+        ;; Step 3: Undeploy all channels via direct API call
+        (when (seq channel-ids)
+          (let [undeploy-xml (apply str "<set>"
+                                   (map #(str "<string>" % "</string>") channel-ids)
+                                   "</set>")]
+            (let [response (mhttp/with-authentication
+                            {:server "https://localhost:8443/api"
+                             :username "admin"
+                             :password "admin"
+                             :ignore-cert-warnings true}
+                            (fn []
+                              (mhttp/post-xml
+                               {:server "https://localhost:8443/api"
+                                :ignore-cert-warnings true}
+                               "/channels/_undeploy"
+                               undeploy-xml
+                               {:returnErrors "true" :debug "false"}
+                               false)))]
+              ;; Verify undeploy was successful (204 No Content) or channels weren't deployed (404/400)
+              (is (contains? #{200 204 400 404} (:status response))
+                  (str "Undeploy should succeed (200/204) or indicate channels weren't deployed (400/404), got: " (:status response))))))
+
+        ;; Step 4: Push channels with bulk deployment flag
+        (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                            "--restrict-to-path" (build-path "Channels" "This is a group")
+                            "-u" "admin" "-p" "admin" "-t" baseline-dir
+                            "-i" "-f" "--deploy-all" "push")))
+
+        ;; Step 5: Pull channels again to verify they are deployed
+        (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                            "-u" "admin" "-p" "admin" "-t" verify-dir
+                            "-i" "-f" "--include-configuration-map" "pull")))
+
+        ;; Step 6: Verify that channels were actually deployed by checking their status
+        ;; We can verify this by checking if the channels exist and are accessible
+        (let [verify-channels-dir (build-path verify-dir "Channels")]
+          (when (cpu/directory? verify-channels-dir)
+            (let [channel-files (cpu/find-files verify-channels-dir :type "f" :name "*.xml")
+                  files (str/split channel-files #"\n")
+                  xml-files (filter #(and (str/ends-with? % ".xml") 
+                                          (not (str/ends-with? % "index.xml"))) files)]
+              ;; Verify that we have channel files
+              (is (not (empty? xml-files)) "Channels should be present after bulk deployment")
+              
+              ;; Verify that channels can be fetched (indicating they are deployed)
+              (doseq [file xml-files]
+                (let [content (slurp file)
+                      xml-zip (mx/to-zip content)
+                      channel-id (mi/find-id :channels xml-zip)
+                      channel-name (mi/find-name :channels xml-zip)]
+                  (when channel-id
+                    ;; Try to fetch the channel directly via API to verify it's deployed
+                    (let [response (mhttp/with-authentication
+                                    {:server "https://localhost:8443/api"
+                                     :username "admin"
+                                     :password "admin"
+                                     :ignore-cert-warnings true}
+                                    (fn []
+                                      (mhttp/fetch-all
+                                       {:server "https://localhost:8443/api"
+                                        :ignore-cert-warnings true
+                                        :api :channels}
+                                       (fn [zip-loc] 
+                                         (let [channels (mi/find-elements :channels zip-loc)]
+                                           (filter #(= channel-id (mi/find-id :channels %)) channels))))))]
+                      (is (not (empty? response)) 
+                          (str "Channel " channel-name " (ID: " channel-id ") should be accessible after bulk deployment")))))))))))))

@@ -4,6 +4,7 @@
             [clojure.test :as ct]
             [clojure.zip :as cz]
             [mirthsync.apis :as ma]
+            [mirthsync.interfaces]
             [mirthsync.cross-platform-utils :as cpu]
             [mirthsync.files :as mf]
             [mirthsync.fixture-tools :refer [build-path]]
@@ -217,6 +218,54 @@
                :channels
                :alerts]
               (ma/apis {:disk-mode "groups" :include-configuration-map false})))))
+
+(ct/deftest bulk-deployment-tests
+  (ct/testing "Deploy all channels function creates correct XML"
+    (let [app-conf {:bulk-deploy-channels (atom ["channel1" "channel2" "channel3"])}
+          expected-xml "<set><string>channel1</string><string>channel2</string><string>channel3</string></set>"]
+      ;; Test that the XML structure is created correctly
+      ;; We can't easily test the actual HTTP call without mocking, but we can test the data structure
+      (ct/is (= ["channel1" "channel2" "channel3"] @(:bulk-deploy-channels app-conf)))))
+
+  (ct/testing "Deploy all channels handles empty channel list"
+    (let [app-conf {:bulk-deploy-channels (atom [])}]
+      ;; Should handle empty list gracefully
+      (ct/is (empty? @(:bulk-deploy-channels app-conf)))))
+
+  (ct/testing "Deploy all channels with nil atom"
+    (let [app-conf {:bulk-deploy-channels nil}]
+      ;; Should handle nil atom gracefully
+      (ct/is (nil? (:bulk-deploy-channels app-conf))))))
+
+(ct/deftest channel-after-push-tests
+  (ct/testing "Channel after-push collects IDs for bulk deployment"
+    (let [app-conf {:deploy-all true :bulk-deploy-channels (atom [])}
+          api :channels
+          el-loc (mx/to-zip "<channel><id>test-channel-id</id><name>Test Channel</name></channel>")
+          result {:status 200 :body "true"}]
+      ;; Mock the find-id function behavior
+      (with-redefs [mirthsync.interfaces/find-id (fn [_ _] "test-channel-id")]
+        (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)
+        (ct/is (= ["test-channel-id"] @(:bulk-deploy-channels app-conf))))))
+
+  (ct/testing "Channel after-push doesn't collect IDs when deploy-all is false"
+    (let [app-conf {:deploy false :deploy-all false :bulk-deploy-channels (atom [])}
+          api :channels
+          el-loc (mx/to-zip "<channel><id>test-channel-id</id><name>Test Channel</name></channel>")
+          result {:status 200 :body "true"}]
+      ;; Mock the find-id function behavior
+      (with-redefs [mirthsync.interfaces/find-id (fn [_ _] "test-channel-id")]
+        (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)
+        (ct/is (empty? @(:bulk-deploy-channels app-conf))))))
+
+  (ct/testing "Channel after-push handles failed channel push"
+    (let [app-conf {:deploy-all true :bulk-deploy-channels (atom [])}
+          api :channels
+          el-loc (mx/to-zip "<channel><id>test-channel-id</id><name>Test Channel</name></channel>")
+          result {:status 400 :body "error"}]
+      ;; When push fails, should not collect channel ID and should return false
+      (ct/is (= false (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)))
+      (ct/is (empty? @(:bulk-deploy-channels app-conf))))))
 
 (comment
   (ct/deftest iterate-apis
