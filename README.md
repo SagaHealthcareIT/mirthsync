@@ -37,12 +37,13 @@ We extend our sincere gratitude to the maintainers and contributors of the [Open
 
 ## Current version
 
-The latest version of mirthSync is "3.4.0-SNAPSHOT". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.5.0-SNAPSHOT". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
 
 **Recent Improvements:**
+- **Bulk Channel Deployment**: New `--deploy-all` flag for efficient bulk deployment of multiple channels
 - **Enhanced Orphaned File Detection**: Always detects orphaned files during pull operations with clear user warnings and optional automatic deletion
 - **Improved User Experience**: Better code organization and elimination of duplicate orphan detection logic
 - **Enhanced Git Integration**: Comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull, push, reset)
@@ -50,6 +51,14 @@ group directory.
 - **Security**: Path validation and safety features for file operations
 
 ## Changes
+
+### 3.5.0-SNAPSHOT
+
+- **Bulk Channel Deployment**: New `--deploy-all` flag for efficient bulk deployment of multiple channels
+  - Deploys all channels in a single operation instead of one-by-one
+  - Significantly faster when pushing multiple channels
+  - Allows Mirth's dependency logic to control deployment order
+- **⚠️ SNAPSHOT Release**: This version contains new features that are still being tested. Use with caution in production environments.
 
 ### 3.3.0-SNAPSHOT
 
@@ -241,6 +250,11 @@ Options:
   -d, --deploy                                         Deploy channels on push
         During a push, deploy each included channel immediately
         after saving the channel to Mirth.
+      --deploy-all                                      Deploy all channels in bulk after push
+        During a push, collect all channel IDs and deploy them
+        in a single bulk operation after all channels are saved.
+        Allows Mirth's dependency logic to control deployment order.
+        More efficient than individual deployment for multiple channels.
   -I, --interactive                                    
         Allow for console prompts for user input
       --commit-message MESSAGE             mirthsync commit  Commit message for git operations
@@ -314,6 +328,37 @@ Pushing a channel group and its channels to a Mirth Connect instance:
 ``` shell
 $ java -jar mirthsync-<version>-standalone.jar -s https://otherserver.localhost/api -u admin -p admin push -t ./mirth-config -r "Channels/This is a group"
 ```
+
+### Channel Deployment
+
+mirthSync supports both individual and bulk channel deployment during push operations:
+
+**Individual channel deployment:**
+``` shell
+# Deploy each channel immediately after it's saved (slower for multiple channels)
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --deploy push -t ./mirth-config
+```
+
+**Bulk channel deployment (recommended for multiple channels):**
+``` shell
+# Collect all channel IDs during push, then deploy them all in one operation (faster)
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --deploy-all push -t ./mirth-config
+```
+
+**Deploy specific channels in bulk:**
+``` shell
+# Push and bulk deploy only channels in a specific group
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --deploy-all push -t ./mirth-config -r "Channels/Production Group"
+```
+
+**Performance comparison:**
+- `--deploy`: Each channel is deployed immediately after being saved (N API calls for N channels)
+- `--deploy-all`: All channels are collected during push, then deployed in a single bulk operation (1 API call for all channels)
+
+**Benefits of bulk deployment:**
+- **Performance**: Significantly faster when pushing multiple channels
+- **Dependency Management**: Allows Mirth's dependency logic to control deployment order
+- **Recommended**: The preferred approach for production deployments with multiple channels
 
 ### Orphaned File Management
 
