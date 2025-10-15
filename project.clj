@@ -71,6 +71,7 @@
             [lein-shell "0.5.0"]]
   ;; :pedantic? :abort
   :checksum :fail
+  :javac-options ["-source" "1.8" "-target" "1.8"]
   :global-vars {*warn-on-reflection* true}
   :aot [mirthsync.core]
   :main mirthsync.core
