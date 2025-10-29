@@ -19,6 +19,8 @@
   :signing {:gpg-key "jessedowell@gmail.com"}
   :repositories ^:replace [["central" {:url "https://repo1.maven.org/maven2/" :snapshots false :checksum :ignore}]
                            ["clojars" {:url "https://repo.clojars.org/"}]]
+  :deploy-repositories [["releases" {:url "https://repo.clojars.org" :creds :gpg}]
+                      ["snapshots" {:url "https://repo.clojars.org" :creds :gpg}]]
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [clj-http "3.10.1" :exclusions [commons-logging]]
                  [org.clojure/data.xml "0.0.8"]
