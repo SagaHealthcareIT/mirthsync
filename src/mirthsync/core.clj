@@ -87,7 +87,7 @@
     :else (throw (IllegalArgumentException.
                   (str "Unsupported writer type: " (class candidate))))))
 
-(defn ^int mainFunc
+(defn ^int -mainFunc
   [^"[Ljava.lang.String;" args out-stream err-stream]
   (let [out-writer (coerce-writer out-stream #(PrintWriter. System/out true))
         err-writer (coerce-writer err-stream #(PrintWriter. System/err true))
