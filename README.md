@@ -37,7 +37,7 @@ We extend our sincere gratitude to the maintainers and contributors of the [Open
 
 ## Current version
 
-The latest version of mirthSync is "3.5.0-SNAPSHOT". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.5.1-SNAPSHOT". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
