@@ -1,13 +1,13 @@
 (ns mirthsync.core
-  (:gen-class
-    :methods [[mainFunc ["[Ljava.lang.String;" java.io.Writer java.io.Writer] int]])
   (:require [mirthsync.logging :as log]
             [mirthsync.actions :as act]
             [mirthsync.apis :as api]
             [mirthsync.cli :as cli]
             [mirthsync.git :as mgit]
             [mirthsync.http-client :as http])
-  (:import [java.io Writer OutputStream PrintWriter]))
+  (:import [java.io Writer OutputStream PrintWriter])
+  (:gen-class
+    :methods [^{:static true} [mainFunc ["[Ljava.lang.String;" java.io.Writer java.io.Writer] int]]))
 
 (defn- run
   "Links the action specified in the application config to the
@@ -87,7 +87,7 @@
     :else (throw (IllegalArgumentException.
                   (str "Unsupported writer type: " (class candidate))))))
 
-(defn ^int -mainFunc
+(defn ^int mainFunc
   [^"[Ljava.lang.String;" args out-stream err-stream]
   (let [out-writer (coerce-writer out-stream #(PrintWriter. System/out true))
         err-writer (coerce-writer err-stream #(PrintWriter. System/err true))
