@@ -2,7 +2,7 @@
   (:require [clojure.data.xml :as cdx]
             [clojure.data.zip :as cdz]
             [clojure.data.zip.xml :as cdzx]
-            [clojure.tools.logging :as log]
+            [mirthsync.logging :as log]
             [clojure.zip :as cz]
             [mirthsync.actions :as ma]
             [mirthsync.files :as mf]

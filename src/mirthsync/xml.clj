@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [clojure.zip :as cz]
             [clojure.data.zip.xml :as cdzx]
-            [clojure.tools.logging :as log]
+            [mirthsync.logging :as log]
             [mirthsync.interfaces :as mi])
   (:import java.io.File))
 

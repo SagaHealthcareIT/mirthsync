@@ -1,6 +1,6 @@
 (ns mirthsync.actions
   (:require [clojure.data.xml :as cdx]
-            [clojure.tools.logging :as log]
+            [mirthsync.logging :as log]
             [clojure.zip :as cz]
             [clojure.string :as str]
             [clojure.java.io :as io]

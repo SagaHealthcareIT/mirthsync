@@ -1,7 +1,7 @@
 (ns mirthsync.http-client
   (:require [clj-http.client :as client]
             [clojure.data.xml :as xml]
-            [clojure.tools.logging :as log]
+            [mirthsync.logging :as log]
             [clojure.zip :as zip]
             [mirthsync.interfaces :as mi]
             [mirthsync.xml :as mxml]))

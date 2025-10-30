@@ -28,20 +28,8 @@
                  [org.clojure/tools.cli "1.0.206"]
                  ;; [tolitius/xml-in "0.1.0"]
                  ;; [com.rpl/specter "1.1.3"]
-                 [org.clojure/tools.logging "1.1.0"]
-                 [ch.qos.logback/logback-classic "1.2.3"]
-                 [ch.qos.logback/logback-core "1.2.3"]
-                 [org.slf4j/slf4j-api "1.7.30"]
-
                  ;; enhanced exceptions
                  [slingshot "0.12.2"]
-
-                 ;; logging redirects
-                 [org.slf4j/jcl-over-slf4j "1.7.30"]
-                 [org.slf4j/log4j-over-slf4j "1.7.30"]
-                 [org.apache.logging.log4j/log4j-to-slf4j "2.13.3"]
-                 [org.slf4j/osgi-over-slf4j "1.7.30"]
-                 [org.slf4j/jul-to-slf4j "1.7.30"]
 
                  ;; optionally pull config from environment
                  [environ "1.2.0"]
@@ -79,9 +67,8 @@
   :target-path "target/%s"
   :profiles
   {
-   ;; :uberjar {:aot :all
-   ;;           :omit-source true}
-   
+   :uberjar {:dependencies [[org.slf4j/slf4j-nop "1.7.36"]]}
+
    :repl {:plugins [[cider/cider-nrepl "0.25.2"]]}
 
    :dev {:dependencies [[clj-commons/conch "0.9.2"]]}}

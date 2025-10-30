@@ -1,6 +1,6 @@
 (ns mirthsync.git
   (:require [clj-jgit.porcelain :as git]
-            [clojure.tools.logging :as log]
+            [mirthsync.logging :as log]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set])

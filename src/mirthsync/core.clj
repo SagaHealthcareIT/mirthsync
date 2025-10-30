@@ -1,12 +1,11 @@
 (ns mirthsync.core
   (:gen-class)
-  (:require [clojure.tools.logging :as log]
+  (:require [mirthsync.logging :as log]
             [mirthsync.actions :as act]
             [mirthsync.apis :as api]
             [mirthsync.cli :as cli]
             [mirthsync.git :as mgit]
-            [mirthsync.http-client :as http])
-  (:import org.slf4j.bridge.SLF4JBridgeHandler))
+            [mirthsync.http-client :as http]))
 
 (defn- run
   "Links the action specified in the application config to the
@@ -65,10 +64,6 @@
 
 (defn main-func
   [& args]
-  ;; redirect jul logging
-  (SLF4JBridgeHandler/removeHandlersForRootLogger)
-  (SLF4JBridgeHandler/install)
-  
   (let [conf (cli/config args)
         conf (if-not (seq (:exit-msg conf))
                (try

@@ -1,7 +1,7 @@
 (ns mirthsync.files
   (:require [clojure.java.io :as io]
             [clojure.string :as cs]
-            [clojure.tools.logging :as log])
+            [mirthsync.logging :as log])
   (:import java.io.File))
 
 (defn- filtered-file-seq

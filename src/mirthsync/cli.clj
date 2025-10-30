@@ -4,13 +4,10 @@
              [cli :refer [parse-opts]]]
             [clojure.string :as str]
             [clojure.java.io :as io]
-            [clojure.tools.logging :as log]
-            [clojure.tools.logging.impl :as log-impl]
+            [mirthsync.logging :as log]
             [environ.core :refer [env]])
   (:import java.net.URL
-           java.io.File
-           ch.qos.logback.classic.Level
-           ))
+           java.io.File))
 
 (defn- strip-trailing-slashes
   "Removes one or more trailing forward or backward trailing slashes
@@ -18,12 +15,6 @@
   [s]
   (when s
     (str/replace s #"(?!^)[\\/]+$" "")))
-
-(def ^{:private true} log-levels (concat
-                                  [Level/INFO
-                                   Level/DEBUG
-                                   Level/TRACE]
-                                  (repeat Level/ALL)))
 
 (def ^{:private true} cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
@@ -144,10 +135,7 @@
 (defn- set-log-level
   "Set the logging level by number"
   [lvl]
-  (let [^ch.qos.logback.classic.Logger logger (log-impl/get-logger
-                                               (log-impl/find-factory)
-                                               "mirthsync")]
-    (.setLevel logger (nth log-levels lvl))))
+  (log/set-verbosity! lvl))
 
 (defn- ^String get-cannonical-path
   [^String path]

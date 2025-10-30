@@ -1,5 +1,5 @@
 (ns mirthsync.interfaces
-  (:require [clojure.tools.logging :as log]))
+  (:require [mirthsync.logging :as log]))
 
 ;;;;;;;;;; API multimethods
 
