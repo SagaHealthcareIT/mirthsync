@@ -4,11 +4,18 @@
 ;; highlighting errors in red.
 
 (ns mirthsync.logging
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str])
+  (:import [java.io PrintWriter]))
 
 (def ^:private level-order [:trace :debug :info :warn :error])
 (def ^:private level-rank (zipmap level-order (range)))
 (defonce ^:private current-level (atom :info))
+
+(def ^:dynamic *out-writer*
+  (PrintWriter. System/out true))
+
+(def ^:dynamic *err-writer*
+  (PrintWriter. System/err true))
 
 (def ^:private ansi-reset "\u001b[0m")
 (def ^:private ansi-red "\u001b[31m")
@@ -89,7 +96,7 @@
 
 (defn emit! [level message]
   (let [{:keys [label color stream prefix?]} (get level->config level {:stream :out})
-        writer (if (= stream :err) *err* *out*)
+        writer (if (= stream :err) *err-writer* *out-writer*)
         prefix (when prefix?
                  (str (ansi-wrap color (padded-label label)) ": "))
         line (str prefix message)]
@@ -167,4 +174,22 @@
       (when (enabled? level#)
         (emit! level# (apply format ~fmt (list value#))))
       value#)))
+
+(defn with-log-writers*
+  "Execute `f` while binding the logging and standard output writers to the
+  provided values (if non-nil)."
+  [out-writer err-writer f]
+  (let [out# (or out-writer *out-writer*)
+        err# (or err-writer *err-writer*)]
+    (binding [*out-writer* out#
+              *err-writer* err#
+              *out* out#
+              *err* err#]
+      (f))))
+
+(defmacro with-log-writers
+  "Bind logging STDOUT/STDERR writers for the enclosed body. Accepts either
+  java.io.Writer instances or nil to keep current bindings."
+  [out-writer err-writer & body]
+  `(with-log-writers* ~out-writer ~err-writer (fn [] ~@body)))
 
