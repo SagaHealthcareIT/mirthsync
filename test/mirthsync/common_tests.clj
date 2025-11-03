@@ -1,6 +1,7 @@
 (ns mirthsync.common-tests
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
+            [clojure.java.io :as io]
             [mirthsync.core :refer :all]
             [mirthsync.fixture-tools :refer :all]
             [mirthsync.http-client :as mhttp]
@@ -468,15 +469,31 @@
       (is (not (nil? token)) "Should be able to get a session token")
       (is (string? token) "Session token should be a string")
 
-      ;; Test pull with token authentication
+      ;; CRITICAL: Test with invalid token first to ensure auth is actually being validated
+      (is (= 1 (main-func "-s" "https://localhost:8443/api"
+                          "--token" "invalid-token-12345" "-t" token-repo-dir
+                          "-i" "-f" "--include-configuration-map" "pull"))
+          "Pull operation should FAIL with invalid token")
+
+      ;; Verify no files were pulled with invalid token
+      (is (or (not (.exists (io/file token-repo-dir)))
+              (empty-directory? token-repo-dir))
+          "Target directory should be empty/nonexistent after failed auth")
+
+      ;; Now test with valid token - this is a FRESH invocation in a NEW process context
+      ;; If this passes, it means the token is actually being used for authentication
       (is (= 0 (main-func "-s" "https://localhost:8443/api"
                           "--token" token "-t" token-repo-dir
                           "-i" "-f" "--include-configuration-map" "pull"))
-          "Pull operation should succeed with token authentication")
+          "Pull operation should succeed with valid token authentication")
 
       ;; Verify files were pulled
       (is (not (empty-directory? token-repo-dir))
           "Target directory should not be empty after pull with token")
+
+      ;; Verify specific files exist to ensure pull actually worked
+      (is (.exists (io/file token-repo-dir "Channels"))
+          "Channels directory should exist after pull")
 
       ;; Test push with token authentication
       (is (= 0 (main-func "--include-configuration-map" "-s" "https://localhost:8443/api"
