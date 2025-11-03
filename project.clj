@@ -1,17 +1,17 @@
 (defproject com.saga-it/mirthsync "3.5.1-SNAPSHOT"
-  :description "Mirthsync is a command line tool, created by Saga IT,
-  for keeping a local copy of important aspects of Mirth Connect
-  configuration in order to allow for the use of traditional version
-  control tools like Git or SVN. With Mirthsync you are able to
-  selectively pull the code for channels, groups, and more from a
-  local or remote Mirth Connect instance and have the code placed into
-  a local hierarchy of files and directories that can be tracked using
-  version control. Selectively pushing code to local or remote Mirth
-  Connect servers is also possible using Mirthsync.
+  :description "MirthSync is an open source DevOps tool for Mirth Connect and
+  Open Integration Engine version control and CI/CD automation. This command line
+  tool enables healthcare integration DevOps workflows by keeping a local copy of
+  Mirth Connect configurations (channels, code templates, global scripts) that can
+  be tracked with Git or other version control systems. MirthSync supports
+  multi-environment deployments (dev, test, prod) with automated channel promotion
+  between servers, making it ideal for interface engine CI/CD pipelines and GitOps
+  workflows. The tool provides infrastructure as code capabilities for HL7, FHIR,
+  and DICOM integration engine deployments with built-in Git integration, channel
+  versioning, and continuous deployment support for healthcare environments.
 
-  The only requirements are having credentials for the
-  server that is being synced and ensuring that the server is
-  configured to allow access to its REST API."
+  The only requirements are having credentials for the server that is being synced
+  and ensuring that the server is configured to allow access to its REST API."
   :url "https://github.com/SagaHealthcareIT/mirthsync"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}

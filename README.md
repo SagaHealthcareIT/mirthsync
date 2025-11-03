@@ -2,16 +2,15 @@
 
 ![](https://github.com/SagaHealthcareIT/mirthsync/workflows/Clojure%20CI/badge.svg)
 
-mirthSync is a command line tool for synchronizing Mirth Connect and Open Integration Engine (OIE) code
-between servers by allowing you to push or pull channels, code
-templates, configuration map and global scripts. The tool includes
-built-in Git integration for version control of your integration platform code
-and configuration, automatic orphaned file detection and cleanup,
-and can also be integrated with other version control systems.
+mirthSync is an open source DevOps tool for Mirth Connect and Open Integration Engine (OIE) version control
+and CI/CD automation. This command line tool enables healthcare integration DevOps workflows by synchronizing
+code between servers - allowing you to push or pull channels, code templates, configuration maps, and global
+scripts. The tool includes built-in Git integration for channel versioning and version control best practices,
+automatic orphaned file detection and cleanup, and supports GitOps and infrastructure as code methodologies for
+healthcare interface engines including HL7 v2, FHIR, and DICOM integration deployments.
 
-The only requirements are having credentials for the server that is
-being synced and the server also needs to support and allow access to
-Mirth Connect's REST API.
+The only requirements are having credentials for the server that is being synced and the server also needs to
+support and allow access to Mirth Connect's REST API.
 
 ## Open Integration Engine Support
 
@@ -21,19 +20,22 @@ We extend our sincere gratitude to the maintainers and contributors of the [Open
 
 ## Suggestions for use
 
-- Use mirthSync's built-in Git integration to automatically version control
-  your Mirth Connect configurations
-- Use mirthSync in conjunction with Git (or any VCS) to back up and
-  track changes to code and settings
-- Pull and push changes between Mirth Connect servers
-- Utilize Git branches to track and merge code between dev, test, and
-  prod environments
-- Use mirthSync as part of your CI/CD workflow
-  - Please see our
+- Set up Mirth Connect version control with Git using mirthSync's built-in integration
+  to automatically track your healthcare integration configurations
+- Implement Mirth Connect channel versioning best practices using Git branches for
+  dev, test, and prod environments
+- Enable automated channel promotion between Mirth Connect servers for multi-environment
+  deployments
+- Build Mirth Connect CI/CD pipelines with automated deployments:
+  - GitLab CI example deployments for interface engine version control
+  - Jenkins integration for automated channel deployments
+  - GitHub Actions workflows - see our
     [mirthsync-ci](https://github.com/SagaHealthcareIT/mirthsync-ci) repository
-    for an example that works with Github Actions
-- Work on mirth javascript locally with your favorite editor without having to
-  edit XML
+    for a complete CI/CD pipeline example
+- Implement GitOps for healthcare integration engines with infrastructure as code workflows
+- Support continuous integration and continuous deployment in healthcare environments
+- Work on Mirth JavaScript locally with your favorite editor without editing XML
+- Version control HL7 v2, FHIR, and DICOM routing configurations
 
 ## Current version
 
@@ -183,19 +185,24 @@ group.
 ## Future plans
 
 - Support Mirth > version 3.12 and latest Open Integration Engine versions
-- Enhanced Open Integration Engine support and testing
-- Support filtering pulls just like we currently are able to filter pushes
+- Enhanced Open Integration Engine CI/CD tooling and testing
+- Advanced interface engine channel deployment best practices and strategies
+- Enhanced filtering capabilities for selective channel deployments
+- Additional CI/CD pipeline examples (Jenkins, GitLab CI, Azure DevOps)
 - Addressing reported issues
 - Implement more tests
-- Performance optimizations for large configurations
+- Performance optimizations for large healthcare integration configurations
 
 
-## Installation 
+## Installation
+
+MirthSync installation is straightforward - this DevOps tool for Mirth Connect can be installed and configured for your version control and CI/CD workflows:
 
 `$ git clone https://github.com/SagaHealthcareIT/mirthsync.git`
 
+For detailed installation guides and integration with your specific CI/CD platform, see the documentation below.
 
-## Prerequisites 
+## Prerequisites
 
 Requires Java JRE or JDK version 8 or higher (Java 8, 11, 17, 21, and other LTS versions are supported)
 
@@ -669,9 +676,25 @@ $ java -jar mirthsync.jar -t ./mirth-config git checkout main
 $ cd ./mirth-config && git merge feature/new-channel
 ```
 
+### CI/CD Pipeline Integration
+
+mirthSync is designed for Mirth Connect CI/CD pipelines and automated deployments. The tool enables continuous integration and continuous deployment workflows for healthcare integration engines.
+
+**Key CI/CD Capabilities:**
+- Automated channel promotion between dev, test, and prod environments
+- Multi-environment deployment strategies for interface engines
+- Integration with Jenkins, GitLab CI, GitHub Actions, and other CI/CD platforms
+- Support for automated testing and validation of channel configurations
+- Infrastructure as code and GitOps workflows for HL7, FHIR, and DICOM integrations
+
+**CI/CD Example Projects:**
+- See our [mirthsync-ci](https://github.com/SagaHealthcareIT/mirthsync-ci) repository for a complete GitHub Actions CI/CD pipeline example
+- Jenkins integration examples for automated Mirth Connect channel deployments
+- GitLab CI pipeline configurations for multi-environment healthcare integration deployments
+
 ### Auto-Commit Integration
 
-mirthsync can automatically commit changes after pull or push operations:
+mirthsync can automatically commit changes after pull or push operations, perfect for CI/CD automation:
 
 Automatically commit changes after pulling from server:
 
@@ -685,7 +708,7 @@ Initialize git repository and auto-commit in one command:
 $ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t ./mirth-config --git-init --auto-commit --commit-message "Initial pull from production" pull
 ```
 
-Auto-commit with custom message and author:
+Auto-commit with custom message and author (ideal for CI/CD systems):
 
 ``` shell
 $ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t ./mirth-config --auto-commit --commit-message "Sync from dev server" --git-author "CI System" --git-email "ci@company.com" pull
