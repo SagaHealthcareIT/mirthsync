@@ -12,7 +12,7 @@
 
   The only requirements are having credentials for the server that is being synced
   and ensuring that the server is configured to allow access to its REST API."
-  :url "https://github.com/SagaHealthcareIT/mirthsync"
+  :url "https://saga-it.com/blog/getting-started-with-mirthsync/"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :min-lein-version "2.9.1"
