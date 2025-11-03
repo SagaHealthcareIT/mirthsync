@@ -27,6 +27,9 @@
    ["-p" "--password PASSWORD" "Password used for authentication"
     :default-fn (constantly (:mirthsync-password env))]
 
+   [nil "--token TOKEN" "Authentication token (HTTP session token) for Mirth API.
+        Mutually exclusive with username and password."]
+
    ["-i" "--ignore-cert-warnings" "Ignore certificate warnings"
     :default false]
 
@@ -152,20 +155,28 @@
 (defn- valid-initial-config?
   "Validate the initial config map. Returns a truth value."
   [{:keys [arguments errors] :as config
-    {:keys [help target restrict-to-path password server username]} :options}]
+    {:keys [help target restrict-to-path password server username token]} :options}]
   (or help
       (let [action (first arguments)
             git-action? (= "git" action)
-            valid-arg-count? (if git-action? 
+            valid-arg-count? (if git-action?
                                (>= (count arguments) 2) ; git needs subcommand
                                (= 1 (count arguments))) ; push/pull are single
+            ;; Check for mutually exclusive auth methods
+            has-username-password? (and username (> (count password) 0))
+            has-token? (and token (> (count token) 0))
+            auth-mutually-exclusive? (or (not has-username-password?)
+                                         (not has-token?))
+            ;; For non-git actions, require either username/password OR token
+            auth-valid? (or has-username-password? has-token?)
             server-valid? (if git-action?
                             true ; git doesn't need server credentials
-                            (and server username (> (count password) 0)))]
+                            (and server auth-valid?))]
         (and (= 0 (count errors))
              valid-arg-count?
              (#{"pull" "push" "git"} action)
              server-valid?
+             auth-mutually-exclusive?
              (is-child-path target restrict-to-path)))))
 
 (defn read-password
@@ -246,16 +257,25 @@
                                     (:help config))
                             (let [action (first (:arguments config))
                                   git-action? (= "git" action)
-                                  custom-errors (when (and (not git-action?) 
+                                  has-username? (:username config)
+                                  has-password? (and (:password config)
+                                                     (> (count (:password config)) 0))
+                                  has-token? (and (:token config)
+                                                  (> (count (:token config)) 0))
+                                  has-username-password? (and has-username? has-password?)
+                                  custom-errors (when (and (not git-action?)
                                                            (not (:help config)))
                                                   (cond-> []
-                                                    (not (:server config)) 
+                                                    (not (:server config))
                                                     (conj "--server is required for push/pull operations")
-                                                    (not (:username config)) 
-                                                    (conj "--username is required for push/pull operations")
-                                                    (not (and (:password config) 
-                                                             (> (count (:password config)) 0)))
-                                                    (conj "--password is required for push/pull operations")))
+
+                                                    ;; Check for mutually exclusive auth
+                                                    (and has-username-password? has-token?)
+                                                    (conj "--username/--password and --token are mutually exclusive")
+
+                                                    ;; Require one auth method
+                                                    (and (not has-username-password?) (not has-token?))
+                                                    (conj "Authentication required: provide either --username/--password or --token")))
                                   all-errors (concat (:errors config) custom-errors)]
                               (usage all-errors (:summary config)))))
 

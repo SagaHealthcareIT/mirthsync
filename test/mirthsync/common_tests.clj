@@ -6,7 +6,23 @@
             [mirthsync.http-client :as mhttp]
             [mirthsync.interfaces :as mi]
             [mirthsync.xml :as mx]
-            [mirthsync.cross-platform-utils :as cpu]))
+            [mirthsync.cross-platform-utils :as cpu]
+            [clj-http.client :as client]))
+
+(defn- get-session-token
+  "Authenticate with Mirth and extract the JSESSIONID cookie value"
+  []
+  (let [cookie-store (clj-http.cookies/cookie-store)
+        _ (binding [clj-http.core/*cookie-store* cookie-store]
+            (client/post "https://localhost:8443/api/users/_login"
+                         {:headers {:x-requested-with "XMLHttpRequest"}
+                          :form-params {:username "admin"
+                                        :password "admin"}
+                          :insecure? true}))
+        cookies (.getCookies cookie-store)
+        session-cookie (first (filter #(= "JSESSIONID" (.getName %)) cookies))]
+    (when session-cookie
+      (.getValue session-cookie))))
 
 ;; NOTE - it's important that some of these tests run in order
 (defn test-integration
@@ -439,5 +455,34 @@
                                        (fn [zip-loc] 
                                          (let [channels (mi/find-elements :channels zip-loc)]
                                            (filter #(= channel-id (mi/find-id :channels %)) channels))))))]
-                      (is (not (empty? response)) 
-                          (str "Channel " channel-name " (ID: " channel-id ") should be accessible after bulk deployment")))))))))))))
+                      (is (not (empty? response))
+                          (str "Channel " channel-name " (ID: " channel-id ") should be accessible after bulk deployment"))))))))))))
+
+  (testing "Token authentication works for pull and push operations"
+    (let [token-repo-dir (str repo-dir "-token-test")
+          token (get-session-token)]
+      ;; Clean up from any previous test runs
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" token-repo-dir)
+
+      ;; Verify we got a token
+      (is (not (nil? token)) "Should be able to get a session token")
+      (is (string? token) "Session token should be a string")
+
+      ;; Test pull with token authentication
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--token" token "-t" token-repo-dir
+                          "-i" "-f" "--include-configuration-map" "pull"))
+          "Pull operation should succeed with token authentication")
+
+      ;; Verify files were pulled
+      (is (not (empty-directory? token-repo-dir))
+          "Target directory should not be empty after pull with token")
+
+      ;; Test push with token authentication
+      (is (= 0 (main-func "--include-configuration-map" "-s" "https://localhost:8443/api"
+                          "--token" token "-t" token-repo-dir
+                          "-i" "-f" "push"))
+          "Push operation should succeed with token authentication")
+
+      ;; Clean up
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" token-repo-dir))))

@@ -43,6 +43,8 @@ extracted into separate files and top level channels are now placed in a default
 group directory.
 
 **Recent Improvements:**
+- **Token-based Authentication**: New `--token` flag for authentication using existing HTTP session tokens (alternative to username/password)
+- **Simplified Git Operations**: Git commands no longer require server credentials or authentication flags
 - **Bulk Channel Deployment**: New `--deploy-all` flag for efficient bulk deployment of multiple channels
 - **Enhanced Orphaned File Detection**: Always detects orphaned files during pull operations with clear user warnings and optional automatic deletion
 - **Improved User Experience**: Better code organization and elimination of duplicate orphan detection logic
@@ -52,8 +54,15 @@ group directory.
 
 ## Changes
 
-### 3.5.0-SNAPSHOT
+### 3.5.1-SNAPSHOT
 
+- **Token-based Authentication**: New `--token` flag for authentication using existing HTTP session tokens
+  - Alternative to username/password authentication
+  - Useful for automation and CI/CD pipelines with pre-authenticated sessions
+  - Mutually exclusive with username/password flags
+- **Simplified Git Operations**: Git commands no longer require server or authentication flags
+  - Run git operations directly on target directory without Mirth server credentials
+  - Streamlined workflow for version control operations
 - **Bulk Channel Deployment**: New `--deploy-all` flag for efficient bulk deployment of multiple channels
   - Deploys all channels in a single operation instead of one-by-one
   - Significantly faster when pushing multiple channels
@@ -220,6 +229,8 @@ Options:
   -s, --server SERVER_URL                              Full HTTP(s) url of the Mirth Connect server
   -u, --username USERNAME                              Username used for authentication
   -p, --password PASSWORD                  <computed>  Password used for authentication
+      --token TOKEN                                    Authentication token (HTTP session token) for Mirth API.
+        Mutually exclusive with username and password.
   -i, --ignore-cert-warnings                           Ignore certificate warnings
   -v                                                   Verbosity level
         May be specified multiple times to increase level.
@@ -290,11 +301,31 @@ Environment variables:
 > set. When interactive input is allowed (-I) and no password can be
 > found, you will be prompted to enter the password at the terminal.
 
+### Authentication Methods
+
+mirthSync supports two authentication methods:
+
+**Username and Password Authentication (traditional):**
+
 How to pull Mirth Connect code from a Mirth Connect instance:
 
 ``` shell
 $ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin pull -t ./mirth-config
 ```
+
+**Token-based Authentication:**
+
+Use an existing HTTP session token (JSESSIONID) for authentication, useful in automation scenarios:
+
+``` shell
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api --token "your-session-token-here" pull -t ./mirth-config
+```
+
+> **Note about authentication:**
+> - Username/password and token authentication are mutually exclusive - use one or the other
+> - Token authentication is useful for CI/CD pipelines where you already have an authenticated session
+> - Git operations do not require any authentication flags (see Git Integration section below)
+
 > Note that the -t parameter accepts absolute and relative paths. Always use a dedicated directory for mirthsync operations, never use your home directory or other system directories.
 
 Pulling code from a Mirth Connect instance allowing for overwriting existing files:
@@ -405,7 +436,12 @@ $ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u 
 
 ### Git Integration
 
-mirthsync includes comprehensive built-in git integration for version control of your Mirth Connect configurations. All git operations work directly with your target directory without requiring server credentials.
+mirthsync includes comprehensive built-in git integration for version control of your Mirth Connect configurations.
+
+**Key Benefits:**
+- **No Server Credentials Required**: Git operations work directly with your local target directory - no need to specify `-s`, `-u`, `-p`, or `--token` flags
+- **Simplified Workflow**: Perform version control operations without connecting to your Mirth server
+- **Complete Git Functionality**: Full support for init, status, add, commit, diff, log, branch, checkout, remote operations, and more
 
 **⚠️ Experimental Feature Notice:** The native git integration is currently experimental and requires extensive testing. While the functionality is comprehensive, we recommend using it alongside traditional git workflows until it has been thoroughly validated across different environments and use cases.
 
@@ -584,25 +620,37 @@ This git reset functionality helps you:
 
 **Complete workflow - pull from server, commit changes, and push to remote:**
 ``` shell
-# Pull latest from Mirth server
+# Pull latest from Mirth server (requires authentication)
 $ java -jar mirthsync.jar -s https://localhost:8443/api -u admin -p admin -t ./mirth-config pull
 
-# Check what changed
+# Check what changed (no authentication needed)
 $ java -jar mirthsync.jar -t ./mirth-config git status
 
-# View unstaged differences
+# View unstaged differences (no authentication needed)
 $ java -jar mirthsync.jar -t ./mirth-config git diff
 
-# Stage changes for commit
+# Stage changes for commit (no authentication needed)
 $ java -jar mirthsync.jar -t ./mirth-config git add
 
-# Review staged changes before commit
+# Review staged changes before commit (no authentication needed)
 $ java -jar mirthsync.jar -t ./mirth-config git diff --staged
 
-# Commit the changes
+# Commit the changes (no authentication needed)
 $ java -jar mirthsync.jar -t ./mirth-config --commit-message "Updated from production server" git commit
 
-# Push to remote repository
+# Push to remote repository (no authentication needed)
+$ java -jar mirthsync.jar -t ./mirth-config git push
+```
+
+**Complete workflow using token authentication:**
+``` shell
+# Pull latest from Mirth server using token authentication
+$ java -jar mirthsync.jar -s https://localhost:8443/api --token "your-session-token" -t ./mirth-config pull
+
+# All git operations remain the same - no credentials needed
+$ java -jar mirthsync.jar -t ./mirth-config git status
+$ java -jar mirthsync.jar -t ./mirth-config git add
+$ java -jar mirthsync.jar -t ./mirth-config --commit-message "Updated from production server" git commit
 $ java -jar mirthsync.jar -t ./mirth-config git push
 ```
 

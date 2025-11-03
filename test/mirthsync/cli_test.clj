@@ -99,6 +99,36 @@
     (let [conf-with-deploy (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy" "push"])
           conf-with-deploy-all (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-all" "push"])]
       (is (and (:deploy conf-with-deploy) (nil? (:deploy-all conf-with-deploy))))
-      (is (and (:deploy-all conf-with-deploy-all) (nil? (:deploy conf-with-deploy-all)))))))
+      (is (and (:deploy-all conf-with-deploy-all) (nil? (:deploy conf-with-deploy-all))))))
+
+  (testing "Token authentication is accepted"
+    (let [conf (config ["-s" "https://localhost:8443/api" "--token" "test-token-123" "-t" "foo" "pull"])]
+      (is (= 0 (:exit-code conf)))
+      (is (nil? (:exit-msg conf)))
+      (is (= "test-token-123" (:token conf)))))
+
+  (testing "Token and username/password are mutually exclusive"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "--token" "test-token" "-t" "foo" "pull"])]
+      (is (= 1 (:exit-code conf)))
+      (is (seq (:exit-msg conf)))
+      (is (re-find #"mutually exclusive" (:exit-msg conf)))))
+
+  (testing "Git operations don't require server or authentication"
+    (let [conf (config ["-t" "foo" "git" "status"])]
+      (is (= 0 (:exit-code conf)))
+      (is (nil? (:exit-msg conf)))
+      (is (= "git" (:action conf)))))
+
+  (testing "Push/pull require authentication (username/password or token)"
+    (let [conf-no-auth (config ["-s" "https://localhost:8443/api" "-t" "foo" "pull"])]
+      (is (= 1 (:exit-code conf-no-auth)))
+      (is (seq (:exit-msg conf-no-auth)))
+      (is (re-find #"Authentication required" (:exit-msg conf-no-auth)))))
+
+  (testing "Push/pull require server"
+    (let [conf-no-server (config ["-u" "admin" "-p" "password" "-t" "foo" "pull"])]
+      (is (= 1 (:exit-code conf-no-server)))
+      (is (seq (:exit-msg conf-no-server)))
+      (is (re-find #"--server is required" (:exit-msg conf-no-server))))))
 
 
