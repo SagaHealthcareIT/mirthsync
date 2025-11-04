@@ -330,7 +330,47 @@
               "Configuration map values should NOT persist when include-configuration-map is false"))
 
         ;; Leave directories for analysis - cleanup moved to beginning of test
-        ))))
+        )))
+
+  (testing "Token authentication works"
+    ;; Test token authentication by getting a real session token and using it
+    (let [token-repo-dir (str repo-dir "-token-test")
+          token (get-session-token)]
+      ;; Clean up from any previous test runs
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" token-repo-dir)
+
+      ;; Verify we got a token
+      (is (not (nil? token)) "Should be able to get a session token")
+      (is (string? token) "Session token should be a string")
+      (is (> (count token) 10) "Token should be a reasonable length")
+
+      ;; Test with invalid token first to ensure auth is actually being validated
+      (is (= 1 (main-func "-s" "https://localhost:8443/api"
+                          "--token" "completely-invalid-token-xyz123" "-t" token-repo-dir
+                          "-i" "-f" "--include-configuration-map" "pull"))
+          "Pull operation should fail with invalid token")
+
+      ;; Verify no files were pulled with invalid token
+      (is (or (not (.exists (io/file token-repo-dir)))
+              (empty-directory? token-repo-dir))
+          "Target directory should be empty/nonexistent after failed auth")
+
+      ;; Now test with valid token
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--token" token "-t" token-repo-dir
+                          "-i" "-f" "--include-configuration-map" "pull"))
+          "Pull operation should succeed with valid token")
+
+      ;; Verify files were actually pulled
+      (is (not (empty-directory? token-repo-dir))
+          "Target directory should not be empty after pull with token")
+
+      ;; Verify specific expected files/directories exist
+      (is (.exists (io/file token-repo-dir "GlobalScripts"))
+          "GlobalScripts directory should exist after successful pull")
+
+      ;; Clean up
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" token-repo-dir))))
 
 
 ;;;;; original approach till the proper diff params were found
