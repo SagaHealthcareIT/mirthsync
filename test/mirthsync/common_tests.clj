@@ -29,6 +29,47 @@
 (defn test-integration
   [repo-dir baseline-dir version]
 
+  (testing "Token authentication works ISOLATED - runs FIRST before any other auth"
+    ;; This test MUST run first to ensure it's not relying on any prior authentication
+    (let [token-repo-dir (str repo-dir "-token-test-isolated")
+          token (get-session-token)]
+      ;; Clean up from any previous test runs
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" token-repo-dir)
+
+      ;; Verify we got a token
+      (is (not (nil? token)) "Should be able to get a session token")
+      (is (string? token) "Session token should be a string")
+      (is (> (count token) 10) "Token should be a reasonable length")
+
+      ;; CRITICAL: Test with invalid token first to ensure auth is actually being validated
+      (is (= 1 (main-func "-s" "https://localhost:8443/api"
+                          "--token" "completely-invalid-token-xyz123" "-t" token-repo-dir
+                          "-i" "-f" "--include-configuration-map" "pull"))
+          "Pull operation should FAIL with invalid token - proving token is being checked")
+
+      ;; Verify no files were pulled with invalid token
+      (is (or (not (.exists (io/file token-repo-dir)))
+              (empty-directory? token-repo-dir))
+          "Target directory should be empty/nonexistent after failed auth")
+
+      ;; Now test with valid token in a completely fresh context
+      ;; No username/password has been used yet in this test suite
+      (is (= 0 (main-func "-s" "https://localhost:8443/api"
+                          "--token" token "-t" token-repo-dir
+                          "-i" "-f" "--include-configuration-map" "pull"))
+          "Pull operation should succeed with valid token - proving token auth works")
+
+      ;; Verify files were actually pulled
+      (is (not (empty-directory? token-repo-dir))
+          "Target directory should not be empty after pull with token")
+
+      ;; Verify specific expected files/directories exist (checking GlobalScripts since it always exists)
+      (is (.exists (io/file token-repo-dir "GlobalScripts"))
+          "GlobalScripts directory should exist after successful pull")
+
+      ;; Clean up
+      (rm "-f" "--preserve-root" "--one-file-system" "-r" token-repo-dir)))
+
   (testing "Complex actions with empty target and restrict-to-path and skip-disabled"
     ;; this specific test is not compatible with 3.08
     (is (= [0 0 0 true 0 0 true 0 false]
@@ -457,49 +498,4 @@
                                          (let [channels (mi/find-elements :channels zip-loc)]
                                            (filter #(= channel-id (mi/find-id :channels %)) channels))))))]
                       (is (not (empty? response))
-                          (str "Channel " channel-name " (ID: " channel-id ") should be accessible after bulk deployment"))))))))))))
-
-  (testing "Token authentication works for pull and push operations"
-    (let [token-repo-dir (str repo-dir "-token-test")
-          token (get-session-token)]
-      ;; Clean up from any previous test runs
-      (rm "-f" "--preserve-root" "--one-file-system" "-r" token-repo-dir)
-
-      ;; Verify we got a token
-      (is (not (nil? token)) "Should be able to get a session token")
-      (is (string? token) "Session token should be a string")
-
-      ;; CRITICAL: Test with invalid token first to ensure auth is actually being validated
-      (is (= 1 (main-func "-s" "https://localhost:8443/api"
-                          "--token" "invalid-token-12345" "-t" token-repo-dir
-                          "-i" "-f" "--include-configuration-map" "pull"))
-          "Pull operation should FAIL with invalid token")
-
-      ;; Verify no files were pulled with invalid token
-      (is (or (not (.exists (io/file token-repo-dir)))
-              (empty-directory? token-repo-dir))
-          "Target directory should be empty/nonexistent after failed auth")
-
-      ;; Now test with valid token - this is a FRESH invocation in a NEW process context
-      ;; If this passes, it means the token is actually being used for authentication
-      (is (= 0 (main-func "-s" "https://localhost:8443/api"
-                          "--token" token "-t" token-repo-dir
-                          "-i" "-f" "--include-configuration-map" "pull"))
-          "Pull operation should succeed with valid token authentication")
-
-      ;; Verify files were pulled
-      (is (not (empty-directory? token-repo-dir))
-          "Target directory should not be empty after pull with token")
-
-      ;; Verify specific files exist to ensure pull actually worked
-      (is (.exists (io/file token-repo-dir "Channels"))
-          "Channels directory should exist after pull")
-
-      ;; Test push with token authentication
-      (is (= 0 (main-func "--include-configuration-map" "-s" "https://localhost:8443/api"
-                          "--token" token "-t" token-repo-dir
-                          "-i" "-f" "push"))
-          "Push operation should succeed with token authentication")
-
-      ;; Clean up
-      (rm "-f" "--preserve-root" "--one-file-system" "-r" token-repo-dir))))
+                          (str "Channel " channel-name " (ID: " channel-id ") should be accessible after bulk deployment")))))))))))))

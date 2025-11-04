@@ -49,13 +49,18 @@
                           :accept "application/xml")))))
 
 (defn- add-cookie-to-store
-  "Add a JSESSIONID cookie to the cookie store"
+  "Add a JSESSIONID cookie to the cookie store. Creates a cookie matching
+  what Mirth Connect sets: Path from server URL (e.g. /api), Secure flag for HTTPS,
+  and Domain matching the server host."
   [cookie-store server token]
-  (let [cookie (BasicClientCookie. "JSESSIONID" token)
-        uri (java.net.URI. server)]
-    (.setDomain cookie (.getHost uri))
-    (.setPath cookie "/")
-    (.setSecure cookie (= "https" (.getScheme uri)))
+  (let [uri (java.net.URI. server)
+        cookie (doto (BasicClientCookie. "JSESSIONID" token)
+                 (.setDomain (.getHost uri))
+                 (.setPath (let [path (.getPath uri)]
+                             (if (and path (not= path ""))
+                               path
+                               "/")))
+                 (.setSecure (= "https" (.getScheme uri))))]
     (.addCookie cookie-store cookie)))
 
 (defn with-authentication
