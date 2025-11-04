@@ -137,3 +137,40 @@
             non-existent-file (io/file (build-path "target" "test" "non-existent.txt"))]
         ; Should still validate path correctly even if file doesn't exist
         (is (safe-delete-file? non-existent-file target-dir))))))
+
+(deftest find-orphaned-files-path-normalization-test
+  (let [find-orphaned-files-in-list #'mirthsync.actions/find-orphaned-files-in-list]
+    (testing "uses canonical paths for consistent comparison"
+      (let [target-dir (build-path "target" "test")
+            ; Create a file with a path that includes . or .. components
+            file-with-dots (io/file (build-path "target" "test" "." "subdir" "file.xml"))
+            canonical-path (.getCanonicalPath file-with-dots)
+            ; Expected paths should use the canonical form
+            expected-paths #{(str target-dir java.io.File/separator "subdir" java.io.File/separator "file.xml")}]
+        ; File should NOT be considered orphaned since its canonical path matches expected
+        (let [orphaned (find-orphaned-files-in-list [file-with-dots] expected-paths target-dir)]
+          (is (= 0 (count orphaned))
+              "File with . in path should not be orphaned when canonical path matches expected"))))
+
+    (testing "handles paths consistently across multiple invocations"
+      (let [target-dir (build-path "target" "test")
+            test-file (io/file (build-path "target" "test" "Channels" "channel1.xml"))
+            expected-paths #{(build-path "target" "test" "Channels" "channel1.xml")}]
+        ; Run the same check twice - should get same result both times
+        (let [first-result (find-orphaned-files-in-list [test-file] expected-paths target-dir)
+              second-result (find-orphaned-files-in-list [test-file] expected-paths target-dir)]
+          (is (= (count first-result) (count second-result))
+              "Multiple invocations should yield consistent results")
+          (is (= 0 (count first-result))
+              "File matching expected path should not be orphaned"))))
+
+    (testing "correctly identifies actual orphans with canonical paths"
+      (let [target-dir (build-path "target" "test")
+            orphan-file (io/file (build-path "target" "test" "Channels" "orphaned.xml"))
+            valid-file (io/file (build-path "target" "test" "Channels" "valid.xml"))
+            expected-paths #{(build-path "target" "test" "Channels" "valid.xml")}]
+        (let [orphaned (find-orphaned-files-in-list [orphan-file valid-file] expected-paths target-dir)]
+          (is (= 1 (count orphaned))
+              "Should find exactly one orphaned file")
+          (is (= (.getCanonicalPath orphan-file) (.getCanonicalPath (first orphaned)))
+              "Should identify the correct orphaned file"))))))

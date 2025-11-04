@@ -138,7 +138,7 @@
   [files expected-paths target-path]
   (let [target-absolute-path (.getCanonicalPath (io/file target-path))]
     (filter (fn [^File file]
-              (let [file-absolute-path (.getAbsolutePath file)
+              (let [file-absolute-path (.getCanonicalPath file)
                     ;; Convert absolute path to relative path starting with target
                     file-relative-path (if (.startsWith file-absolute-path target-absolute-path)
                                          (str target-path
