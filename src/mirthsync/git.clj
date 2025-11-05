@@ -121,7 +121,8 @@
     false))
 
 (defn git-commit
-  "Create a git commit with the specified message and optional author info"
+  "Create a git commit with the specified message and optional author info.
+   GPG signing is explicitly disabled to avoid password prompts in automated contexts."
   ([target-dir message]
    (git-commit target-dir message nil nil))
   ([target-dir message author-name author-email]
@@ -130,7 +131,8 @@
        (let [repo (git/load-repo target-dir)
              commit-args (->> [message
                                (when author-name :author-name) author-name
-                               (when author-email :author-email) author-email]
+                               (when author-email :author-email) author-email
+                               :sign? false]  ; Disable GPG signing to avoid password prompts
                               (remove nil?))]
          (try
            (log/info "Creating git commit:" message)

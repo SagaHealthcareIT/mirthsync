@@ -78,6 +78,10 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - Always verify that removed functions are not referenced elsewhere before deletion.
 - Use private helper functions (defn-) for internal implementation details that shouldn't be part of the public API.
 
+### Git Integration
+- **GPG Signing**: Commits created by mirthsync explicitly disable GPG signing (`:sign? false`) to avoid password prompts in automated contexts. This overrides user's `~/.gitconfig` settings where `commit.gpgsign = true` may be set.
+- This ensures mirthsync can create commits non-interactively regardless of the user's git configuration.
+
 ### Feature Development Best Practices
 - **Orphan Detection**: Always detect orphaned files during pull operations and warn users about them, even when automatic deletion is disabled.
 - **User Experience**: Provide clear warnings with file lists and actionable instructions when potentially destructive operations are available but not enabled.
