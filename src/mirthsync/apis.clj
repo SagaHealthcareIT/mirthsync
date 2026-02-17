@@ -256,7 +256,9 @@
     (when (seq channel-ids)
       (log/infof "Deploying %d channels in bulk: %s" (count channel-ids) (pr-str channel-ids))
       (try+
-       (let [channel-set (str "<set>" (apply str (map #(str "<string>" % "</string>") channel-ids)) "</set>")]
+       (let [channel-set (apply str "<set>"
+                               (map #(str "<string>" % "</string>") channel-ids)
+                               "</set>")]
          (mhttp/post-xml
           app-conf
           "/channels/_deploy"
@@ -314,7 +316,9 @@
          all-channels (distinct (concat changed-channels new-channels))]
      (if (seq all-channels)
        (do (log/infof "Deploying %d channel(s): %s" (count all-channels) (pr-str all-channels))
-           (let [channel-set (str "<set>" (apply str (map #(str "<string>" % "</string>") all-channels)) "</set>")]
+           (let [channel-set (apply str "<set>"
+                                   (map #(str "<string>" % "</string>") all-channels)
+                                   "</set>")]
              (mhttp/post-xml app-conf "/channels/_deploy" channel-set
                              {:returnErrors "true" :debug "false"} false)
              (log/info "Deploy-changed completed successfully")))
