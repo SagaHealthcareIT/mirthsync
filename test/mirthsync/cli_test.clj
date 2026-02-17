@@ -101,6 +101,33 @@
       (is (and (:deploy conf-with-deploy) (nil? (:deploy-all conf-with-deploy))))
       (is (and (:deploy-all conf-with-deploy-all) (nil? (:deploy conf-with-deploy-all))))))
 
+  (testing "Deploy-changed flag is parsed correctly"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-changed" "push"])]
+      (is (= true (:deploy-changed conf)))))
+
+  (testing "Deploy-changed defaults to nil"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "push"])]
+      (is (nil? (:deploy-changed conf)))))
+
+  (testing "Deploy-changed is independent from other deploy flags"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-changed" "push"])]
+      (is (= true (:deploy-changed conf)))
+      (is (nil? (:deploy conf)))
+      (is (nil? (:deploy-all conf)))))
+
+  (testing "Deploy-new flag is parsed correctly"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-new" "push"])]
+      (is (= true (:deploy-new conf)))))
+
+  (testing "Deploy-new defaults to nil"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "push"])]
+      (is (nil? (:deploy-new conf)))))
+
+  (testing "Deploy-new can be combined with deploy-changed"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-changed" "--deploy-new" "push"])]
+      (is (= true (:deploy-changed conf)))
+      (is (= true (:deploy-new conf)))))
+
   (testing "Token authentication is accepted"
     (let [conf (config ["-s" "https://localhost:8443/api" "--token" "test-token-123" "-t" "foo" "pull"])]
       (is (= 0 (:exit-code conf)))

@@ -86,6 +86,16 @@
         During a push, collect all channel IDs and deploy them together
         at the end, allowing Mirth's dependency logic to control order."]
 
+   [nil "--deploy-changed" "Deploy only changed channels after push
+        After all channels are saved, query the server for channel statuses
+        and deploy only those with a non-zero deployedRevisionDelta or
+        where codeTemplatesChanged is true."]
+
+   [nil "--deploy-new" "Deploy channels that are not currently deployed
+        Use with --deploy-changed. During push, tracks which channels were
+        saved. After push, any saved channel not found in the dashboard
+        statuses (i.e. not currently deployed) will also be deployed."]
+
    ["-I" "--interactive" "
         Allow for console prompts for user input"]
 
