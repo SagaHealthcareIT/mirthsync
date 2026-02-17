@@ -236,6 +236,10 @@
         (let [channel-id (mi/find-id api (:el-loc app-conf))]
           (log/infof "Collecting channel ID for bulk deployment: %s" channel-id)
           (swap! (:bulk-deploy-channels app-conf) conj channel-id)))
+      ;; Track pushed channel IDs for --deploy-new
+      (when (:pushed-channel-ids app-conf)
+        (let [channel-id (mi/find-id api (:el-loc app-conf))]
+          (swap! (:pushed-channel-ids app-conf) conj channel-id)))
       true)
     (do (log/error (str "Unable to save the channel."
                         (when-not (app-conf :force) " There may be remote changes or the remote version does not match the local version. If you want to push the local changes anyway you can use the \"-f\" flag to force an overwrite.")))
@@ -252,9 +256,7 @@
     (when (seq channel-ids)
       (log/infof "Deploying %d channels in bulk: %s" (count channel-ids) (pr-str channel-ids))
       (try+
-       (let [channel-set (apply str "<set>"
-                               (map #(str "<string>" % "</string>") channel-ids)
-                               "</set>")]
+       (let [channel-set (str "<set>" (apply str (map #(str "<string>" % "</string>") channel-ids)) "</set>")]
          (mhttp/post-xml
           app-conf
           "/channels/_deploy"
@@ -265,6 +267,61 @@
        (catch Object {:keys [body]}
          (log/error (str "Error during bulk channel deployment: " body))
          false)))))
+
+(defn deploy-changed-channels
+  "Query the server for channel deployment statuses and deploy only channels
+  that have a non-zero deployedRevisionDelta or, when code templates were
+  pushed, where codeTemplatesChanged is true. When --deploy-new is active,
+  also deploy any pushed channels not found in the dashboard statuses."
+  [{:keys [code-templates-pushed pushed-channel-ids] :as app-conf}]
+  (log/info "Checking for channels with pending deployment changes...")
+  (try+
+   (let [body (mhttp/get-xml app-conf "/channels/statuses")
+         statuses-zip (mx/to-zip body)
+         dashboard-statuses (cdzx/xml-> statuses-zip :dashboardStatus)
+         deployed-ids (set (map #(cdzx/xml1-> % :channelId cdzx/text) dashboard-statuses))
+         ;; Find changed channels from dashboard statuses
+         changed-channels
+         (reduce
+          (fn [acc status-loc]
+            (let [channel-id (cdzx/xml1-> status-loc :channelId cdzx/text)
+                  channel-name (cdzx/xml1-> status-loc :name cdzx/text)
+                  delta-text (cdzx/xml1-> status-loc :deployedRevisionDelta cdzx/text)
+                  delta (when delta-text
+                          (try (Integer/parseInt delta-text)
+                               (catch NumberFormatException _ nil)))
+                  code-templates-changed (= "true" (cdzx/xml1-> status-loc :codeTemplatesChanged cdzx/text))
+                  revision-changed (and delta (not= 0 delta))
+                  needs-deploy (or revision-changed
+                                   (and code-templates-pushed code-templates-changed))]
+              (log/debugf "Channel '%s' (%s): revisionDelta=%s, codeTemplatesChanged=%s"
+                          channel-name channel-id (or delta-text "nil") code-templates-changed)
+              (when needs-deploy
+                (log/infof "Collecting channel for deployment: %s (%s)" channel-name channel-id))
+              (if needs-deploy
+                (conj acc channel-id)
+                acc)))
+          []
+          dashboard-statuses)
+         ;; Find undeployed channels (pushed but not in dashboard)
+         new-channels (when pushed-channel-ids
+                        (let [pushed-ids @pushed-channel-ids
+                              undeployed (remove deployed-ids pushed-ids)]
+                          (when (seq undeployed)
+                            (doseq [id undeployed]
+                              (log/infof "Collecting undeployed channel for deployment: %s" id))
+                            undeployed)))
+         all-channels (distinct (concat changed-channels new-channels))]
+     (if (seq all-channels)
+       (do (log/infof "Deploying %d channel(s): %s" (count all-channels) (pr-str all-channels))
+           (let [channel-set (str "<set>" (apply str (map #(str "<string>" % "</string>") all-channels)) "</set>")]
+             (mhttp/post-xml app-conf "/channels/_deploy" channel-set
+                             {:returnErrors "true" :debug "false"} false)
+             (log/info "Deploy-changed completed successfully")))
+       (log/info "No channels have pending deployment changes")))
+   (catch Object {:keys [body]}
+     (log/error (str "Error during deploy-changed: " body))
+     false)))
 
 (defmethod mi/pre-node-action :default [_ app-conf] app-conf)
 (defmethod mi/pre-node-action :code-template-libraries [_ app-conf]

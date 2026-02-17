@@ -267,6 +267,135 @@
       (ct/is (= false (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)))
       (ct/is (empty? @(:bulk-deploy-channels app-conf))))))
 
+(defn- find-changed-channel-ids
+  "Helper to extract channel IDs that need deployment from dashboard statuses.
+  A channel needs deployment if deployedRevisionDelta is non-zero or codeTemplatesChanged is true."
+  [dashboard-statuses]
+  (reduce
+   (fn [acc status-loc]
+     (let [channel-id (cdzx/xml1-> status-loc :channelId cdzx/text)
+           delta-text (cdzx/xml1-> status-loc :deployedRevisionDelta cdzx/text)
+           delta (when delta-text
+                   (try (Integer/parseInt delta-text)
+                        (catch NumberFormatException _ nil)))
+           code-templates-changed (= "true" (cdzx/xml1-> status-loc :codeTemplatesChanged cdzx/text))
+           needs-deploy (or (and delta (not= 0 delta))
+                            code-templates-changed)]
+       (if needs-deploy
+         (conj acc channel-id)
+         acc)))
+   []
+   dashboard-statuses))
+
+(ct/deftest deploy-changed-channels-tests
+  (ct/testing "Channels with non-zero revision delta are selected"
+    (let [sample-xml "<list>
+                        <dashboardStatus>
+                          <channelId>1aa2c102-3167-4122-9467-dd989ce3d189</channelId>
+                          <name>Channel A</name>
+                          <deployedRevisionDelta>1</deployedRevisionDelta>
+                          <codeTemplatesChanged>false</codeTemplatesChanged>
+                        </dashboardStatus>
+                        <dashboardStatus>
+                          <channelId>b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98</channelId>
+                          <name>Channel B</name>
+                          <deployedRevisionDelta>0</deployedRevisionDelta>
+                          <codeTemplatesChanged>false</codeTemplatesChanged>
+                        </dashboardStatus>
+                        <dashboardStatus>
+                          <channelId>c3d4e5f6-7890-4abc-def1-234567890abc</channelId>
+                          <name>Channel C</name>
+                          <deployedRevisionDelta>3</deployedRevisionDelta>
+                          <codeTemplatesChanged>false</codeTemplatesChanged>
+                        </dashboardStatus>
+                      </list>"
+          statuses-zip (mx/to-zip sample-xml)
+          changed-ids (find-changed-channel-ids (cdzx/xml-> statuses-zip :dashboardStatus))]
+      (ct/is (= ["1aa2c102-3167-4122-9467-dd989ce3d189" "c3d4e5f6-7890-4abc-def1-234567890abc"] changed-ids))
+      (ct/is (not (some #{"b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98"} changed-ids)))))
+
+  (ct/testing "Channels with codeTemplatesChanged=true are selected"
+    (let [sample-xml "<list>
+                        <dashboardStatus>
+                          <channelId>1aa2c102-3167-4122-9467-dd989ce3d189</channelId>
+                          <name>Channel A</name>
+                          <deployedRevisionDelta>0</deployedRevisionDelta>
+                          <codeTemplatesChanged>true</codeTemplatesChanged>
+                        </dashboardStatus>
+                        <dashboardStatus>
+                          <channelId>b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98</channelId>
+                          <name>Channel B</name>
+                          <deployedRevisionDelta>0</deployedRevisionDelta>
+                          <codeTemplatesChanged>false</codeTemplatesChanged>
+                        </dashboardStatus>
+                      </list>"
+          statuses-zip (mx/to-zip sample-xml)
+          changed-ids (find-changed-channel-ids (cdzx/xml-> statuses-zip :dashboardStatus))]
+      (ct/is (= ["1aa2c102-3167-4122-9467-dd989ce3d189"] changed-ids))))
+
+  (ct/testing "Both delta and codeTemplatesChanged trigger deploy"
+    (let [sample-xml "<list>
+                        <dashboardStatus>
+                          <channelId>1aa2c102-3167-4122-9467-dd989ce3d189</channelId>
+                          <name>Channel A</name>
+                          <deployedRevisionDelta>2</deployedRevisionDelta>
+                          <codeTemplatesChanged>true</codeTemplatesChanged>
+                        </dashboardStatus>
+                      </list>"
+          statuses-zip (mx/to-zip sample-xml)
+          changed-ids (find-changed-channel-ids (cdzx/xml-> statuses-zip :dashboardStatus))]
+      (ct/is (= ["1aa2c102-3167-4122-9467-dd989ce3d189"] changed-ids))))
+
+  (ct/testing "All channels up to date results in empty list"
+    (let [sample-xml "<list>
+                        <dashboardStatus>
+                          <channelId>1aa2c102-3167-4122-9467-dd989ce3d189</channelId>
+                          <name>Channel A</name>
+                          <deployedRevisionDelta>0</deployedRevisionDelta>
+                          <codeTemplatesChanged>false</codeTemplatesChanged>
+                        </dashboardStatus>
+                      </list>"
+          statuses-zip (mx/to-zip sample-xml)
+          changed-ids (find-changed-channel-ids (cdzx/xml-> statuses-zip :dashboardStatus))]
+      (ct/is (empty? changed-ids))))
+
+  (ct/testing "Empty dashboard status list"
+    (let [sample-xml "<list/>"
+          statuses-zip (mx/to-zip sample-xml)
+          dashboard-statuses (cdzx/xml-> statuses-zip :dashboardStatus)]
+      (ct/is (empty? dashboard-statuses)))))
+
+(ct/deftest deploy-new-tracking-tests
+  (ct/testing "Channel after-push tracks pushed IDs when pushed-channel-ids atom is present"
+    (let [app-conf {:pushed-channel-ids (atom [])}
+          api :channels
+          el-loc (mx/to-zip "<channel><id>d4e5f6a7-8901-4bcd-ef23-456789abcdef</id><name>New Channel</name></channel>")
+          result {:status 200 :body "true"}]
+      (with-redefs [mirthsync.interfaces/find-id (fn [_ _] "d4e5f6a7-8901-4bcd-ef23-456789abcdef")]
+        (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)
+        (ct/is (= ["d4e5f6a7-8901-4bcd-ef23-456789abcdef"] @(:pushed-channel-ids app-conf))))))
+
+  (ct/testing "Channel after-push does not track when pushed-channel-ids atom is absent"
+    (let [app-conf {}
+          api :channels
+          el-loc (mx/to-zip "<channel><id>d4e5f6a7-8901-4bcd-ef23-456789abcdef</id><name>Channel</name></channel>")
+          result {:status 200 :body "true"}]
+      (with-redefs [mirthsync.interfaces/find-id (fn [_ _] "d4e5f6a7-8901-4bcd-ef23-456789abcdef")]
+        (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)
+        (ct/is (nil? (:pushed-channel-ids app-conf))))))
+
+  (ct/testing "Undeployed pushed channels are identified correctly"
+    (let [pushed-ids (atom ["1aa2c102-3167-4122-9467-dd989ce3d189" "e5f6a7b8-9012-4cde-f345-6789abcdef01"])
+          deployed-ids #{"1aa2c102-3167-4122-9467-dd989ce3d189" "b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98"}
+          undeployed (remove deployed-ids @pushed-ids)]
+      (ct/is (= ["e5f6a7b8-9012-4cde-f345-6789abcdef01"] (vec undeployed)))))
+
+  (ct/testing "All pushed channels already deployed results in no new channels"
+    (let [pushed-ids (atom ["1aa2c102-3167-4122-9467-dd989ce3d189" "b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98"])
+          deployed-ids #{"1aa2c102-3167-4122-9467-dd989ce3d189" "b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98" "c3d4e5f6-7890-4abc-def1-234567890abc"}
+          undeployed (remove deployed-ids @pushed-ids)]
+      (ct/is (empty? undeployed)))))
+
 (comment
   (ct/deftest iterate-apis
     (ct/is (= "target/foo/blah.xm" (local-path-str "foo/blah.xml" "target")))))

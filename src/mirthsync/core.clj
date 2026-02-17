@@ -34,6 +34,11 @@
             app-conf (http/with-authentication
                        app-conf
                        (fn []
+                         (when (and (= "push" action)
+                                    (> (count (filter identity [(:deploy app-conf) (:deploy-all app-conf) (:deploy-changed app-conf)])) 1))
+                           (log/warn "Multiple deploy flags specified. This may cause redundant deployment operations."))
+                         (when (and (= "push" action) (:deploy-new app-conf) (not (:deploy-changed app-conf)))
+                           (log/warn "--deploy-new has no effect without --deploy-changed"))
                          (let [preprocessed-conf (api/iterate-apis app-conf (api/apis app-conf) api/preprocess-api)
                                ;; For pull operations, always capture local files before pull for orphan detection
                                conf-with-pre-pull (if (= "pull" action)
@@ -43,10 +48,21 @@
                                conf-with-bulk-deploy (if (and (= "push" action) (:deploy-all conf-with-pre-pull))
                                                         (assoc conf-with-pre-pull :bulk-deploy-channels (atom []))
                                                         conf-with-pre-pull)
-                               processed-conf (api/iterate-apis conf-with-bulk-deploy (api/apis conf-with-bulk-deploy) action-fn)]
+                               ;; Initialize pushed-channel-ids atom for --deploy-new tracking (requires --deploy-changed)
+                               conf-with-tracking (if (and (= "push" action) (:deploy-new conf-with-bulk-deploy) (:deploy-changed conf-with-bulk-deploy))
+                                                      (assoc conf-with-bulk-deploy :pushed-channel-ids (atom []))
+                                                      conf-with-bulk-deploy)
+                               processed-conf (api/iterate-apis conf-with-tracking (api/apis conf-with-tracking) action-fn)]
                            ;; After push with --deploy-all, deploy all channels
                            (when (and (= "push" action) (:deploy-all processed-conf))
                              (api/deploy-all-channels processed-conf))
+                           ;; After push with --deploy-changed, deploy only channels with revision delta
+                           (when (and (= "push" action) (:deploy-changed processed-conf))
+                             (let [pushed-apis (set (api/apis processed-conf))
+                                   code-templates-pushed (or (contains? pushed-apis :code-template-libraries)
+                                                             (contains? pushed-apis :code-templates))]
+                               (api/deploy-changed-channels
+                                (assoc processed-conf :code-templates-pushed code-templates-pushed))))
                            ;; After pull, always check for orphaned files
                            (if (= "pull" action)
                              (act/cleanup-orphaned-files-with-pre-pull processed-conf (api/apis processed-conf))
