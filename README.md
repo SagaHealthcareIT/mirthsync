@@ -280,7 +280,15 @@ Options:
         in a single bulk operation after all channels are saved.
         Allows Mirth's dependency logic to control deployment order.
         More efficient than individual deployment for multiple channels.
-  -I, --interactive                                    
+      --deploy-changed                                 Deploy only changed channels after push
+        After all channels are saved, query the server for channel statuses
+        and deploy only those with a non-zero deployedRevisionDelta or
+        where codeTemplatesChanged is true.
+      --deploy-new                                     Deploy channels that are not currently deployed
+        Use with --deploy-changed. During push, tracks which channels were
+        saved. After push, any saved channel not found in the dashboard
+        statuses (i.e. not currently deployed) will also be deployed.
+  -I, --interactive
         Allow for console prompts for user input
       --commit-message MESSAGE             mirthsync commit  Commit message for git operations
       --git-author NAME                    <computed>        Git author name for commits
@@ -394,6 +402,15 @@ $ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u 
 ``` shell
 # Push and bulk deploy only channels in a specific group
 $ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --deploy-all push -t ./mirth-config -r "Channels/Production Group"
+```
+
+**Selective deployment (deploy only changed channels):**
+``` shell
+# Deploy only channels that have pending changes (non-zero revision delta or code template changes)
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --deploy-changed push -t ./mirth-config
+
+# Deploy changed channels AND any newly pushed channels that aren't currently deployed
+$ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --deploy-changed --deploy-new push -t ./mirth-config
 ```
 
 **Performance comparison:**
