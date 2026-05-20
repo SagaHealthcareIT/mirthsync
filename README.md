@@ -20,10 +20,10 @@ We extend our sincere gratitude to the maintainers and contributors of the [Open
 
 ## VS Code Extension
 
-A companion VS Code extension is available for a graphical interface to mirthSync operations.
-See [VS Code Extension Documentation](docs/vscode-extension/README.md) for details.
+A companion VS Code extension is available for a graphical interface to mirthSync operations:
 
-Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SagaITLLC.mirthsync).
+- [SagaHealthcareIT/mirthsync-vscode](https://github.com/SagaHealthcareIT/mirthsync-vscode) — docs, screen recordings, issue tracker.
+- Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SagaITLLC.mirthsync) or [Open VSX](https://open-vsx.org/extension/SagaITLLC/mirthsync) (for Cursor and similar editors).
 
 ## Suggestions for use
 
