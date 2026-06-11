@@ -214,12 +214,12 @@
   [{:keys [api] :as app-conf}]
   (let [local-path (mi/local-path api (:target app-conf))
         target-path (:target app-conf)
-        ;; Normalize paths by removing trailing slashes for comparison
-        normalized-local (if (.endsWith local-path "/")
-                           (.substring local-path 0 (dec (.length local-path)))
+        ;; Normalize paths by removing trailing separators for comparison
+        normalized-local (if (.endsWith ^String local-path File/separator)
+                           (.substring ^String local-path 0 (dec (.length ^String local-path)))
                            local-path)
-        normalized-target (if (.endsWith target-path "/")
-                            (.substring target-path 0 (dec (.length target-path)))
+        normalized-target (if (.endsWith ^String target-path File/separator)
+                            (.substring ^String target-path 0 (dec (.length ^String target-path)))
                             target-path)
         ;; For APIs that use the root target directory (like configuration-map, resources),
         ;; only capture files that match the API's file pattern instead of all files
