@@ -13,7 +13,7 @@ if type -p greadlink; then
     _readlink=greadlink
 fi
 
-_dir=`dirname $($_readlink -f $0)`
+_dir=$(dirname "$($_readlink -f "$0")")
 
 ## mostly from - https://stackoverflow.com/a/7335524 goal is to detect
 ## java version and potentially disable access warnings
@@ -31,9 +31,9 @@ if [[ "$_java" ]]; then
     version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2}')
     echo version "$version"
     # if [[ "$version" > "1.8" ]]; then
-    #     $_java --illegal-access=permit -jar ${_dir}/lib/uberjar/mirthsync-3.5.2-standalone.jar $@
-    # else         
-        $_java -jar ${_dir}/../lib/mirthsync-3.5.2-standalone.jar $@
+    #     "$_java" --illegal-access=permit -jar "${_dir}/lib/uberjar/mirthsync-3.5.2-standalone.jar" "$@"
+    # else
+        "$_java" -jar "${_dir}/../lib/mirthsync-3.5.2-standalone.jar" "$@"
     # fi
 fi
 ##

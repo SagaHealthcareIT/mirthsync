@@ -81,14 +81,16 @@ function findJava() {
   // Check if java is in PATH
   const javaCommand = process.platform === 'win32' ? 'java.exe' : 'java';
 
-  // Try running java -version to check if it's available
+  // Try running java -version to check if it's available. As with the
+  // main spawn below, do not use a shell here: it is unnecessary for a
+  // no-argument detection call, and a shell launched when java is absent
+  // can still write to stderr, which would be misread as "java present".
   const result = spawnSync(javaCommand, ['-version'], {
     stdio: ['pipe', 'pipe', 'pipe'],
-    encoding: 'utf8',
-    shell: process.platform === 'win32'
+    encoding: 'utf8'
   });
 
-  if (result.status === 0 || result.stderr) {
+  if (!result.error && (result.status === 0 || result.stderr)) {
     // Java outputs version to stderr
     return javaCommand;
   }
@@ -102,7 +104,7 @@ function findJava() {
         stdio: ['pipe', 'pipe', 'pipe'],
         encoding: 'utf8'
       });
-      if (homeResult.status === 0 || homeResult.stderr) {
+      if (!homeResult.error && (homeResult.status === 0 || homeResult.stderr)) {
         return javaPath;
       }
     }
