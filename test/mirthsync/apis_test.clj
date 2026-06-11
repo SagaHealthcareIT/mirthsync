@@ -1,9 +1,11 @@
 (ns mirthsync.apis-test
   (:require [clojure.data :as cd]
             [clojure.data.zip.xml :as cdzx]
+            [clojure.java.io :as io]
             [clojure.test :as ct]
             [clojure.zip :as cz]
             [mirthsync.apis :as ma]
+            [mirthsync.cli :as cli]
             [mirthsync.interfaces]
             [mirthsync.cross-platform-utils :as cpu]
             [mirthsync.files :as mf]
@@ -266,6 +268,35 @@
       ;; When push fails, should not collect channel ID and should return false
       (ct/is (= false (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)))
       (ct/is (empty? @(:bulk-deploy-channels app-conf))))))
+
+(ct/deftest forward-slash-restrict-to-path-pull-writes-file
+  ;; A restrict-to-path supplied with forward slashes must still match the
+  ;; OS-native file paths that serialize-node compares against via
+  ;; String/startsWith. config normalizes the separators; this drives the real
+  ;; serialize-node filter+write path end-to-end (no server) and asserts the
+  ;; file is written even when the path is given with forward slashes.
+  (let [target (build-path "target" "restrict-to-path-sep-test")
+        fpath (build-path target "Channels" "GroupA" "ChannelA.xml")
+        el-loc (mx/to-zip "<channel><id>id-1</id><name>ChannelA</name></channel>")
+        ;; restrict-to-path given with forward slashes
+        restrict-to-path (:restrict-to-path
+                          (cli/config ["-s" "https://localhost:8443/api"
+                                       "-u" "admin" "-p" "password"
+                                       "-t" target
+                                       "-r" "Channels/GroupA/ChannelA" "pull"]))
+        app-conf {:api :channels
+                  :el-loc el-loc
+                  :target target
+                  :restrict-to-path restrict-to-path
+                  :disk-mode "code"}]
+    (when (.exists (io/file target)) (cpu/delete-recursive target :allowed-dir "target"))
+    (with-redefs [mirthsync.interfaces/should-skip? (fn [_ _ _] false)
+                  mirthsync.interfaces/file-path (fn [_ _] fpath)
+                  mirthsync.interfaces/deconstruct-node (fn [_ _ _] [[fpath "<channel><id>id-1</id></channel>"]])]
+      (mx/serialize-node app-conf)
+      (ct/testing "Forward-slash restrict-to-path writes the channel file"
+        (ct/is (.exists (io/file fpath)))))
+    (when (.exists (io/file target)) (cpu/delete-recursive target :allowed-dir "target"))))
 
 (comment
   (ct/deftest iterate-apis

@@ -131,4 +131,33 @@
       (is (seq (:exit-msg conf-no-server)))
       (is (re-find #"--server is required" (:exit-msg conf-no-server))))))
 
+(deftest restrict-to-path-separator-normalization
+  ;; A restrict-to-path supplied with forward slashes must be normalized to
+  ;; the platform File/separator so it matches OS-native file paths; on
+  ;; Windows a forward-slash prefix would otherwise never match the backslash
+  ;; file paths that the push/pull filtering compares against.
+  (let [sep java.io.File/separator
+        rtp (fn [path]
+              (:restrict-to-path
+               (config ["-s" "https://localhost:8443/api" "-u" "admin"
+                        "-p" "password" "-t" "foo" "-r" path "pull"])))]
+    (testing "Forward slashes are normalized to the platform separator"
+      (is (= (clojure.string/join sep ["Channels" "GroupA" "ChannelA"])
+             (rtp "Channels/GroupA/ChannelA"))))
+
+    (testing "Backslashes are normalized to the platform separator"
+      (is (= (clojure.string/join sep ["Channels" "GroupA" "ChannelA"])
+             (rtp "Channels\\GroupA\\ChannelA"))))
+
+    (testing "Mixed and repeated separators collapse to a single separator"
+      (is (= (clojure.string/join sep ["Channels" "GroupA" "ChannelA"])
+             (rtp "Channels//GroupA\\\\ChannelA"))))
+
+    (testing "Trailing separators are still stripped after normalization"
+      (is (= (clojure.string/join sep ["Channels" "GroupA"])
+             (rtp "Channels/GroupA/"))))
+
+    (testing "An empty restrict-to-path remains empty"
+      (is (= "" (rtp ""))))))
+
 

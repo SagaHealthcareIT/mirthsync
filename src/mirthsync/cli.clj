@@ -16,6 +16,16 @@
   (when s
     (str/replace s #"(?!^)[\\/]+$" "")))
 
+(defn- normalize-path-separators
+  "Collapses runs of forward and/or backward slashes into the platform's
+  File/separator. A restrict-to-path is matched against OS-native file paths
+  via String/startsWith (see mirthsync.xml/serialize-node and
+  mirthsync.actions/local-locs), so a path supplied with forward slashes must
+  be normalized to the platform separator to match the file paths on Windows."
+  [s]
+  (when s
+    (str/replace s #"[\\/]+" (java.util.regex.Matcher/quoteReplacement File/separator))))
+
 (def ^{:private true} cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
     :parse-fn strip-trailing-slashes
@@ -68,7 +78,7 @@
         that directory. The RESTRICT_TO_PATH must be specified relative to
         the target directory."
     :default ""
-    :parse-fn strip-trailing-slashes]
+    :parse-fn (comp strip-trailing-slashes normalize-path-separators)]
 
    [nil "--include-configuration-map" " A boolean flag to include the
         configuration map in a push or pull. Default: false"
