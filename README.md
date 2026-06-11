@@ -298,6 +298,7 @@ Options:
         When pulling from remote, compare local files with remote files and
         delete any local files that no longer exist on the remote server.
         Use with --interactive to confirm deletions before they occur.
+  -V, --version                                              Print version and exit
   -h, --help
 
 Actions:
