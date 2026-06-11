@@ -139,10 +139,20 @@ function main() {
   // Build the command arguments
   const args = ['-jar', jarPath, ...process.argv.slice(2)];
 
-  // Spawn Java process with inherited stdio for full interactivity
+  // Spawn Java process with inherited stdio for full interactivity.
+  //
+  // Do NOT run this through a shell. With shell:true on Windows, Node
+  // concatenates the argv into a single command string without quoting
+  // (see Node's DEP0190 warning), so any argument containing a space —
+  // e.g. -r "Channels/Default Group/Sample Channel" — is word-split by the
+  // shell before Java ever sees it, and mirthsync fails to parse the command.
+  // Passing the argv array directly lets the runtime deliver each argument to
+  // Java verbatim, spaces and all, identically on every platform. A shell was
+  // never needed for resolution: findJava() always returns a concrete
+  // executable name ("java.exe") or absolute path, which spawn() locates on
+  // PATH on its own.
   const child = spawn(javaPath, args, {
-    stdio: 'inherit',
-    shell: process.platform === 'win32'
+    stdio: 'inherit'
   });
 
   // Forward signals to child process
