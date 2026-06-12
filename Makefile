@@ -56,8 +56,11 @@ release:
 	cp target/uberjar/mirthsync-$(VERSION)-standalone.jar target/mirthsync-$(VERSION)/lib
 	tar -C target/ -cvzf target/mirthsync-$(VERSION).tar.gz mirthsync-$(VERSION)
 	cd target && zip -r mirthsync-$(VERSION).zip mirthsync-$(VERSION)
-	gpg --detach-sign --armor target/mirthsync-$(VERSION).tar.gz
-	gpg --detach-sign --armor target/mirthsync-$(VERSION).zip
+# Sign the release archives with the release key explicitly. The keyring may
+# hold more than one secret key, so -u avoids gpg's default-key selection
+# (matches the :signing :gpg-key in project.clj and the signed git tag).
+	gpg -u jesse.dowell@gmail.com --detach-sign --armor target/mirthsync-$(VERSION).tar.gz
+	gpg -u jesse.dowell@gmail.com --detach-sign --armor target/mirthsync-$(VERSION).zip
 	cd target && sha256sum mirthsync-$(VERSION).tar.gz mirthsync-$(VERSION).zip > CHECKSUMS.txt
 	lein do vcs assert-committed, vcs tag
 
