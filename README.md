@@ -46,7 +46,7 @@ Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/item
 
 ## Current version
 
-The latest version of mirthSync is "3.5.2". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.6.0". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
@@ -62,6 +62,13 @@ group directory.
 - **Security**: Path validation and safety features for file operations
 
 ## Changes
+
+### 3.6.0
+
+- **`--version` flag**: New `-V`/`--version` flag prints the installed mirthsync version and exits (no server/credentials required).
+- **Windows `--restrict-to-path` with spaces and forward slashes** (issues #82, #83): the npm launcher no longer word-splits arguments through a shell, and restrict paths supplied with forward slashes are normalized to the platform separator — so scoping a pull/push to a single channel or group (e.g. `-r "Channels/Default Group/Sample Channel"`) now works on Windows. Pulling a single channel with `-r Channels/<group>/<channel>` writes the channel file as expected.
+- **Launcher quoting**: `mirthsync.sh`/`mirthsync.bat` quote the jar path and arguments so install paths or arguments containing spaces are handled correctly.
+- **Windows `--delete-orphaned` fix**: orphan detection no longer captures unmanaged files (e.g. `.git`) under the target root on Windows, preventing accidental deletion.
 
 ### 3.5.2
 
@@ -291,6 +298,7 @@ Options:
         When pulling from remote, compare local files with remote files and
         delete any local files that no longer exist on the remote server.
         Use with --interactive to confirm deletions before they occur.
+  -V, --version                                              Print version and exit
   -h, --help
 
 Actions:

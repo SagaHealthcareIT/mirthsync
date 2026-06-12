@@ -1,4 +1,4 @@
-VERSION := 3.5.2
+VERSION := 3.6.0
 NPM_VERSION := $(VERSION)
 
 default:

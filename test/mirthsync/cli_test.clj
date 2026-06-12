@@ -1,8 +1,22 @@
 (ns mirthsync.cli-test
   (:require [mirthsync.cli :refer :all]
+            [mirthsync.version :as ver]
             [clojure.test :refer :all]
             [clojure.tools
              [cli :refer [parse-opts]]]))
+
+(deftest version-flag
+  ;; --version short-circuits like --help: it prints the version and exits 0
+  ;; without requiring --target/--server/authentication. Assert against the
+  ;; version namespace value (not a literal) so it survives version bumps.
+  (testing "--version yields exit 0 and the version string, no other args needed"
+    (let [conf (config ["--version"])]
+      (is (= 0 (:exit-code conf)))
+      (is (= ver/version (:exit-msg conf)))))
+  (testing "-V short alias behaves the same"
+    (let [conf (config ["-V"])]
+      (is (= 0 (:exit-code conf)))
+      (is (= ver/version (:exit-msg conf))))))
 
 (deftest configuration
   (testing "Fail on invalid arguments"

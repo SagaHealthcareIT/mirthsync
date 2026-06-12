@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [clojure.java.io :as io]
             [mirthsync.logging :as log]
+            [mirthsync.version :as ver]
             [environ.core :refer [env]])
   (:import java.net.URL
            java.io.File))
@@ -119,6 +120,8 @@
         delete any local files that no longer exist on the remote server.
         Use with --interactive to confirm deletions before they occur."
     :default false]
+
+   ["-V" "--version" "Print version and exit"]
 
    ["-h" "--help"]])
 
@@ -253,18 +256,22 @@
                        (assoc % :git-subcommand-args git-args)
                        %))
                    
-                   ;; Set up our exit code
+                   ;; Set up our exit code. --version short-circuits cleanly
+                   ;; (like --help) without requiring --target/--server/auth.
                    (assoc :exit-code
-                          (if (or (:errors config)
-                                  (not args-valid?))
+                          (if (and (not (get-in config [:options :version]))
+                                   (or (:errors config)
+                                       (not args-valid?)))
                             1
                             0)))
 
         config (-> config
                    ;; exit message if errors - add custom validation errors
                    (assoc :exit-msg
-                          (when (or (> (:exit-code config) 0)
-                                    (:help config))
+                          (cond
+                            (:version config) ver/version
+                            (or (> (:exit-code config) 0)
+                                (:help config))
                             (let [action (first (:arguments config))
                                   git-action? (= "git" action)
                                   has-username? (:username config)
