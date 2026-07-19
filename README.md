@@ -768,6 +768,16 @@ Requires [Leiningen](https://leiningen.org/)
 
 - Gracefully handle renames and deletions
 
+## About & Commercial Support
+
+mirthSync is built and maintained by [Saga IT, LLC](https://saga-it.com), a
+healthcare integration consultancy. If you need help beyond the tool:
+
+- [Mirth Connect consulting & development](https://saga-it.com/services/mirth-connect): channel development, AWS/Azure HA clustering, and commercial-license migration
+- [Open Integration Engine (OIE) services](https://saga-it.com/services/open-integration-engine)
+- [Getting started with mirthSync](https://saga-it.com/blog/getting-started-with-mirthsync): step-by-step CLI walkthrough
+- [MirthSync for VS Code](https://saga-it.com/products/mirthsync-vscode): the companion GUI extension
+
 ## License
 
 Copyright © 2017-2022 Saga IT LLC
