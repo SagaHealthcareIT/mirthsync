@@ -46,7 +46,7 @@ Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/item
 
 ## Current version
 
-The latest version of mirthSync is "3.6.0". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.7.0". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
@@ -55,6 +55,7 @@ group directory.
 - **Token-based Authentication**: New `--token` flag for authentication using existing HTTP session tokens (alternative to username/password)
 - **Simplified Git Operations**: Git commands no longer require server credentials or authentication flags
 - **Bulk Channel Deployment**: New `--deploy-all` flag for efficient bulk deployment of multiple channels
+- **Selective Deployment**: New `--deploy-changed` and `--deploy-new` flags deploy only channels with pending changes or new channels after a push
 - **Enhanced Orphaned File Detection**: Always detects orphaned files during pull operations with clear user warnings and optional automatic deletion
 - **Improved User Experience**: Better code organization and elimination of duplicate orphan detection logic
 - **Enhanced Git Integration**: Comprehensive subcommand support (init, status, add, commit, diff, log, branch, checkout, remote, pull, push, reset)
@@ -62,6 +63,12 @@ group directory.
 - **Security**: Path validation and safety features for file operations
 
 ## Changes
+
+### 3.7.0
+
+- **Selective deployment** (PR #78, thanks @gibson9583): new `--deploy-changed` flag deploys only channels that Mirth reports as changed after a push (non-zero `deployedRevisionDelta`, or `codeTemplatesChanged` when this push saved code templates). Pair it with `--deploy-new` to also deploy pushed channels that are not currently deployed. Errors while checking or deploying return a nonzero exit code and skip the automatic Git commit.
+  - Mirth only tracks template changes for FUNCTION and COMPILED_CODE templates; drag-and-drop templates never trigger a deployment.
+  - Deploy flags have no effect with `--disk-mode backup`, because a configuration restore leaves every channel undeployed.
 
 ### 3.6.0
 
