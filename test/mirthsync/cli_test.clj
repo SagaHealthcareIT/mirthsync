@@ -145,6 +145,34 @@
       (is (seq (:exit-msg conf-no-server)))
       (is (re-find #"--server is required" (:exit-msg conf-no-server))))))
 
+(deftest selective-deployment-flags
+  (testing "Deploy-changed flag is parsed correctly"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-changed" "push"])]
+      (is (= true (:deploy-changed conf)))))
+
+  (testing "Deploy-changed defaults to nil"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "push"])]
+      (is (nil? (:deploy-changed conf)))))
+
+  (testing "Deploy-changed is independent from other deploy flags"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-changed" "push"])]
+      (is (= true (:deploy-changed conf)))
+      (is (nil? (:deploy conf)))
+      (is (nil? (:deploy-all conf)))))
+
+  (testing "Deploy-new flag is parsed correctly"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-new" "push"])]
+      (is (= true (:deploy-new conf)))))
+
+  (testing "Deploy-new defaults to nil"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "push"])]
+      (is (nil? (:deploy-new conf)))))
+
+  (testing "Deploy-new can be combined with deploy-changed"
+    (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-changed" "--deploy-new" "push"])]
+      (is (= true (:deploy-changed conf)))
+      (is (= true (:deploy-new conf))))))
+
 (deftest restrict-to-path-separator-normalization
   ;; A restrict-to-path supplied with forward slashes must be normalized to
   ;; the platform File/separator so it matches OS-native file paths; on

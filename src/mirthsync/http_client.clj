@@ -101,3 +101,11 @@
       :body
       mxml/to-zip
       find-elements))
+
+(defn get-xml
+  "Authenticated GET to the given path, returns the response body string."
+  [{:keys [server ignore-cert-warnings]} path]
+  (-> (client/get (str server path)
+                  {:headers (build-headers)
+                   :insecure? ignore-cert-warnings})
+      :body))

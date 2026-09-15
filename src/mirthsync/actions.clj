@@ -10,6 +10,14 @@
             [mirthsync.xml :as mxml])
   (:import java.io.File))
 
+(defn- uploads-code-templates?
+  [{:keys [api el-loc]}]
+  (or (contains? #{:code-templates :code-template-libraries} api)
+      (and (= :server-configuration api)
+           ;; Empty template sections also count: restoring them removes templates.
+           (some #(contains? #{:codeTemplates :codeTemplateLibraries} (:tag %))
+                 (:content (cz/node el-loc))))))
+
 (defn- upload-node
   "Extracts the id from the xmlloc using the find-id predicates. PUTs or
   POSTs the params to the location constructed from the base-url,
@@ -21,7 +29,9 @@
                  (mhttp/post-xml app-conf (mi/post-path api) params query-params true)
                  (mhttp/put-xml app-conf query-params))]
     (if (mi/after-push api app-conf result)
-      app-conf
+      (cond-> app-conf
+        (and (:deploy-changed app-conf) (uploads-code-templates? app-conf))
+        (assoc :code-templates-pushed true))
       (assoc app-conf :exit-code 1 :exit-msg "Failure(s) were encountered during the push"))))
 
 (defn fetch-and-pre-assoc
