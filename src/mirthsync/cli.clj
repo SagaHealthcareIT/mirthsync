@@ -89,7 +89,7 @@
    [nil "--deploy-changed" "Deploy only changed channels after push
         After all channels are saved, query the server for channel statuses
         and deploy only those with a non-zero deployedRevisionDelta or
-        where codeTemplatesChanged is true."]
+        where codeTemplatesChanged is true and this push saved code templates."]
 
    [nil "--deploy-new" "Deploy channels that are not currently deployed
         Use with --deploy-changed. During push, tracks which channels were

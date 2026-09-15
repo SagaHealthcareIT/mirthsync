@@ -101,6 +101,7 @@
       (is (and (:deploy conf-with-deploy) (nil? (:deploy-all conf-with-deploy))))
       (is (and (:deploy-all conf-with-deploy-all) (nil? (:deploy conf-with-deploy-all))))))
 
+(deftest selective-deployment-flags
   (testing "Deploy-changed flag is parsed correctly"
     (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-changed" "push"])]
       (is (= true (:deploy-changed conf)))))
@@ -126,7 +127,7 @@
   (testing "Deploy-new can be combined with deploy-changed"
     (let [conf (config ["-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "--deploy-changed" "--deploy-new" "push"])]
       (is (= true (:deploy-changed conf)))
-      (is (= true (:deploy-new conf)))))
+      (is (= true (:deploy-new conf))))))
 
   (testing "Token authentication is accepted"
     (let [conf (config ["-s" "https://localhost:8443/api" "--token" "test-token-123" "-t" "foo" "pull"])]

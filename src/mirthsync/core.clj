@@ -56,13 +56,11 @@
                            ;; After push with --deploy-all, deploy all channels
                            (when (and (= "push" action) (:deploy-all processed-conf))
                              (api/deploy-all-channels processed-conf))
-                           ;; After push with --deploy-changed, deploy only channels with revision delta
-                           (when (and (= "push" action) (:deploy-changed processed-conf))
-                             (let [pushed-apis (set (api/apis processed-conf))
-                                   code-templates-pushed (or (contains? pushed-apis :code-template-libraries)
-                                                             (contains? pushed-apis :code-templates))]
-                               (api/deploy-changed-channels
-                                (assoc processed-conf :code-templates-pushed code-templates-pushed))))
+                           ;; Selective deployment must not run after a failed upload.
+                           (when (and (= "push" action) (:deploy-changed processed-conf)
+                                      (zero? (:exit-code processed-conf)))
+                             (when (false? (api/deploy-changed-channels processed-conf))
+                               (throw (ex-info "Failure(s) were encountered during deploy-changed" {}))))
                            ;; After pull, always check for orphaned files
                            (if (= "pull" action)
                              (act/cleanup-orphaned-files-with-pre-pull processed-conf (api/apis processed-conf))

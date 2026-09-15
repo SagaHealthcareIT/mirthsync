@@ -316,9 +316,9 @@
          all-channels (distinct (concat changed-channels new-channels))]
      (if (seq all-channels)
        (do (log/infof "Deploying %d channel(s): %s" (count all-channels) (pr-str all-channels))
-           (let [channel-set (apply str "<set>"
-                                   (map #(str "<string>" % "</string>") all-channels)
-                                   "</set>")]
+           (let [channel-set (cdx/emit-str
+                              (apply cdx/element :set nil
+                                     (map #(cdx/element :string nil %) all-channels)))]
              (mhttp/post-xml app-conf "/channels/_deploy" channel-set
                              {:returnErrors "true" :debug "false"} false)
              (log/info "Deploy-changed completed successfully")))

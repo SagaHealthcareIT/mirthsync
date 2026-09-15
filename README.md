@@ -283,7 +283,7 @@ Options:
       --deploy-changed                                 Deploy only changed channels after push
         After all channels are saved, query the server for channel statuses
         and deploy only those with a non-zero deployedRevisionDelta or
-        where codeTemplatesChanged is true.
+        where codeTemplatesChanged is true and this push saved code templates.
       --deploy-new                                     Deploy channels that are not currently deployed
         Use with --deploy-changed. During push, tracks which channels were
         saved. After push, any saved channel not found in the dashboard
@@ -412,6 +412,11 @@ $ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u 
 # Deploy changed channels AND any newly pushed channels that aren't currently deployed
 $ java -jar mirthsync-<version>-standalone.jar -s https://localhost:8443/api -u admin -p admin --deploy-changed --deploy-new push -t ./mirth-config
 ```
+
+Template-only changes trigger deployment only when this push successfully saves
+code templates, template libraries, or a backup with a template section.
+Errors while checking or deploying changed channels return a nonzero exit code
+and skip automatic Git commits.
 
 **Performance comparison:**
 - `--deploy`: Each channel is deployed immediately after being saved (N API calls for N channels)

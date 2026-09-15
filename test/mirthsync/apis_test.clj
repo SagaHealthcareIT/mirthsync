@@ -4,11 +4,13 @@
             [clojure.test :as ct]
             [clojure.zip :as cz]
             [mirthsync.apis :as ma]
+            [mirthsync.http-client :as mhttp]
             [mirthsync.interfaces]
             [mirthsync.cross-platform-utils :as cpu]
             [mirthsync.files :as mf]
             [mirthsync.fixture-tools :refer [build-path]]
-            [mirthsync.xml :as mx]))
+            [mirthsync.xml :as mx]
+            [slingshot.slingshot :refer [throw+]]))
 
 (defn update-id [loc]
   (-> loc
@@ -219,6 +221,12 @@
                :alerts]
               (ma/apis {:disk-mode "groups" :include-configuration-map false})))))
 
+(defn- assert-deployment-xml
+  "Compare the complete XML tree, including any unexpected text around IDs."
+  [expected actual]
+  (ct/is (= (cz/node (mx/to-zip expected))
+            (cz/node (mx/to-zip actual)))))
+
 (ct/deftest bulk-deployment-tests
   (ct/testing "Deploy all channels function creates correct XML"
     (let [app-conf {:bulk-deploy-channels (atom ["channel1" "channel2" "channel3"])}
@@ -267,134 +275,176 @@
       (ct/is (= false (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)))
       (ct/is (empty? @(:bulk-deploy-channels app-conf))))))
 
-(defn- find-changed-channel-ids
-  "Helper to extract channel IDs that need deployment from dashboard statuses.
-  A channel needs deployment if deployedRevisionDelta is non-zero or codeTemplatesChanged is true."
-  [dashboard-statuses]
-  (reduce
-   (fn [acc status-loc]
-     (let [channel-id (cdzx/xml1-> status-loc :channelId cdzx/text)
-           delta-text (cdzx/xml1-> status-loc :deployedRevisionDelta cdzx/text)
-           delta (when delta-text
-                   (try (Integer/parseInt delta-text)
-                        (catch NumberFormatException _ nil)))
-           code-templates-changed (= "true" (cdzx/xml1-> status-loc :codeTemplatesChanged cdzx/text))
-           needs-deploy (or (and delta (not= 0 delta))
-                            code-templates-changed)]
-       (if needs-deploy
-         (conj acc channel-id)
-         acc)))
-   []
-   dashboard-statuses))
+(def ^:private changed-statuses-xml
+  "<list>
+     <dashboardStatus>
+       <channelId>positive-delta</channelId><name>Positive delta</name>
+       <deployedRevisionDelta>2</deployedRevisionDelta><codeTemplatesChanged>false</codeTemplatesChanged>
+     </dashboardStatus>
+     <dashboardStatus>
+       <channelId>unchanged</channelId><name>Unchanged</name>
+       <deployedRevisionDelta>0</deployedRevisionDelta><codeTemplatesChanged>false</codeTemplatesChanged>
+     </dashboardStatus>
+     <dashboardStatus>
+       <channelId>templates-only</channelId><name>Templates only</name>
+       <deployedRevisionDelta>0</deployedRevisionDelta><codeTemplatesChanged>true</codeTemplatesChanged>
+     </dashboardStatus>
+     <dashboardStatus>
+       <channelId>negative-delta</channelId><name>Negative delta</name>
+       <deployedRevisionDelta>-1</deployedRevisionDelta><codeTemplatesChanged>false</codeTemplatesChanged>
+     </dashboardStatus>
+     <dashboardStatus>
+       <channelId>both-changed</channelId><name>Both changed</name>
+       <deployedRevisionDelta>1</deployedRevisionDelta><codeTemplatesChanged>true</codeTemplatesChanged>
+     </dashboardStatus>
+   </list>")
+
+(defn- assert-deploy-changed-request
+  "Run the real deployment function with HTTP stubs and inspect its requests."
+  [app-conf statuses-xml expected-xml]
+  (let [calls (atom [])]
+    (with-redefs [mhttp/get-xml (fn [conf path]
+                                (swap! calls conj [:get conf path])
+                                statuses-xml)
+                  mhttp/post-xml (fn [conf path body params multipart?]
+                                  (swap! calls conj [:post conf path body params multipart?])
+                                  {:status 200 :body "<map/>"})]
+      (ma/deploy-changed-channels app-conf))
+    (ct/is (= [:get app-conf "/channels/statuses"] (first @calls)))
+    (ct/is (= (if expected-xml 2 1) (count @calls)))
+    (when expected-xml
+      (let [[method conf path body params multipart?] (second @calls)]
+        (ct/is (= [:post app-conf "/channels/_deploy" {:returnErrors "true" :debug "false"} false]
+                  [method conf path params multipart?]))
+        (assert-deployment-xml expected-xml body)))))
 
 (ct/deftest deploy-changed-channels-tests
-  (ct/testing "Channels with non-zero revision delta are selected"
-    (let [sample-xml "<list>
-                        <dashboardStatus>
-                          <channelId>1aa2c102-3167-4122-9467-dd989ce3d189</channelId>
-                          <name>Channel A</name>
-                          <deployedRevisionDelta>1</deployedRevisionDelta>
-                          <codeTemplatesChanged>false</codeTemplatesChanged>
-                        </dashboardStatus>
-                        <dashboardStatus>
-                          <channelId>b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98</channelId>
-                          <name>Channel B</name>
-                          <deployedRevisionDelta>0</deployedRevisionDelta>
-                          <codeTemplatesChanged>false</codeTemplatesChanged>
-                        </dashboardStatus>
-                        <dashboardStatus>
-                          <channelId>c3d4e5f6-7890-4abc-def1-234567890abc</channelId>
-                          <name>Channel C</name>
-                          <deployedRevisionDelta>3</deployedRevisionDelta>
-                          <codeTemplatesChanged>false</codeTemplatesChanged>
-                        </dashboardStatus>
-                      </list>"
-          statuses-zip (mx/to-zip sample-xml)
-          changed-ids (find-changed-channel-ids (cdzx/xml-> statuses-zip :dashboardStatus))]
-      (ct/is (= ["1aa2c102-3167-4122-9467-dd989ce3d189" "c3d4e5f6-7890-4abc-def1-234567890abc"] changed-ids))
-      (ct/is (not (some #{"b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98"} changed-ids)))))
+  (doseq [[templates-pushed expected-xml]
+          [[true "<set><string>positive-delta</string><string>templates-only</string><string>negative-delta</string><string>both-changed</string></set>"]
+           [false "<set><string>positive-delta</string><string>negative-delta</string><string>both-changed</string></set>"]
+           [nil "<set><string>positive-delta</string><string>negative-delta</string><string>both-changed</string></set>"]]]
+    (ct/testing (str "Revision changes always deploy; template changes require templates pushed: " templates-pushed)
+      (assert-deploy-changed-request {:code-templates-pushed templates-pushed}
+                                     changed-statuses-xml expected-xml)))
 
-  (ct/testing "Channels with codeTemplatesChanged=true are selected"
-    (let [sample-xml "<list>
-                        <dashboardStatus>
-                          <channelId>1aa2c102-3167-4122-9467-dd989ce3d189</channelId>
-                          <name>Channel A</name>
-                          <deployedRevisionDelta>0</deployedRevisionDelta>
-                          <codeTemplatesChanged>true</codeTemplatesChanged>
-                        </dashboardStatus>
-                        <dashboardStatus>
-                          <channelId>b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98</channelId>
-                          <name>Channel B</name>
-                          <deployedRevisionDelta>0</deployedRevisionDelta>
-                          <codeTemplatesChanged>false</codeTemplatesChanged>
-                        </dashboardStatus>
-                      </list>"
-          statuses-zip (mx/to-zip sample-xml)
-          changed-ids (find-changed-channel-ids (cdzx/xml-> statuses-zip :dashboardStatus))]
-      (ct/is (= ["1aa2c102-3167-4122-9467-dd989ce3d189"] changed-ids))))
+  (doseq [templates-pushed [true false]
+          statuses-xml ["<list/>"
+                        "<list><dashboardStatus><channelId>unchanged</channelId><deployedRevisionDelta>0</deployedRevisionDelta><codeTemplatesChanged>false</codeTemplatesChanged></dashboardStatus></list>"]]
+    (ct/testing "No pending changes means no deploy request"
+      (assert-deploy-changed-request {:code-templates-pushed templates-pushed} statuses-xml nil)))
 
-  (ct/testing "Both delta and codeTemplatesChanged trigger deploy"
-    (let [sample-xml "<list>
-                        <dashboardStatus>
-                          <channelId>1aa2c102-3167-4122-9467-dd989ce3d189</channelId>
-                          <name>Channel A</name>
-                          <deployedRevisionDelta>2</deployedRevisionDelta>
-                          <codeTemplatesChanged>true</codeTemplatesChanged>
-                        </dashboardStatus>
-                      </list>"
-          statuses-zip (mx/to-zip sample-xml)
-          changed-ids (find-changed-channel-ids (cdzx/xml-> statuses-zip :dashboardStatus))]
-      (ct/is (= ["1aa2c102-3167-4122-9467-dd989ce3d189"] changed-ids))))
+  (doseq [delta-element ["" "<deployedRevisionDelta/>"
+                         "<deployedRevisionDelta>invalid</deployedRevisionDelta>"
+                         "<deployedRevisionDelta>2147483648</deployedRevisionDelta>"]
+          templates-pushed [true false]]
+    (ct/testing (str "Missing or invalid deltas still allow template-only changes: " delta-element)
+      (assert-deploy-changed-request
+       {:code-templates-pushed templates-pushed}
+       (str "<list><dashboardStatus><channelId>templates-only</channelId>"
+            delta-element
+            "<codeTemplatesChanged>true</codeTemplatesChanged></dashboardStatus></list>")
+       (when templates-pushed "<set><string>templates-only</string></set>")))))
 
-  (ct/testing "All channels up to date results in empty list"
-    (let [sample-xml "<list>
-                        <dashboardStatus>
-                          <channelId>1aa2c102-3167-4122-9467-dd989ce3d189</channelId>
-                          <name>Channel A</name>
-                          <deployedRevisionDelta>0</deployedRevisionDelta>
-                          <codeTemplatesChanged>false</codeTemplatesChanged>
-                        </dashboardStatus>
-                      </list>"
-          statuses-zip (mx/to-zip sample-xml)
-          changed-ids (find-changed-channel-ids (cdzx/xml-> statuses-zip :dashboardStatus))]
-      (ct/is (empty? changed-ids))))
+(ct/deftest deploy-new-channels-tests
+  (ct/testing "Changed and undeployed IDs are combined once in discovery order"
+    (let [pushed-ids (atom ["unchanged" "new-channel" "positive-delta" "new-channel"])]
+      (assert-deploy-changed-request
+       {:code-templates-pushed false :pushed-channel-ids pushed-ids}
+       changed-statuses-xml
+       "<set><string>positive-delta</string><string>negative-delta</string><string>both-changed</string><string>new-channel</string></set>")
+      (ct/is (= ["unchanged" "new-channel" "positive-delta" "new-channel"] @pushed-ids))))
 
-  (ct/testing "Empty dashboard status list"
-    (let [sample-xml "<list/>"
-          statuses-zip (mx/to-zip sample-xml)
-          dashboard-statuses (cdzx/xml-> statuses-zip :dashboardStatus)]
-      (ct/is (empty? dashboard-statuses)))))
+  (ct/testing "Every pushed channel is new when the dashboard is empty"
+    (assert-deploy-changed-request
+     {:pushed-channel-ids (atom ["new-channel" "another-new-channel" "new-channel"])}
+     "<list/>"
+     "<set><string>new-channel</string><string>another-new-channel</string></set>"))
+
+  (ct/testing "Already deployed and unchanged channels are not redeployed by deploy-new"
+    (assert-deploy-changed-request
+     {:pushed-channel-ids (atom ["unchanged"])}
+     "<list><dashboardStatus><channelId>unchanged</channelId><deployedRevisionDelta>0</deployedRevisionDelta></dashboardStatus></list>"
+     nil))
+
+  (ct/testing "Empty tracking does not request deployment"
+    (assert-deploy-changed-request {:pushed-channel-ids (atom [])} "<list/>" nil))
+
+  (ct/testing "Repeated dashboard entries are deployed only once"
+    (assert-deploy-changed-request
+     {}
+     "<list><dashboardStatus><channelId>changed</channelId><deployedRevisionDelta>1</deployedRevisionDelta></dashboardStatus><dashboardStatus><channelId>changed</channelId><deployedRevisionDelta>2</deployedRevisionDelta></dashboardStatus></list>"
+     "<set><string>changed</string></set>")))
+
+(ct/deftest deploy-changed-failure-tests
+  (doseq [failure-stage [:get :post]]
+    (ct/testing (str "HTTP failure at " failure-stage " returns false without retrying")
+      (let [calls (atom [])
+            app-conf {:pushed-channel-ids (atom ["new-channel"])}]
+        (with-redefs [mhttp/get-xml (fn [_ _]
+                                    (swap! calls conj :get)
+                                    (if (= :get failure-stage)
+                                      (throw+ {:status 500 :body "Status lookup failed"})
+                                      "<list/>"))
+                      mhttp/post-xml (fn [& _]
+                                      (swap! calls conj :post)
+                                      (throw+ {:status 500 :body "Deployment failed"}))]
+          (ct/is (false? (ma/deploy-changed-channels app-conf))))
+        (ct/is (= (if (= :get failure-stage) [:get] [:get :post]) @calls))
+        (ct/is (= ["new-channel"] @(:pushed-channel-ids app-conf))))))
+
+  (ct/testing "Malformed dashboard XML does not deploy pushed IDs as new channels"
+    (let [calls (atom [])]
+      (with-redefs [mhttp/get-xml (fn [_ _] "<list>")
+                    mhttp/post-xml (fn [& args] (swap! calls conj args))]
+        (ct/is (false? (ma/deploy-changed-channels {:pushed-channel-ids (atom ["new-channel"])}))))
+      (ct/is (empty? @calls)))))
+
+(ct/deftest deploy-changed-refresh-tests
+  (ct/testing "Each invocation rechecks dashboard state before deciding to deploy"
+    (let [calls (atom [])
+          deployed? (atom false)
+          app-conf {:pushed-channel-ids (atom ["new-channel"])}]
+      (with-redefs [mhttp/get-xml (fn [_ _]
+                                  (swap! calls conj :get)
+                                  (if @deployed?
+                                    "<list><dashboardStatus><channelId>new-channel</channelId><deployedRevisionDelta>0</deployedRevisionDelta></dashboardStatus></list>"
+                                    "<list/>"))
+                    mhttp/post-xml (fn [_ _ body _ _]
+                                    (swap! calls conj :post)
+                                    (assert-deployment-xml "<set><string>new-channel</string></set>" body)
+                                    (reset! deployed? true)
+                                    {:status 200 :body "<map/>"})]
+        (ma/deploy-changed-channels app-conf)
+        (ma/deploy-changed-channels app-conf))
+      (ct/is (= [:get :post :get] @calls)))))
 
 (ct/deftest deploy-new-tracking-tests
-  (ct/testing "Channel after-push tracks pushed IDs when pushed-channel-ids atom is present"
-    (let [app-conf {:pushed-channel-ids (atom [])}
-          api :channels
-          el-loc (mx/to-zip "<channel><id>d4e5f6a7-8901-4bcd-ef23-456789abcdef</id><name>New Channel</name></channel>")
-          result {:status 200 :body "true"}]
-      (with-redefs [mirthsync.interfaces/find-id (fn [_ _] "d4e5f6a7-8901-4bcd-ef23-456789abcdef")]
-        (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)
-        (ct/is (= ["d4e5f6a7-8901-4bcd-ef23-456789abcdef"] @(:pushed-channel-ids app-conf))))))
+  (ct/testing "Only successful saves are tracked, including repeated saves"
+    (let [pushed-ids (atom [])
+          el-loc (mx/to-zip "<channel><id>new-channel</id><name>New Channel</name></channel>")
+          app-conf {:pushed-channel-ids pushed-ids :el-loc el-loc}]
+      (doseq [result [{:status 200 :body "true"}
+                      {:status 200 :body "<boolean>true</boolean>"}
+                      {:status 200 :body "{\"boolean\":true}"}]]
+        (ct/is (true? (mirthsync.interfaces/after-push :channels app-conf result))))
+      (ct/is (= ["new-channel" "new-channel" "new-channel"] @pushed-ids))
+      (doseq [result [{:status 200 :body "false"} {:status 400 :body "error"}]]
+        (ct/is (false? (mirthsync.interfaces/after-push :channels app-conf result))))
+      (ct/is (= ["new-channel" "new-channel" "new-channel"] @pushed-ids))))
 
-  (ct/testing "Channel after-push does not track when pushed-channel-ids atom is absent"
-    (let [app-conf {}
-          api :channels
-          el-loc (mx/to-zip "<channel><id>d4e5f6a7-8901-4bcd-ef23-456789abcdef</id><name>Channel</name></channel>")
-          result {:status 200 :body "true"}]
-      (with-redefs [mirthsync.interfaces/find-id (fn [_ _] "d4e5f6a7-8901-4bcd-ef23-456789abcdef")]
-        (mirthsync.interfaces/after-push api (assoc app-conf :el-loc el-loc) result)
-        (ct/is (nil? (:pushed-channel-ids app-conf))))))
+  (ct/testing "Saving a channel without tracking still succeeds"
+    (let [app-conf {:el-loc (mx/to-zip "<channel><id>new-channel</id></channel>")}]
+      (ct/is (true? (mirthsync.interfaces/after-push :channels app-conf {:status 200 :body "true"})))
+      (ct/is (nil? (:pushed-channel-ids app-conf)))))
 
-  (ct/testing "Undeployed pushed channels are identified correctly"
-    (let [pushed-ids (atom ["1aa2c102-3167-4122-9467-dd989ce3d189" "e5f6a7b8-9012-4cde-f345-6789abcdef01"])
-          deployed-ids #{"1aa2c102-3167-4122-9467-dd989ce3d189" "b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98"}
-          undeployed (remove deployed-ids @pushed-ids)]
-      (ct/is (= ["e5f6a7b8-9012-4cde-f345-6789abcdef01"] (vec undeployed)))))
-
-  (ct/testing "All pushed channels already deployed results in no new channels"
-    (let [pushed-ids (atom ["1aa2c102-3167-4122-9467-dd989ce3d189" "b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98"])
-          deployed-ids #{"1aa2c102-3167-4122-9467-dd989ce3d189" "b7e8f4a1-52d3-4c9e-a1b6-7f3e2d1c0a98" "c3d4e5f6-7890-4abc-def1-234567890abc"}
-          undeployed (remove deployed-ids @pushed-ids)]
-      (ct/is (empty? undeployed)))))
+  (ct/testing "Bulk deployment and new-channel tracking both receive successful saves"
+    (let [app-conf {:deploy-all true
+                    :bulk-deploy-channels (atom [])
+                    :pushed-channel-ids (atom [])
+                    :el-loc (mx/to-zip "<channel><id>new-channel</id></channel>")}]
+      (ct/is (true? (mirthsync.interfaces/after-push :channels app-conf {:status 200 :body "true"})))
+      (ct/is (= ["new-channel"] @(:bulk-deploy-channels app-conf)))
+      (ct/is (= ["new-channel"] @(:pushed-channel-ids app-conf))))))
 
 (comment
   (ct/deftest iterate-apis
