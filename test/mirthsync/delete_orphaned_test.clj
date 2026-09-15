@@ -31,7 +31,7 @@
                     :target (build-path "target" "test")}
           mock-managed-files [(io/file (build-path "target" "test" "ConfigurationMap.xml"))]
           mock-user-file (io/file (build-path "target" "test" "user-file.txt"))]
-      (with-redefs [mi/local-path (fn [_ _] (str (build-path "target" "test") "/"))  ; Root directory with trailing slash
+      (with-redefs [mi/local-path (fn [_ _] (str (build-path "target" "test") java.io.File/separator))  ; Root directory with trailing separator
                     mi/api-files (fn [_ _] mock-managed-files)]  ; Only returns managed files
         (let [result (capture-pre-pull-local-files app-conf)]
           (is (contains? (set (:pre-pull-local-files result)) (first mock-managed-files)))
@@ -47,15 +47,15 @@
         ; Root API should only capture managed files returned by mi/api-files
         (let [result (capture-pre-pull-local-files root-api-conf)]
           (is (= 1 (count (:pre-pull-local-files result))))
-          (is (= managed-files (:pre-pull-local-files result))))))))
+          (is (= managed-files (:pre-pull-local-files result)))))))
 
-  (testing "path normalization handles trailing slashes correctly"
+  (testing "path normalization handles trailing separators correctly"
     (let [app-conf {:api :resources
-                    :target (build-path "target" "test")}]  ; No trailing slash
-      (with-redefs [mi/local-path (fn [_ _] (str (build-path "target" "test") "/"))  ; With trailing slash
+                    :target (build-path "target" "test")}]  ; No trailing separator
+      (with-redefs [mi/local-path (fn [_ _] (str (build-path "target" "test") java.io.File/separator))  ; With trailing separator
                     mi/api-files (fn [_ _] [(io/file (build-path "target" "test" "Resources.xml"))])]
         (let [result (capture-pre-pull-local-files app-conf)]
-          (is (= 1 (count (:pre-pull-local-files result))))))))
+          (is (= 1 (count (:pre-pull-local-files result)))))))))
 
 (deftest cleanup-orphaned-files-with-pre-pull-test
   (testing "does not delete user files in root directory"

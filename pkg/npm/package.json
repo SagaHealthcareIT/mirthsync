@@ -1,6 +1,6 @@
 {
   "name": "@saga-it/mirthsync",
-  "version": "3.5.2",
+  "version": "3.6.0",
   "description": "DevOps tool for Mirth Connect and Open Integration Engine version control and CI/CD automation",
   "keywords": [
     "mirth",

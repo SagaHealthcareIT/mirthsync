@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [clojure.java.io :as io]
             [mirthsync.logging :as log]
+            [mirthsync.version :as ver]
             [environ.core :refer [env]])
   (:import java.net.URL
            java.io.File))
@@ -15,6 +16,16 @@
   [s]
   (when s
     (str/replace s #"(?!^)[\\/]+$" "")))
+
+(defn- normalize-path-separators
+  "Collapses runs of forward and/or backward slashes into the platform's
+  File/separator. A restrict-to-path is matched against OS-native file paths
+  via String/startsWith (see mirthsync.xml/serialize-node and
+  mirthsync.actions/local-locs), so a path supplied with forward slashes must
+  be normalized to the platform separator to match the file paths on Windows."
+  [s]
+  (when s
+    (str/replace s #"[\\/]+" (java.util.regex.Matcher/quoteReplacement File/separator))))
 
 (def ^{:private true} cli-options
   [["-s" "--server SERVER_URL" "Full HTTP(s) url of the Mirth Connect server"
@@ -68,7 +79,7 @@
         that directory. The RESTRICT_TO_PATH must be specified relative to
         the target directory."
     :default ""
-    :parse-fn strip-trailing-slashes]
+    :parse-fn (comp strip-trailing-slashes normalize-path-separators)]
 
    [nil "--include-configuration-map" " A boolean flag to include the
         configuration map in a push or pull. Default: false"
@@ -119,6 +130,8 @@
         delete any local files that no longer exist on the remote server.
         Use with --interactive to confirm deletions before they occur."
     :default false]
+
+   ["-V" "--version" "Print version and exit"]
 
    ["-h" "--help"]])
 
@@ -253,18 +266,22 @@
                        (assoc % :git-subcommand-args git-args)
                        %))
                    
-                   ;; Set up our exit code
+                   ;; Set up our exit code. --version short-circuits cleanly
+                   ;; (like --help) without requiring --target/--server/auth.
                    (assoc :exit-code
-                          (if (or (:errors config)
-                                  (not args-valid?))
+                          (if (and (not (get-in config [:options :version]))
+                                   (or (:errors config)
+                                       (not args-valid?)))
                             1
                             0)))
 
         config (-> config
                    ;; exit message if errors - add custom validation errors
                    (assoc :exit-msg
-                          (when (or (> (:exit-code config) 0)
-                                    (:help config))
+                          (cond
+                            (:version config) ver/version
+                            (or (> (:exit-code config) 0)
+                                (:help config))
                             (let [action (first (:arguments config))
                                   git-action? (= "git" action)
                                   has-username? (:username config)
