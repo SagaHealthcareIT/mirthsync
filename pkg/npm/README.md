@@ -68,7 +68,9 @@ mirthsync -t ./mirth-config --commit-message "Updated channels" git commit
 
 ## Documentation
 
-For complete documentation, visit:
+Product page: https://saga-it.com/products/mirthsync
+
+For complete documentation and source, visit:
 https://github.com/SagaHealthcareIT/mirthsync
 
 ## License
