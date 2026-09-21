@@ -1,4 +1,4 @@
-(defproject com.saga-it/mirthsync "3.7.0"
+(defproject com.saga-it/mirthsync "3.7.1"
   :description "MirthSync is an open source DevOps tool for Mirth Connect and
   Open Integration Engine version control and CI/CD automation. This command line
   tool enables healthcare integration DevOps workflows by keeping a local copy of

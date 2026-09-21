@@ -2,4 +2,4 @@
 SET mypath=%~dp0
 SET mypath=%mypath:~0,-1%
 
-java -jar "%mypath%\..\lib\mirthsync-3.7.0-standalone.jar" %*
+java -jar "%mypath%\..\lib\mirthsync-3.7.1-standalone.jar" %*

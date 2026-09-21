@@ -46,7 +46,7 @@ Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/item
 
 ## Current version
 
-The latest version of mirthSync is "3.7.0". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.7.1". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
@@ -63,6 +63,10 @@ group directory.
 - **Security**: Path validation and safety features for file operations
 
 ## Changes
+
+### 3.7.1
+
+- **Registry metadata** (PR #91, thanks @morgan-saga): the Clojars project `:url` and the npm `homepage` now point at the mirthSync product page, https://saga-it.com/products/mirthsync, instead of a redirecting blog URL and the GitHub repo. No code changes.
 
 ### 3.7.0
 
