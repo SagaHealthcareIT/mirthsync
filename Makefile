@@ -43,7 +43,10 @@ npm-clean:
 	rm -f pkg/npm/*.tgz
 	rm -f target/*.tgz
 
-release:
+# npm-clean first: `make npm-prepare` leaves pkg/npm/lib/mirthsync.jar behind
+# (gitignored), and the `cp -a pkg` below would pack that stale jar from the
+# previous release into the archives.
+release: npm-clean
 	sed -E -i.bak "s/(defproject com\\.saga-it\\/mirthsync) \"[0-9]+\\.[0-9]+\\.[0-9]+(-SNAPSHOT)?\"/\\1 \"$(VERSION)\"/g" project.clj
 	rm -f project.clj.bak
 	sed -E -i.bak "s/(version of mirthSync is) \"[0-9]+\\.[0-9]+\\.[0-9]+(-SNAPSHOT)?\"/\\1 \"$(VERSION)\"/g" README.md
