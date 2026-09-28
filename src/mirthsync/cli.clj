@@ -131,6 +131,14 @@
         Use with --interactive to confirm deletions before they occur."
     :default false]
 
+   [nil "--[no-]sort-unordered" "Sort unordered collections during a pull.
+        Mirth stores some collections (code template context types,
+        library and alert channel IDs, the configuration map, etc.) in
+        no fixed order, which creates noisy diffs between pulls. These
+        are sorted by default; use --no-sort-unordered to write them
+        in the order the server returns them."
+    :default true]
+
    ["-V" "--version" "Print version and exit"]
 
    ["-h" "--help"]])

@@ -151,7 +151,7 @@
                         "-i" "-f" "--include-configuration-map" "pull"))))
 
   (testing "Pull diff from baseline has only inconsequential differences (ordering, etc)"
-    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*<lastStatsTime>.*" repo-dir baseline-dir))))
+    (is (= "" (diff "--recursive" "--suppress-common-lines" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*<lastStatsTime>.*" repo-dir baseline-dir))))
 
   (testing "Push back from pull dir succeeds without errors"
     (is (= 0 (main-func "--include-configuration-map" "-s" "https://localhost:8443/api"
@@ -164,7 +164,7 @@
                         "-i" "-f" "--include-configuration-map" "pull"))))
 
   (testing "Pull diff from baseline after multiple pushes has only inconsequential differences (ordering, etc)"
-    (is (= "" (diff "--recursive" "--exclude" ".DS_Store" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*<lastStatsTime>.*" repo-dir baseline-dir))))
+    (is (= "" (diff "--recursive" "--exclude" ".DS_Store" "--suppress-common-lines" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*<lastStatsTime>.*" repo-dir baseline-dir))))
 
   (testing "Code template push fails wth changes and --force not enabled."
     (is (= 1 (do
@@ -206,7 +206,7 @@
       ;; environments. The backup mode functionality is still tested via the push operation.
       (if (System/getenv "GITHUB_ACTIONS")
         (println "Skipping backup mode diff test in CI environment due to environment-specific differences")
-        (is (= "" (diff "--exclude" ".DS_Store" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*"  "-I" ".*<lastStatsTime>.*" (str repo-dir "/FullBackup.xml") (str baseline-dir "/../mirth-backup-" version ".xml")))))
+        (is (= "" (diff "--exclude" ".DS_Store" "--suppress-common-lines" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*"  "-I" ".*<lastStatsTime>.*" (str repo-dir "/FullBackup.xml") (str baseline-dir "/../mirth-backup-" version ".xml")))))
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
@@ -219,7 +219,7 @@
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
                             "-i" "-m" "groups" "--include-configuration-map" "pull"))))
-      (is (= "" (diff "--exclude" ".DS_Store" "--recursive" "--suppress-common-lines" "-I" ".*<contextType>.*" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*<lastStatsTime>.*" repo-dir baseline-dir)))
+      (is (= "" (diff "--exclude" ".DS_Store" "--recursive" "--suppress-common-lines" "-I" ".*<time>.*" "-I" ".*<timezone>.*" "-I" ".*<revision>.*" "-I" ".*<lastStatsTime>.*" repo-dir baseline-dir)))
       (is (= 0 (do
                  (main-func "-s" "https://localhost:8443/api"
                             "-u" "admin" "-p" "admin" "-t" repo-dir
