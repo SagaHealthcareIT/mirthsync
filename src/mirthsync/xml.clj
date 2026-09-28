@@ -34,10 +34,11 @@
   Their serialized order depends on hashing (for enums it changes on every
   server restart), so they are sorted to keep pulls stable. A path matches
   when it equals the tail of an element's tag path, which starts with ::root
-  so that a path can be anchored to the root element. Lists, where
-  order is meaningful (destinationConnectors, filter and transformer elements,
-  metaDataColumns, resources, ...), and LinkedHashMaps (resourceIds, headers)
-  must never be added here."
+  so that a path can be anchored to the root element. Only add paths for
+  Set or Map fields. Lists, where order is meaningful (destinationConnectors,
+  filter and transformer elements, metaDataColumns, resources, ...), must
+  never be added here. An element serialized with an ordered class, such as
+  class=\"linked-hash-map\", is never sorted even when its path matches."
   [;; The standalone configuration map and global scripts files
    [::root :map]
    ;; CodeTemplateContextSet (enum set)
@@ -45,11 +46,9 @@
    ;; CodeTemplateLibrary
    [:codeTemplateLibrary :enabledChannelIds]
    [:codeTemplateLibrary :disabledChannelIds]
-   ;; ChannelExportData. channelTags is a List, but is built from the
-   ;; server's tag Set, so it has no meaningful order either.
+   ;; ChannelExportData
    [:exportData :dependentIds]
    [:exportData :dependencyIds]
-   [:exportData :channelTags]
    ;; ChannelTag
    [:channelTag :channelIds]
    ;; ConnectorProperties
@@ -80,14 +79,44 @@
                  (= suffix (subvec path offset)))))
         unordered-paths))
 
+(def ^:private unordered-classes
+  "XStream class attribute values of hash-ordered collections. A missing
+  class attribute means the field's default Set or Map implementation."
+  #{nil "set" "map"})
+
 (defn- element?
   [node]
   (instance? clojure.data.xml.Element node))
 
+(defn- first-text
+  "Returns the first text found in a depth-first walk of the node, which is
+  the key of a map entry and the value of a set member."
+  [node]
+  (or (some #(if (string? %) % (first-text %)) (:content node))
+      ""))
+
+(defn- sort-children
+  "Sorts integer members numerically. Everything else is sorted by tag,
+  attributes and first text, so that map entries sort by key and
+  properties by name, with the serialized xml as a final tie-breaker."
+  [children]
+  (let [texts (map first-text children)]
+    (if (and (every? #(every? string? (:content %)) children)
+             (every? #(re-matches #"-?\d+" %) texts))
+      (map second (sort-by first (map vector (map bigint texts) children)))
+      (map peek (sort-by pop (map (fn [child text]
+                                     [(name (:tag child))
+                                      (pr-str (into (sorted-map) (:attrs child)))
+                                      text
+                                      (xml/emit-str child)
+                                      child])
+                                   children
+                                   texts))))))
+
 (defn sort-unordered
   "Returns the xml element with the children of every element listed in
-  unordered-paths sorted by their serialized xml. Children are sorted
-  bottom-up so nested sets are already canonical when compared."
+  unordered-paths sorted. Children are sorted bottom-up so nested sets are
+  already canonical when compared."
   ([node]
    (sort-unordered [::root] node))
   ([ancestors node]
@@ -95,9 +124,9 @@
      (let [path (conj ancestors (:tag node))
            content (map (partial sort-unordered path) (:content node))]
        (assoc node :content (if (and (unordered-path? path)
+                                     (contains? unordered-classes (get-in node [:attrs :class]))
                                      (every? element? content))
-                              ;; emit each child once rather than per comparison
-                              (map second (sort-by first (map (juxt xml/emit-str identity) content)))
+                              (sort-children content)
                               content)))
      node)))
 
