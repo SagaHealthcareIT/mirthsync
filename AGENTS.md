@@ -70,7 +70,7 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - **Multimethods**: Used for dispatch based on entity types and operations
 - **XML Processing**: Extensive use of clojure.data.xml and zipper operations
 - **Orphan Detection**: Automatic detection of local files that no longer exist on remote server during pull operations
-- **Unordered Collection Sorting**: `mirthsync.xml/sort-unordered` sorts the children of elements Mirth backs with a HashSet/HashMap (allowlisted by tag path in `unordered-paths`) before a pull writes files. Only add paths for Set/Map fields, never for Lists, whose order is meaningful. Elements serialized with an ordered XStream class (e.g. `class="linked-hash-map"`) are skipped even when their path matches. Map entries sort by key and integer sets numerically.
+- **Unordered Collection Sorting**: `mirthsync.xml/sort-unordered` sorts the children of elements Mirth backs with a HashSet/HashMap (allowlisted by tag path in `unordered-paths`) before a pull writes files. Only add paths for Set/Map fields, never for Lists, whose order is meaningful. The one exception is a List the server loads with no `ORDER BY` and restores item by item (`serverConfiguration/alerts`); prove it flaps first, e.g. by pushing in reverse file order. Elements serialized with an ordered XStream class (e.g. `class="linked-hash-map"`) are skipped even when their path matches. Map entries sort by key and integer sets numerically.
 - **Pre-pull State Capture**: Local files are captured before pull operations to enable accurate orphan detection
 
 ### Code Quality

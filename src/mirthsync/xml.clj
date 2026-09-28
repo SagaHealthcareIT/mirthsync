@@ -37,7 +37,8 @@
   so that a path can be anchored to the root element. Only add paths for
   Set or Map fields. Lists, where order is meaningful (destinationConnectors,
   filter and transformer elements, metaDataColumns, resources, ...), must
-  never be added here. An element serialized with an ordered class, such as
+  never be added here, unless the server fills the List from a database query
+  with no ORDER BY and saves each item by id on restore. An element serialized with an ordered class, such as
   class=\"linked-hash-map\", is never sorted even when its path matches."
   [;; The standalone configuration map and global scripts files
    [::root :map]
@@ -63,7 +64,9 @@
    [:partialChannels :entry :alertConnectors :enabledConnectors]
    [:partialChannels :entry :alertConnectors :disabledConnectors]
    [:trigger :errorEventTypes]
-   ;; ServerConfiguration
+   ;; ServerConfiguration. alerts is a List, but it comes from a query with
+   ;; no ORDER BY, so its order follows database insertion order.
+   [:serverConfiguration :alerts]
    [:serverConfiguration :channelTags]
    [:serverConfiguration :channelDependencies]
    [:serverConfiguration :globalScripts]

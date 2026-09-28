@@ -147,6 +147,14 @@
        <entry><string>db.url</string><com.mirth.connect.util.ConfigurationProperty><value>jdbc</value></com.mirth.connect.util.ConfigurationProperty></entry>
        <entry><string>db</string><com.mirth.connect.util.ConfigurationProperty><value>x</value></com.mirth.connect.util.ConfigurationProperty></entry>
      </configurationMap>
+     <alerts>
+       <alertModel version=\"4.5.2\"><id>alert-b</id><name>B</name></alertModel>
+       <alertModel version=\"4.5.2\"><id>alert-a</id><name>A</name></alertModel>
+     </alerts>
+     <channels>
+       <channel version=\"4.5.2\"><id>chan-b</id></channel>
+       <channel version=\"4.5.2\"><id>chan-a</id></channel>
+     </channels>
      <resourceProperties>
        <list>
          <b/>
@@ -227,7 +235,10 @@
       (is (= ["B Plugin" "Data Pruner"] (texts loc :pluginProperties :entry :string)))
       (is (= ["archiveEnabled" "enabled"]
              (cdzx/xml-> loc :pluginProperties :entry :properties :property (cdzx/attr :name)))))
-    (testing "Lists keep the server's order"
+    (testing "Alerts are sorted by id, since their order follows database insertion order"
+      (is (= ["alert-a" "alert-b"] (texts loc :alerts :alertModel :id))))
+    (testing "Other lists keep the server's order"
+      (is (= ["chan-b" "chan-a"] (texts loc :channels :channel :id)))
       (is (= [:b :a] (map :tag (:content (cdzx/xml1-> loc :resourceProperties :list cz/node))))))))
 
 (deftest sort-unordered-alerts

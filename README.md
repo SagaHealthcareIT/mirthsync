@@ -66,7 +66,7 @@ group directory.
 
 ### Unreleased
 
-- **Stable ordering for unordered collections** (issue #66, thanks @daniel-ls-howard): a pull now sorts the collections that Mirth stores in no fixed order, so pulling unchanged code no longer shows them reordered in version control. This covers code template context types, library enabled/disabled channel IDs, channel dependency and tag IDs, connector plugin properties, alert channels and error event types, the configuration map, global scripts, and the set-backed parts of a backup-mode server configuration. Lists whose order matters, such as destination connectors and transformer steps, are left untouched, and no values are changed. Pushes are unaffected because the server stores these as unordered sets and maps.
+- **Stable ordering for unordered collections** (issue #66, thanks @daniel-ls-howard): a pull now sorts the collections that Mirth stores in no fixed order, so pulling unchanged code no longer shows them reordered in version control. This covers code template context types, library enabled/disabled channel IDs, channel dependency and tag IDs, connector plugin properties, alert channels and error event types, the configuration map, global scripts, and the set-backed parts of a backup-mode server configuration, including its alert list, whose order depends on the order the alerts were created in. Lists whose order matters, such as destination connectors and transformer steps, are left untouched, and no values are changed. Pushes are unaffected because the server stores these as unordered sets and maps.
   - Expect a one-time commit that only reorders these elements on your first pull after upgrading.
   - Use `--no-sort-unordered` to keep the server's order.
 
