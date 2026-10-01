@@ -64,6 +64,12 @@ group directory.
 
 ## Changes
 
+### Unreleased
+
+- **Stable ordering for unordered collections** (issue #66, thanks @daniel-ls-howard): a pull now sorts the collections that Mirth stores in no fixed order, so pulling unchanged code no longer shows them reordered in version control. This covers code template context types, library enabled/disabled channel IDs, channel dependency and tag IDs, connector plugin properties, alert channels and error event types, the configuration map, global scripts, and the set-backed parts of a backup-mode server configuration, including its alert list, whose order depends on the order the alerts were created in. Lists whose order matters, such as destination connectors and transformer steps, are left untouched, and no values are changed. Pushes are unaffected because the server stores these as unordered sets and maps.
+  - Expect a one-time commit that only reorders these elements on your first pull after upgrading.
+  - Use `--no-sort-unordered` to keep the server's order.
+
 ### 3.7.1
 
 - **Registry metadata** (PR #91, thanks @morgan-saga): the Clojars project `:url` and the npm `homepage` now point at the mirthSync product page, https://saga-it.com/products/mirthsync, instead of a redirecting blog URL and the GitHub repo. No code changes.
@@ -317,6 +323,12 @@ Options:
         When pulling from remote, compare local files with remote files and
         delete any local files that no longer exist on the remote server.
         Use with --interactive to confirm deletions before they occur.
+      --[no-]sort-unordered                                  Sort unordered collections during a pull.
+        Mirth stores some collections (code template context types,
+        library and alert channel IDs, the configuration map, etc.) in
+        no fixed order, which creates noisy diffs between pulls. These
+        are sorted by default; use --no-sort-unordered to write them
+        in the order the server returns them.
   -V, --version                                              Print version and exit
   -h, --help
 

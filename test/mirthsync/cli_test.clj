@@ -55,7 +55,8 @@
                 :git-author (System/getProperty "user.name"),
                 :auto-commit false,
                 :git-init false,
-                :delete-orphaned false}]
+                :delete-orphaned false,
+                :sort-unordered true}]
       (is (= conf (config ["-s" "https://localhost:8443/api/" "-u" "admin" "-p" "password"  "-t" "./tmp/" "push"])))))
 
   (testing "Sensible pull defaults"
@@ -79,7 +80,8 @@
                 :git-author (System/getProperty "user.name"),
                 :auto-commit false,
                 :git-init false,
-                :delete-orphaned false}]
+                :delete-orphaned false,
+                :sort-unordered true}]
       (is (= conf (config ["-f" "-s" "https://localhost:8443/api" "-u" "admin" "-p" "password" "-t" "foo" "pull"])))))
 
   (testing "Force defaults to nil"
