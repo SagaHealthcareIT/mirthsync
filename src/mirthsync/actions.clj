@@ -138,7 +138,11 @@
   [{:keys [api] :as app-conf}]
   (let [remote-elements (remote-locs app-conf)]
     (set (mapcat (fn [el-loc]
-                   (let [app-conf-with-el (assoc app-conf :el-loc el-loc)]
+                   ;; Re-zip the node as process-nodes does. Otherwise
+                   ;; deconstruct-node walks on to the end of the server
+                   ;; response, through every following element.
+                   (let [el-loc (cz/xml-zip (cz/node el-loc))
+                         app-conf-with-el (assoc app-conf :el-loc el-loc)]
                      (map first (mi/deconstruct-node app-conf-with-el (mi/file-path api app-conf-with-el) el-loc))))
                  remote-elements))))
 
