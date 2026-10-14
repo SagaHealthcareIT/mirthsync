@@ -87,8 +87,8 @@
      (mi/api-files api (mi/local-path api (:target app-conf))))))
 
 (defn- remote-locs
-  "Seq of remote el-locs for the current api. Could be lazy or not
-  depending on the implementation of find-elements."
+  "Lazy seq of remote el-locs for the current api, each detached from
+  the full server response."
   [{:keys [api] :as app-conf}]
   ;; Re-zip each node since it's part of the full server response and the
   ;; callers shouldn't be exposed to that. cz/root would return the whole
@@ -98,7 +98,9 @@
        (mhttp/fetch-all app-conf (partial mi/find-elements api))))
 
 (defn-  process-nodes
-  "Prints the message and processes the el-locs via the action."
+  "Prints the message and processes the el-locs via the action. Each
+  el-loc must be rooted at its own node, as remote-locs and local-locs
+  return them."
   [{:keys [api] :as app-conf} msg el-locs action]
   (log/info msg)
   (loop [app-conf app-conf
