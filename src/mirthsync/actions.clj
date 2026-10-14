@@ -90,7 +90,12 @@
   "Seq of remote el-locs for the current api. Could be lazy or not
   depending on the implementation of find-elements."
   [{:keys [api] :as app-conf}]
-  (mhttp/fetch-all app-conf (partial mi/find-elements api)))
+  ;; Re-zip each node since it's part of the full server response and the
+  ;; callers shouldn't be exposed to that. cz/root would return the whole
+  ;; response, and walking with cz/next until cz/end? would go on through
+  ;; every element that follows.
+  (map #(cz/xml-zip (cz/node %))
+       (mhttp/fetch-all app-conf (partial mi/find-elements api))))
 
 (defn-  process-nodes
   "Prints the message and processes the el-locs via the action."
@@ -100,11 +105,7 @@
          el-locs el-locs]
     (if-let [el-loc (first el-locs)]
       (recur
-                                    ; We need to re-zip our node since it's part
-                                    ; of a larger doc and the called code
-                                    ; shouldn't be exposed to that. cz/root for instance
-                                    ; would return something unexpected.
-       (->> (assoc app-conf :el-loc (cz/xml-zip (cz/node el-loc)))
+       (->> (assoc app-conf :el-loc el-loc)
             (mi/pre-node-action api)
             action)
        (rest el-locs))
@@ -138,11 +139,7 @@
   [{:keys [api] :as app-conf}]
   (let [remote-elements (remote-locs app-conf)]
     (set (mapcat (fn [el-loc]
-                   ;; Re-zip the node as process-nodes does. Otherwise
-                   ;; deconstruct-node walks on to the end of the server
-                   ;; response, through every following element.
-                   (let [el-loc (cz/xml-zip (cz/node el-loc))
-                         app-conf-with-el (assoc app-conf :el-loc el-loc)]
+                   (let [app-conf-with-el (assoc app-conf :el-loc el-loc)]
                      (map first (mi/deconstruct-node app-conf-with-el (mi/file-path api app-conf-with-el) el-loc))))
                  remote-elements))))
 
@@ -243,13 +240,6 @@
                             ;; For subdirectory APIs, capture all files in their directory
                             (all-files-seq local-path))]
     (update app-conf :pre-pull-local-files (fnil into []) api-managed-files)))
-
-(defn capture-expected-paths
-  "Capture expected file paths from remote server before pull operation."
-  [{:keys [api] :as app-conf}]
-  (let [expected-paths (get-remote-expected-file-paths app-conf)]
-    (assoc app-conf :expected-paths expected-paths)))
-
 
 (defn cleanup-orphaned-files-with-pre-pull
   "Clean up orphaned local files using pre-pull captured files."
