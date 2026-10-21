@@ -89,7 +89,8 @@
 (deftest deployment-failures-reach-cli
   (doseq [[flags failure-stage]
           [[["--deploy-changed"] :statuses]
-           [["--deploy-changed"] :deployment]]]
+           [["--deploy-changed"] :deployment]
+           [["--deploy-all"] :deployment]]]
     (testing (str flags " failure at " failure-stage)
       (let [result (run-push {"Channels/Default Group/Channel.xml" channel-xml}
                              flags {:fail-at failure-stage})]
@@ -121,14 +122,14 @@
       (is (empty? (deploy-requests result))))))
 
 (deftest successful-deployment-and-noop
-  (doseq [flags [["--deploy-changed"]]]
+  (doseq [flags [["--deploy-changed"] ["--deploy-all"]]]
     (testing (str "Successful deployment keeps exit code zero: " flags)
       (let [result (run-push {"Channels/Default Group/Channel.xml" channel-xml} flags {})]
         (is (= 0 (:exit-code result)))
         (is (= 1 (count (:commits result))))
         (is (= 1 (count (deploy-requests result)))))))
 
-  (doseq [flags [["--deploy-changed"]]]
+  (doseq [flags [["--deploy-changed"] ["--deploy-all"]]]
     (testing "An empty deployment selection is a successful no-op"
       (let [result (run-push {} flags {:statuses "<list/>"})]
         (is (= 0 (:exit-code result)))
