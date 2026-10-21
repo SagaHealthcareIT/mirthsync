@@ -100,7 +100,7 @@ mirthSync is a Clojure-based command-line tool for synchronizing Mirth Connect c
 - **Complex Conditional Logic**: In boolean filtering logic, add comments to clarify intent and review conditions for logical redundancy. Complex chains of `and`/`or` conditions can become hard to read and may contain unnecessary clauses.
 
 ### Dependencies
-- Requires Java JRE/JDK version 8 or higher
+- Requires Java JRE/JDK version 11 or higher (the bundled JGit 6.8 is built for Java 11)
 - Built with Leiningen
 - Key libraries: clj-http, clojure.data.xml, tools.cli, slingshot, clj-jgit
 
