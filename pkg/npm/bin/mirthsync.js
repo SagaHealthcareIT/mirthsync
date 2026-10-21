@@ -64,14 +64,14 @@ Java is required to run mirthsync but was not found on your system.
       break;
 
     default:
-      instructions += `Please install Java JRE or JDK version 8 or higher.
+      instructions += `Please install Java JRE or JDK version 11 or higher.
 Download from: https://adoptium.net/
 `;
   }
 
   instructions += `
-Minimum required version: Java 8
-Recommended: Java 11, 17, or 21 (LTS versions)
+Minimum required version: Java 11
+Recommended: Java 17 or 21 (LTS versions)
 `;
 
   return instructions;

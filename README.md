@@ -46,7 +46,7 @@ Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/item
 
 ## Current version
 
-The latest version of mirthSync is "3.8.0". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.8.1". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
@@ -64,10 +64,18 @@ group directory.
 
 ## Changes
 
+### 3.8.1
+
+- **Faster orphan detection on pull** (PR #97, thanks @dave-InTheCloud): after a pull, the orphan check walked the rest of the server response once for every item, so its run time grew with the square of the channel count. It now runs in linear time. On a server with about 300 channels, a pull dropped from about 9 minutes to about 20 seconds.
+  - The old check also expected files that did not exist, which hid some stale `.js` files. Pulls may now report orphaned script files that they missed before, and `--delete-orphaned` will delete them. Add `--interactive` to confirm each deletion.
+- **`--deploy-all` failures fail the command**: a failed bulk deployment was logged but still exited 0, and `--auto-commit` still committed. It now exits 1 and skips the automatic Git commit, as `--deploy-changed` does.
+- **Java 11 is required**: mirthSync has needed Java 11 or newer since 3.5.1, the first stable release with Git integration, because the bundled JGit 6.8 is built for Java 11. The README, the npm package README and the npm launcher's install hint said Java 8 and now say Java 11. Nothing changes at run time.
+- **Removed `mirthsync.actions/capture-expected-paths`** (PR #98): this unused function is gone. It only matters if you call mirthSync as a library from the Clojars jar.
+
 ### 3.8.0
 
 - **Stable ordering for unordered collections** (issue #66, thanks @daniel-ls-howard): a pull now sorts the collections that Mirth stores in no fixed order, so pulling unchanged code no longer shows them reordered in version control. This covers code template context types, library enabled/disabled channel IDs, channel dependency and tag IDs, connector plugin properties, alert channels and error event types, the configuration map, global scripts, and the set-backed parts of a backup-mode server configuration, including its alert list, whose order depends on the order the alerts were created in. Lists whose order matters, such as destination connectors and transformer steps, are left untouched, and no values are changed. Pushes are unaffected because the server stores these as unordered sets and maps.
-  - Expect a one-time commit that only reorders these elements on your first pull after upgrading.
+  - Expect a one-time commit that only reorders these elements the first time you pull over your existing files with `-f` after upgrading. Without `-f`, a pull does not overwrite existing files.
   - Use `--no-sort-unordered` to keep the server's order.
 - **Smaller release archives**: the `.tar.gz` and `.zip` no longer bundle a leftover npm jar from a previous release, which roughly doubled their size.
 
@@ -236,7 +244,7 @@ For detailed installation guides and integration with your specific CI/CD platfo
 
 ## Prerequisites
 
-Requires Java JRE or JDK version 8 or higher (Java 8, 11, 17, 21, and other LTS versions are supported)
+Requires Java JRE or JDK version 11 or higher (Java 11, 17, 21, and other LTS versions are supported)
 
 ## For MacOS users
 To be able to run the script on MacOS, you need to install the following tools:

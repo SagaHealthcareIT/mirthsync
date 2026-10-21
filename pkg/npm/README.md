@@ -10,7 +10,7 @@ npm install -g @saga-it/mirthsync
 
 ## Prerequisites
 
-**Java JRE or JDK version 8 or higher is required.**
+**Java JRE or JDK version 11 or higher is required.**
 
 If Java is not installed, mirthsync will display platform-specific installation instructions when you run it.
 
