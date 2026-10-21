@@ -55,7 +55,8 @@
                                processed-conf (api/iterate-apis conf-with-tracking (api/apis conf-with-tracking) action-fn)]
                            ;; After push with --deploy-all, deploy all channels
                            (when (and (= "push" action) (:deploy-all processed-conf))
-                             (api/deploy-all-channels processed-conf))
+                             (when (false? (api/deploy-all-channels processed-conf))
+                               (throw (ex-info "Failure(s) were encountered during deploy-all" {}))))
                            ;; Selective deployment must not run after a failed upload.
                            (when (and (= "push" action) (:deploy-changed processed-conf)
                                       (zero? (:exit-code processed-conf)))
