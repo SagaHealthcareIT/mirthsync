@@ -85,31 +85,52 @@
         (cs/replace "\\" "%5C"))
     name))
 
+(defn- restrict-item-pred
+  "Predicate: is a path part of the item --restrict-to-path names exactly?
+  That is the path itself, <path>.xml, or anything under <path>/. For a
+  restrict given as <name>.xml it also takes <name>/, the folder code disk
+  mode writes that item's scripts to."
+  [target restrict-to-path]
+  (let [prefix (str target File/separator restrict-to-path)
+        as-file (str prefix ".xml")
+        as-dir (str prefix File/separator)
+        scripts-dir (when (.endsWith prefix ".xml")
+                      (str (subs prefix 0 (- (count prefix) (count ".xml"))) File/separator))]
+    (fn [^String p]
+      (or (= p prefix)
+          (= p as-file)
+          (.startsWith p as-dir)
+          (boolean (and scripts-dir (.startsWith p ^String scripts-dir)))))))
+
+(defn restrict-names-item?
+  "True when --restrict-to-path names an item exactly: one of
+  candidate-paths is that item, or it exists on disk under target as a
+  file, a directory or <path>.xml."
+  [target restrict-to-path candidate-paths]
+  (boolean
+   (and (seq restrict-to-path)
+        (or (.exists (io/file (str target File/separator restrict-to-path)))
+            (.exists (io/file (str target File/separator restrict-to-path ".xml")))
+            (some (restrict-item-pred target restrict-to-path) candidate-paths)))))
+
 (defn restrict-matcher
   "Predicate over file path strings for --restrict-to-path.
 
-  When the path names an item exactly - some candidate path is <path>,
-  <path>.xml, or lies under <path>/ - only that item and what is under it
-  match, so restricting to channel `ADT` does not also take `ADT Inbound`.
-  Otherwise the path is a partial name and keeps the original string-prefix
-  match: `Channels/Default Group/AD` still takes every channel in that
-  group whose name starts with AD. An empty path matches everything under
-  the target.
+  exact? (see restrict-names-item?) true: only the named item and what is
+  under it match, so restricting to channel `ADT` does not also take
+  `ADT Inbound`, and group `Lab` does not take group `Lab Archive`.
+  exact? false: the path is a partial name and keeps the original
+  string-prefix match, so `Channels/Default Group/AD` still takes every
+  channel in that group whose name starts with AD. An empty path matches
+  everything under the target.
 
-  candidate-paths are the paths the operation could touch: the local files
-  for a push, the files the server's items would be written to for a pull."
-  [target restrict-to-path candidate-paths]
-  (let [prefix (str target File/separator restrict-to-path)
-        by-prefix (fn [^String p] (.startsWith p prefix))]
-    (if (empty? restrict-to-path)
-      by-prefix
-      (let [as-file (str prefix ".xml")
-            as-dir (str prefix File/separator)
-            in-item? (fn [^String p]
-                       (or (= p prefix) (= p as-file) (.startsWith p as-dir)))]
-        (if (some in-item? candidate-paths)
-          in-item?
-          by-prefix)))))
+  restrict-names-item? looks at the disk as well as the candidates, so a
+  group and its channels agree about what `Channels/Lab` means."
+  [target restrict-to-path exact?]
+  (let [prefix (str target File/separator restrict-to-path)]
+    (if (and exact? (seq restrict-to-path))
+      (restrict-item-pred target restrict-to-path)
+      (fn [^String p] (.startsWith p prefix)))))
 
 (defn safe-name
   "Asserts that the string param is creatable file that doesn't span paths. Fails

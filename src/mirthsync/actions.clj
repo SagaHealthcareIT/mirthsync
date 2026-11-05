@@ -68,8 +68,11 @@
   [{:keys [api restrict-to-path target] :as app-conf}]
 
   (let [files (vec (mi/api-files api (mi/local-path api (:target app-conf))))
-        matches? (mf/restrict-matcher target restrict-to-path
-                                      (map #(.toString ^File %) files))]
+        ;; A push decides from the disk, so every api agrees.
+        matches? (mf/restrict-matcher
+                  target restrict-to-path
+                  (mf/restrict-names-item? target restrict-to-path
+                                           (map #(.toString ^File %) files)))]
     (log/debugf "restrict-to-path: %s" restrict-to-path)
 
     (sequence
@@ -130,10 +133,16 @@
   [{:keys [api target restrict-to-path] :as app-conf}]
   (let [el-locs (vec (remote-locs app-conf))
         ;; Whether -r names an item exactly is judged against what the server
-        ;; has, so a pull of a channel not yet on disk is still exact.
-        matches? (mf/restrict-matcher target restrict-to-path
-                                      (when (seq restrict-to-path)
-                                        (expected-file-paths app-conf el-locs)))]
+        ;; has (each item's main path; no file is read) and the disk, so a
+        ;; pull of a channel not yet on disk is still exact. The disk keeps
+        ;; the apis in step: channel-groups and code-template-libraries run
+        ;; first and write the group's or library's index.xml, so channels and
+        ;; code-templates see `Channels/Lab` as the exact group too.
+        exact? (mf/restrict-names-item?
+                target restrict-to-path
+                (when (seq restrict-to-path)
+                  (map #(mi/file-path api (assoc app-conf :el-loc %)) el-locs)))
+        matches? (mf/restrict-matcher target restrict-to-path exact?)]
     (-> (process-nodes
          (assoc app-conf :restrict-match? matches?)
          (str "Downloading from " (mhttp/api-url app-conf) " to " (mi/local-path api (:target app-conf)))

@@ -140,7 +140,15 @@
   --no-sort-unordered is set. Returns app-conf."
   [{:keys [api el-loc restrict-to-path target disk-mode] :as app-conf}]
 
-  (when-not (mi/should-skip? api el-loc app-conf)
+  (when-not (or (mi/should-skip? api el-loc app-conf)
+                ;; groups disk mode writes a channel or code template into its
+                ;; group's or library's index.xml, which deconstruct-node reads
+                ;; first. When that index is outside the restrict it was never
+                ;; written, so skip the item before trying to read it.
+                (and (= "groups" disk-mode)
+                     (#{:channels :code-templates} api)
+                     (:restrict-match? app-conf)
+                     (not ((:restrict-match? app-conf) (mi/file-path api app-conf)))))
     (loop [files-data (mi/deconstruct-node app-conf
                                            (mi/file-path api app-conf)
                                            (if (:sort-unordered app-conf)
