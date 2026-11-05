@@ -132,9 +132,10 @@
 (def ^:private adt-pair [["a" "ADT"] ["b" "ADT Inbound"]])
 
 (ct/deftest pull-takes-only-the-named-channel-and-its-scripts
-  (doseq [restrict ["Channels/G/ADT" "Channels/G/ADT.xml"]]
+  ;; Platform separators, as the CLI's parse-fn leaves them.
+  (doseq [restrict [(build-path "Channels" "G" "ADT") (build-path "Channels" "G" "ADT.xml")]]
     (let [dir (fresh-dir "pull-exact")
-          [files conf] (pull! dir "code" (build-path restrict) one-group adt-pair)]
+          [files conf] (pull! dir "code" restrict one-group adt-pair)]
       (ct/is (= ["Channels/G/ADT.xml" "Channels/G/ADT/PreprocessingScript.js"] files) restrict)
       (ct/testing "the matcher does not leak out of the pull"
         (ct/is (not (contains? conf :restrict-match?))))
