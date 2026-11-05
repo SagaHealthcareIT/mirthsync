@@ -299,8 +299,10 @@ Options:
         path may refer to a filename specifically or a directory. If the path
         refers to a file - only that file will be pushed. If the path refers to
         a directory - the push will be limited to resources contained within
-        that directory. The RESTRICT_TO_PATH must be specified relative to
-        the target directory.
+        that directory. A channel may be named without its extension. If the
+        path names no file or directory exactly, it is used as a prefix and
+        takes every path that starts with it. The RESTRICT_TO_PATH must be
+        specified relative to the target directory.
       --include-configuration-map                       A boolean flag to include the
         configuration map in a push or pull. Default: false
       --skip-disabled                                   A boolean flag that indicates whether

@@ -85,6 +85,32 @@
         (cs/replace "\\" "%5C"))
     name))
 
+(defn restrict-matcher
+  "Predicate over file path strings for --restrict-to-path.
+
+  When the path names an item exactly - some candidate path is <path>,
+  <path>.xml, or lies under <path>/ - only that item and what is under it
+  match, so restricting to channel `ADT` does not also take `ADT Inbound`.
+  Otherwise the path is a partial name and keeps the original string-prefix
+  match: `Channels/Default Group/AD` still takes every channel in that
+  group whose name starts with AD. An empty path matches everything under
+  the target.
+
+  candidate-paths are the paths the operation could touch: the local files
+  for a push, the files the server's items would be written to for a pull."
+  [target restrict-to-path candidate-paths]
+  (let [prefix (str target File/separator restrict-to-path)
+        by-prefix (fn [^String p] (.startsWith p prefix))]
+    (if (empty? restrict-to-path)
+      by-prefix
+      (let [as-file (str prefix ".xml")
+            as-dir (str prefix File/separator)
+            in-item? (fn [^String p]
+                       (or (= p prefix) (= p as-file) (.startsWith p as-dir)))]
+        (if (some in-item? candidate-paths)
+          in-item?
+          by-prefix)))))
+
 (defn safe-name
   "Asserts that the string param is creatable file that doesn't span paths. Fails
   with an exception if any issues are detected, otherwise returns the unmodified
