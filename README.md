@@ -67,9 +67,11 @@ group directory.
 Version 3.9.0 changes how item names map to file and directory names, so that a target directory works on Windows as well as on macOS and Linux.
 Item names are the names of channels, channel groups, code templates, code template libraries, alerts, and the transformer and filter steps that become `.js` files.
 
-- Control characters and `" * : < > ? |` are percent encoded, as `/` and `\` already were. For example, `Accept message if "msg['MSH']" equals "X"` becomes `Accept message if %22msg['MSH']%22 equals %22X%22`.
+- Control characters and `" * : < > ? |` are percent encoded, as `/` and `\` already were.
+  For example, `Accept message if "msg['MSH']" equals "X"` becomes `Accept message if %22msg['MSH']%22 equals %22X%22`.
 - Trailing dots and spaces are percent encoded, because Windows silently drops them.
-- Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM0`-`COM9` and `LPT0`-`LPT9`, in any case and with or without an extension) have their last character percent encoded. For example, `AUX` becomes `AU%58`.
+- Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM0`-`COM9`, `COM¹`-`COM³`, `LPT0`-`LPT9` and `LPT¹`-`LPT³`, in any case and with or without an extension) have their last character percent encoded.
+  For example, `AUX` becomes `AU%58`.
 - Names longer than 240 UTF-8 bytes are cut to 200 bytes and end with `-` plus an 8-character hash of the full name.
 
 Names without these characters are unchanged.
@@ -81,7 +83,10 @@ Names without these characters are unchanged.
 - Those old files may hold local edits that were never pushed.
   `--delete-orphaned` deletes them, so push any local changes before upgrading.
 - A pull without `-f` keeps your existing XML files.
-  They still name the old script files, and push keeps reading the files the XML names, so edits to the old files are still pushed.
+  For an item whose own name did not change, its XML still names the old script files, and push keeps reading the files the XML names, so edits to the old files are still pushed.
+- If the name of a channel, channel group, code template, library or alert itself changed, a pull without `-f` writes a second XML file for the same item next to the old one.
+  Push would then upload both, and the one pushed last wins, so local edits can be overwritten by the server's copy.
+  Resolve this with the suggested steps below before pushing.
 - `--restrict-to-path` values that contain affected characters stop matching, because the directory and file names changed.
 
 ### Suggested steps
