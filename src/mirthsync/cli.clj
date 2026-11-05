@@ -20,8 +20,7 @@
 (defn- normalize-path-separators
   "Collapses runs of forward and/or backward slashes into the platform's
   File/separator. A restrict-to-path is matched against OS-native file paths
-  via String/startsWith (see mirthsync.xml/serialize-node and
-  mirthsync.actions/local-locs), so a path supplied with forward slashes must
+  (see mirthsync.files/restrict-matcher), so a path supplied with forward slashes must
   be normalized to the platform separator to match the file paths on Windows."
   [s]
   (when s
@@ -76,8 +75,10 @@
         path may refer to a filename specifically or a directory. If the path
         refers to a file - only that file will be pushed. If the path refers to
         a directory - the push will be limited to resources contained within
-        that directory. The RESTRICT_TO_PATH must be specified relative to
-        the target directory."
+        that directory. A channel may be named without its extension. If the
+        path names no file or directory exactly, it is used as a prefix and
+        takes every path that starts with it. The RESTRICT_TO_PATH must be
+        specified relative to the target directory."
     :default ""
     :parse-fn (comp strip-trailing-slashes normalize-path-separators)]
 
