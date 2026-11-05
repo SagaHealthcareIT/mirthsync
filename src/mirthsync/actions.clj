@@ -224,7 +224,7 @@
   "Get all files (not just XML) in a directory tree."
   [dir]
   (when (.exists (io/file dir))
-    (filter #(.isFile %) (file-seq (io/file dir)))))
+    (filter #(.isFile ^File %) (file-seq (io/file dir)))))
 
 (defn capture-pre-pull-local-files
   "Capture API-managed local files before pull operation for orphan detection."
