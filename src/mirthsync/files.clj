@@ -100,12 +100,29 @@
     (let [encoded (cs/replace name #"[\x00-\x1F\"*:<>?|]" #(percent-encode-char (first %)))]
       (cs/replace encoded #"[. ]+$" #(apply str (map percent-encode-char %))))))
 
+(def ^:private windows-reserved-stem
+  "Device names Windows reserves, with or without an extension: NUL.txt is the
+  same as NUL. See https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file"
+  #"(?i)(CON|PRN|AUX|NUL|COM[0-9¹²³]|LPT[0-9¹²³])")
+
+(defn- encode-windows-reserved-names
+  "Percent encodes the last character of a Windows reserved device name, so a
+  channel named 'AUX' or 'nul.backup' maps to 'AU%58' or 'nu%6C.backup'. The
+  result is no longer reserved, so encoding it again changes nothing."
+  [^String name]
+  (when name
+    (let [dot (cs/index-of name ".")
+          stem (if dot (subs name 0 dot) name)]
+      (if (re-matches windows-reserved-stem stem)
+        (str (subs stem 0 (dec (count stem)))
+             (percent-encode-char (last stem))
+             (when dot (subs name dot)))
+        name))))
+
 (def ^:private max-name-bytes
   "Names longer than this many UTF-8 bytes are shortened. File systems commonly
   cap a name at 255 bytes, and callers append an extension such as '.js' or
-  '.xml' after safe-name. Shortened names fit in shortened-name-bytes, which
-  leaves room for that extension while staying under this limit, so a shortened
-  name plus its extension is never shortened a second time."
+  '.xml' after safe-name, so this leaves room for it."
   240)
 
 (def ^:private shortened-name-bytes 200)
@@ -133,32 +150,34 @@
                        (recur (.offsetByCodePoints name (int end) (int -1))))))]
       (str prefix suffix))))
 
-(defn- assert-single-component
+(defn assert-file-name
+  "Asserts that name is a single path component that can't refer to a parent or
+  the current directory, and returns it unchanged."
   [name]
   (assert
-   (and (string? name) (= name (.getName (File. ^String name))))
+   (and (string? name)
+        (not (#{"." ".."} name))
+        (= name (.getName (File. ^String name))))
    (str "Name does not appear to be safe"
         " for file creation - " name
         " - Check for invalid characters."))
   name)
 
-(defn legacy-safe-name
-  "safe-name as it behaved before encode-windows-chars and shorten-long-name were
-  added. Used to find script files written by older versions during a push."
-  [name]
-  (some-> name encode-path-chars assert-single-component))
-
 (defn safe-name
   "Asserts that the string param is creatable file that doesn't span paths. Fails
   with an exception if any issues are detected, otherwise returns the unmodified
   string (unless there are weird characters as defined in encode-path-chars and
-  encode-windows-chars, or the name is too long for shorten-long-name; in which
-  case the string is modified accordingly)."
+  encode-windows-chars, a Windows reserved name, or a name too long for
+  shorten-long-name; in which case the string is modified accordingly)."
   [name]
   (log/debugf "safe-name pre: (%s)" name)
-  (if-let [name (some-> name encode-path-chars encode-windows-chars shorten-long-name)]
+  (if-let [name (some-> name
+                        encode-path-chars
+                        encode-windows-chars
+                        encode-windows-reserved-names
+                        shorten-long-name)]
     (do
-      (assert-single-component name)
+      (assert-file-name name)
       (log/spyf :debug "safe-name post: (%s)" name))
     name))
 

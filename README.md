@@ -62,6 +62,43 @@ group directory.
 - **Improved JGit API**: Better reliability and performance with fixed reflection warnings
 - **Security**: Path validation and safety features for file operations
 
+## Upgrading to 3.9.0
+
+Version 3.9.0 changes how item names map to file and directory names, so that a target directory works on Windows as well as on macOS and Linux.
+Item names are the names of channels, channel groups, code templates, code template libraries, alerts, and the transformer and filter steps that become `.js` files.
+
+- Control characters and `" * : < > ? |` are percent encoded, as `/` and `\` already were. For example, `Accept message if "msg['MSH']" equals "X"` becomes `Accept message if %22msg['MSH']%22 equals %22X%22`.
+- Trailing dots and spaces are percent encoded, because Windows silently drops them.
+- Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM0`-`COM9` and `LPT0`-`LPT9`, in any case and with or without an extension) have their last character percent encoded. For example, `AUX` becomes `AU%58`.
+- Names longer than 240 UTF-8 bytes are cut to 200 bytes and end with `-` plus an 8-character hash of the full name.
+
+Names without these characters are unchanged.
+
+### What changes after upgrading
+
+- The next pull writes affected items under their new names.
+  Files with the old names stay in place and are reported as orphans.
+- Those old files may hold local edits that were never pushed.
+  `--delete-orphaned` deletes them, so push any local changes before upgrading.
+- A pull without `-f` keeps your existing XML files.
+  They still name the old script files, and push keeps reading the files the XML names, so edits to the old files are still pushed.
+- `--restrict-to-path` values that contain affected characters stop matching, because the directory and file names changed.
+
+### Suggested steps
+
+1. Push any local changes with your current version.
+2. Have everyone who works on the same target directory upgrade together.
+3. Run `pull -f --delete-orphaned` once, review the result, and commit it.
+   A plain `pull -f` writes the new files but leaves the old ones in place.
+4. Update any `-r`/`--restrict-to-path` values in scripts and CI jobs to the new names.
+
+### Things to know
+
+- A `%` in a name is not encoded, so two names can map to the same file: `Foo: Bar` and `Foo%3A Bar` both become `Foo%3A Bar`.
+  Avoid `%` followed by two hex digits in item names.
+- Paths inside a target directory can exceed 260 characters.
+  On Windows, Java handles long paths, but Git needs `git config core.longpaths true`.
+
 ## Changes
 
 ### 3.8.1

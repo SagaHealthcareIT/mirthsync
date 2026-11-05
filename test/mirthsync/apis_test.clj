@@ -214,10 +214,39 @@
       "trailing space%20" (mf/safe-name "trailing space ")
       "inner. dots .stay" (mf/safe-name "inner. dots .stay")))
 
-  (ct/testing "Encoding is idempotent so stored filerefs resolve to the same file"
-    (doseq [n ["Set NTE.2.1 to \"TX\"" "a:b*c?d|e>f" "trailing.. " (apply str (repeat 300 "x"))]]
-      (ct/is (= (mf/safe-name n) (mf/safe-name (mf/safe-name n))))
-      (ct/is (= (str (mf/safe-name n) ".js") (mf/safe-name (str (mf/safe-name n) ".js")))))))
+  (ct/testing "Encoding an encoded name changes nothing"
+    (doseq [n ["Set NTE.2.1 to \"TX\"" "a:b*c?d|e>f" "trailing.. " "AUX" "nul.backup" (apply str (repeat 300 "x"))]]
+      (ct/is (= (mf/safe-name n) (mf/safe-name (mf/safe-name n)))))))
+
+(ct/deftest test-windows-reserved-file-names
+  (ct/testing "Reserved device names are encoded, with or without an extension, in any case"
+    (ct/are [x y] (= x y)
+      "CO%4E" (mf/safe-name "CON")
+      "PR%4E" (mf/safe-name "PRN")
+      "AU%58" (mf/safe-name "AUX")
+      "nu%6C" (mf/safe-name "nul")
+      "COM%31" (mf/safe-name "COM1")
+      "lpt%39" (mf/safe-name "lpt9")
+      "COM%30" (mf/safe-name "COM0")
+      "COM%B9" (mf/safe-name "COM¹")
+      "NU%4C.txt" (mf/safe-name "NUL.txt")
+      "Au%78.tar.gz" (mf/safe-name "Aux.tar.gz")))
+
+  (ct/testing "Names that only contain a reserved name are unchanged"
+    (ct/are [x] (= x (mf/safe-name x))
+      "CONSOLE"
+      "AUX Results"
+      "COM10"
+      "LPT"
+      "MyNUL.txt"
+      "results.NUL")))
+
+(ct/deftest test-assert-file-name
+  (ct/testing "Single names pass through unchanged"
+    (ct/is (= "Step %22a%22.js" (mf/assert-file-name "Step %22a%22.js"))))
+  (ct/testing "Names that leave the directory are rejected"
+    (doseq [bad [".." "." "../x.js" "a/b.js" (str "a" java.io.File/separator "b.js")]]
+      (ct/is (thrown? AssertionError (mf/assert-file-name bad)) bad))))
 
 (ct/deftest test-long-file-names
   (let [long-a (str (apply str (repeat 300 "a")) "-one")

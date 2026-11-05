@@ -402,12 +402,27 @@
           (spit (io/file script-dir fileref) "current();")
           (is (= "current();" (expand fileref)))))
 
-      (testing "falls back to the name an older version wrote"
+      (testing "reads the old file the XML names when the new file also exists"
+        ;; after upgrading, a pull without -f keeps Channel.xml pointing at the old
+        ;; file but also writes the new one; edits to the old file must be pushed.
         ;; long names were not shortened before, and unlike quotes they are valid on every OS
-        (let [fileref (str (apply str (repeat 245 "x")) ".js")]
+        (let [long-name (apply str (repeat 245 "x"))
+              old-fileref (str long-name ".js")
+              new-fileref (str (mf/safe-name long-name) ".js")]
+          (is (not= old-fileref new-fileref))
+          (spit (io/file script-dir old-fileref) "edited();")
+          (spit (io/file script-dir new-fileref) "from-server();")
+          (is (= "edited();" (expand old-fileref)))
+          (is (= "from-server();" (expand new-fileref)))))
+
+      (testing "reads names that a second pass through safe-name would change"
+        (let [fileref (str (mf/safe-name (apply str (repeat 239 "y"))) ".js")]
           (is (not= fileref (mf/safe-name fileref)))
-          (spit (io/file script-dir fileref) "legacy();")
-          (is (= "legacy();" (expand fileref)))))
+          (spit (io/file script-dir fileref) "edge();")
+          (is (= "edge();" (expand fileref)))))
+
+      (testing "rejects filerefs that leave the channel directory"
+        (is (thrown? AssertionError (expand "../escape.js"))))
       (finally
         (doseq [f (reverse (file-seq (io/file dir)))]
           (.delete ^java.io.File f))))))

@@ -56,11 +56,11 @@
             tag (:tag node)
             next-el-loc (if-let
                             [fileref (when tag (:msync-fileref (:attrs node)))]
-                          (let [dir (str (mf/remove-extension (.toString ^File main-file)) File/separator)
-                                current (File. (str dir (mf/safe-name fileref)))
-                                ;; repos pulled by older versions may still hold the unencoded name
-                                legacy (File. (str dir (mf/legacy-safe-name fileref)))
-                                file-text (slurp (if (or (.exists current) (not (.exists legacy))) current legacy))]
+                          ;; fileref is the exact name pull wrote, whichever version wrote it, so it
+                          ;; is read as-is rather than passed through safe-name again
+                          (let [file-text (slurp (str (mf/remove-extension (.toString ^File main-file))
+                                                      File/separator
+                                                      (mf/assert-file-name fileref)))]
                             (cz/next (cz/edit el-loc (fn [node]
                                                        (assoc (assoc node :content (list file-text)) :attrs (dissoc (:attrs node) :msync-fileref))))))
                           (cz/next el-loc))]
