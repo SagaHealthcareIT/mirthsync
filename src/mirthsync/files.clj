@@ -77,13 +77,96 @@
   it is meant as a way to keep the code backwards compatible in terms of the
   filesystem layout while allowing for a few exceptional cases. Slashes will be
   replaced with their URLEncoder/encode equivalent - forward slash becomes %2F
-  and backslash becomes %5C."
+  and backslash becomes %5C.
+
+  A percent sign becomes %25, first, so a name that already contains an encoded
+  form such as 'a%2Fb' or 'AU%58' never maps to the same file as 'a/b' or 'AUX'."
   [^String name]
   (if name
     (-> name
+        (cs/replace "%" "%25")
         (cs/replace "/" "%2F")
         (cs/replace "\\" "%5C"))
     name))
+
+(defn- percent-encode-char
+  [c]
+  (format "%%%02X" (int c)))
+
+(defn- encode-windows-chars
+  "Windows rejects control characters and \" * : < > ? | anywhere in a file name,
+  and silently strips trailing dots and spaces. Mirth generates rule and step
+  names such as 'Accept message if \"msg['MSH']\" equals \"X\"', so these are
+  percent encoded the same way as slashes."
+  [^String name]
+  (when name
+    (let [encoded (cs/replace name #"[\x00-\x1F\"*:<>?|]" #(percent-encode-char (first %)))]
+      (cs/replace encoded #"[. ]+$" #(apply str (map percent-encode-char %))))))
+
+(def ^:private windows-reserved-stem
+  "Device names Windows reserves, with or without an extension: NUL.txt is the
+  same as NUL. See https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file"
+  #"(?i)(CON|PRN|AUX|NUL|COM[0-9¹²³]|LPT[0-9¹²³])")
+
+(defn- encode-windows-reserved-names
+  "Percent encodes the last character of a Windows reserved device name, so a
+  channel named 'AUX' or 'nul.backup' maps to 'AU%58' or 'nu%6C.backup'.
+  Windows ignores spaces between the device name and the extension, so
+  'NUL .txt' is reserved too and maps to 'NU%4C .txt'."
+  [^String name]
+  (when name
+    (let [dot (cs/index-of name ".")
+          stem (if dot (subs name 0 dot) name)
+          device (cs/replace stem #" +$" "")]
+      (if (re-matches windows-reserved-stem device)
+        (str (subs device 0 (dec (count device)))
+             (percent-encode-char (last device))
+             (subs name (count device)))
+        name))))
+
+(def ^:private max-name-bytes
+  "Names longer than this many UTF-8 bytes are shortened. File systems commonly
+  cap a name at 255 bytes, and callers append an extension such as '.js' or
+  '.xml' after safe-name, so this leaves room for it."
+  240)
+
+(def ^:private shortened-name-bytes 200)
+
+(defn- utf8-length
+  [^String s]
+  (alength (.getBytes s "UTF-8")))
+
+(defn- shorten-long-name
+  "Returns name unchanged if it fits in max-name-bytes. Otherwise keeps as much of
+  the start of the name as fits and appends '-' plus the first 8 hex characters
+  of the SHA-1 of the full name, so distinct long names stay distinct and the
+  same name always maps to the same file."
+  [^String name]
+  (if (or (nil? name) (<= (utf8-length name) max-name-bytes))
+    name
+    (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-1")
+                          (.getBytes name "UTF-8"))
+          suffix (str "-" (subs (apply str (map #(format "%02x" %) digest)) 0 8))
+          budget (- shortened-name-bytes (utf8-length suffix))
+          prefix (loop [end (.length name)]
+                   (let [candidate (subs name 0 end)]
+                     (if (<= (utf8-length candidate) budget)
+                       candidate
+                       (recur (.offsetByCodePoints name (int end) (int -1))))))]
+      (str prefix suffix))))
+
+(defn assert-file-name
+  "Asserts that name is a single path component that can't refer to a parent or
+  the current directory, and returns it unchanged."
+  [name]
+  (assert
+   (and (string? name)
+        (not (#{"." ".."} name))
+        (= name (.getName (File. ^String name))))
+   (str "Name does not appear to be safe"
+        " for file creation - " name
+        " - Check for invalid characters."))
+  name)
 
 (defn- restrict-item-pred
   "Predicate: is a path part of the item --restrict-to-path names exactly?
@@ -135,18 +218,18 @@
 (defn safe-name
   "Asserts that the string param is creatable file that doesn't span paths. Fails
   with an exception if any issues are detected, otherwise returns the unmodified
-  string (unless there are weird characters as defined in encode-path-chars; in
-  which case the string is modified accordingly)."
+  string (unless there are weird characters as defined in encode-path-chars and
+  encode-windows-chars, a Windows reserved name, or a name too long for
+  shorten-long-name; in which case the string is modified accordingly)."
   [name]
   (log/debugf "safe-name pre: (%s)" name)
-  (if-let [name (encode-path-chars name)]
+  (if-let [name (some-> name
+                        encode-path-chars
+                        encode-windows-chars
+                        encode-windows-reserved-names
+                        shorten-long-name)]
     (do
-      (assert
-       (and (string? name) (= name (.getName (File. ^String name))))
-       (str "Name does not appear to be safe"
-            " for file creation - " name
-            " - Check for invalid characters."))
-
+      (assert-file-name name)
       (log/spyf :debug "safe-name post: (%s)" name))
     name))
 

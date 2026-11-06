@@ -62,6 +62,52 @@ group directory.
 - **Improved JGit API**: Better reliability and performance with fixed reflection warnings
 - **Security**: Path validation and safety features for file operations
 
+## Upgrading to 3.9.0
+
+Version 3.9.0 changes how item names map to file and directory names, so that a target directory works on Windows as well as on macOS and Linux.
+Item names are the names of channels, channel groups, code templates, code template libraries, alerts, and the transformer and filter steps that become `.js` files.
+
+- Control characters, `%` and `" * : < > ? |` are percent encoded, as `/` and `\` already were.
+  For example, `Accept message if "msg['MSH']" equals "X"` becomes `Accept message if %22msg['MSH']%22 equals %22X%22`, and `50% off` becomes `50%25 off`.
+  Because `%` is encoded too, a name no longer shares a file with the encoded form of another name.
+- Trailing dots and spaces are percent encoded, because Windows silently drops them.
+- Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM0`-`COM9`, `COM¹`-`COM³`, `LPT0`-`LPT9` and `LPT¹`-`LPT³`, in any case, with or without an extension, and with or without spaces before the extension) have their last character percent encoded.
+  For example, `AUX` becomes `AU%58` and `NUL .txt` becomes `NU%4C .txt`.
+- Names longer than 240 UTF-8 bytes are cut to 200 bytes and end with `-` plus an 8-character hash of the full name.
+
+Names without these characters are unchanged.
+
+### What changes after upgrading
+
+- The next pull writes affected items under their new names.
+  Files with the old names stay in place and are reported as orphans.
+- Those old files may hold local edits that were never pushed.
+  `--delete-orphaned` deletes them, so push any local changes before upgrading.
+- A pull without `-f` keeps your existing XML files.
+  For an item whose own name did not change, its XML still names the old script files, and push keeps reading the files the XML names, so edits to the old files are still pushed.
+- If the name of a channel, channel group, code template, library or alert itself changed, a pull without `-f` writes a second XML file for the same item next to the old one.
+  Push would then upload both, and the one pushed last wins, so local edits can be overwritten by the server's copy.
+  Resolve this with the suggested steps below before pushing.
+- A `--restrict-to-path` value that names an affected item no longer names it, because its directory and file names changed.
+  A value that names no item matches every item whose path starts with it, so an old value can match nothing or a different item.
+  For example, `-r "Channels/G/AUX"` can take a channel named `AUX Results` instead of `AU%58`.
+
+### Suggested steps
+
+1. Push any local changes with your current version.
+2. Have everyone who works on the same target directory upgrade together.
+3. Run `pull -f --delete-orphaned` once, review the result, and commit it.
+   A plain `pull -f` writes the new files but leaves the old ones in place.
+4. Update any `-r`/`--restrict-to-path` values in scripts and CI jobs to the new names.
+   In a `.bat` or `.cmd` file, cmd treats `%` specially: write each `%` as `%%`, for example `-r "Channels/G/AU%%58"`, or as `%%%%` when the command is run with `call`, as the npm `mirthsync` command must be from a batch file.
+   Otherwise cmd reads `%5` as the fifth argument to the batch file.
+   PowerShell and other shells need no change.
+
+### Things to know
+
+- Paths inside a target directory can exceed 260 characters.
+  On Windows, Java handles long paths, but Git needs `git config core.longpaths true`.
+
 ## Changes
 
 ### 3.8.1

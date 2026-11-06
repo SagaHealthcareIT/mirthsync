@@ -56,7 +56,11 @@
             tag (:tag node)
             next-el-loc (if-let
                             [fileref (when tag (:msync-fileref (:attrs node)))]
-                          (let [file-text (slurp (str (mf/remove-extension (.toString ^File main-file)) File/separator (mf/safe-name fileref)))]
+                          ;; fileref is the exact name pull wrote, whichever version wrote it, so it
+                          ;; is read as-is rather than passed through safe-name again
+                          (let [file-text (slurp (str (mf/remove-extension (.toString ^File main-file))
+                                                      File/separator
+                                                      (mf/assert-file-name fileref)))]
                             (cz/next (cz/edit el-loc (fn [node]
                                                        (assoc (assoc node :content (list file-text)) :attrs (dissoc (:attrs node) :msync-fileref))))))
                           (cz/next el-loc))]
@@ -242,7 +246,7 @@
   "Get all files (not just XML) in a directory tree."
   [dir]
   (when (.exists (io/file dir))
-    (filter #(.isFile %) (file-seq (io/file dir)))))
+    (filter #(.isFile ^File %) (file-seq (io/file dir)))))
 
 (defn capture-pre-pull-local-files
   "Capture API-managed local files before pull operation for orphan detection."

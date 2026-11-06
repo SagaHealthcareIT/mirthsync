@@ -199,7 +199,88 @@
     (ct/are [x y] (= x y)
       "foo.xml" (mf/safe-name "foo.xml")
       "%2Fpath chars in%2F%5C%5C%2F%5C%2F name.ext%2F" (mf/safe-name "/path chars in/\\\\/\\/ name.ext/")
-      "!@#$%^&*()_+-=[]{}||;:'\",<.>%2F?.xml" (mf/safe-name "!@#$%^&*()_+-=[]{}||;:'\",<.>/?.xml"))))
+      "!@#$%25^&%2A()_+-=[]{}%7C%7C;%3A'%22,%3C.%3E%2F%3F.xml" (mf/safe-name "!@#$%^&*()_+-=[]{}||;:'\",<.>/?.xml"))))
+
+(ct/deftest test-windows-safe-file-names
+  (ct/testing "Characters Windows rejects are percent encoded"
+    (ct/are [x y] (= x y)
+      "1-Accept message if %22msg['MSH']['MSH.6']%22 equals %2243308%22"
+      (mf/safe-name "1-Accept message if \"msg['MSH']['MSH.6']\" equals \"43308\"")
+
+      "MSH (out) %3C-- Message Header (MSH) (in)" (mf/safe-name "MSH (out) <-- Message Header (MSH) (in)")
+      "a%3Ab%2Ac%3Fd%7Ce%3Ef" (mf/safe-name "a:b*c?d|e>f")
+      "tab%09newline%0A" (mf/safe-name "tab\tnewline\n")
+      "trailing%2E%2E" (mf/safe-name "trailing..")
+      "trailing space%20" (mf/safe-name "trailing space ")
+      "inner. dots .stay" (mf/safe-name "inner. dots .stay")))
+
+  (ct/testing "Percent signs are encoded, so a name never shares a file with its encoded form"
+    (ct/are [x y] (= x y)
+      "50%25 off" (mf/safe-name "50% off")
+      "a%253Ab" (mf/safe-name "a%3Ab")
+      "AU%2558" (mf/safe-name "AU%58"))
+    (doseq [n ["Set NTE.2.1 to \"TX\"" "a:b*c?d|e>f" "a/b" "trailing.. " "AUX" "nul.backup" "NUL .txt"]]
+      (ct/is (not= (mf/safe-name n) (mf/safe-name (mf/safe-name n))) n)))
+
+  (ct/testing "Names with slashes keep the file names earlier versions wrote"
+    (ct/are [x y] (= x y)
+      "a%2Fb" (mf/safe-name "a/b")
+      "a%5Cb" (mf/safe-name "a\\b"))))
+
+(ct/deftest test-windows-reserved-file-names
+  (ct/testing "Reserved device names are encoded, with or without an extension, in any case"
+    (ct/are [x y] (= x y)
+      "CO%4E" (mf/safe-name "CON")
+      "PR%4E" (mf/safe-name "PRN")
+      "AU%58" (mf/safe-name "AUX")
+      "nu%6C" (mf/safe-name "nul")
+      "COM%31" (mf/safe-name "COM1")
+      "lpt%39" (mf/safe-name "lpt9")
+      "COM%30" (mf/safe-name "COM0")
+      "COM%B9" (mf/safe-name "COM¹")
+      "NU%4C.txt" (mf/safe-name "NUL.txt")
+      "Au%78.tar.gz" (mf/safe-name "Aux.tar.gz")))
+
+  (ct/testing "Spaces between a reserved name and its extension still count as reserved"
+    (ct/are [x y] (= x y)
+      "NU%4C .txt" (mf/safe-name "NUL .txt")
+      "au%78  .tar.gz" (mf/safe-name "aux  .tar.gz")
+      "COM%31 .log" (mf/safe-name "COM1 .log")
+      "CON%20" (mf/safe-name "CON ")))
+
+  (ct/testing "Names that only contain a reserved name are unchanged"
+    (ct/are [x] (= x (mf/safe-name x))
+      "CONSOLE"
+      "AUX Results"
+      "AUX Results .txt"
+      "COM10"
+      "LPT"
+      "MyNUL.txt"
+      "results.NUL")))
+
+(ct/deftest test-assert-file-name
+  (ct/testing "Single names pass through unchanged"
+    (ct/is (= "Step %22a%22.js" (mf/assert-file-name "Step %22a%22.js"))))
+  (ct/testing "Names that leave the directory are rejected"
+    (doseq [bad [".." "." "../x.js" "a/b.js" (str "a" java.io.File/separator "b.js")]]
+      (ct/is (thrown? AssertionError (mf/assert-file-name bad)) bad))))
+
+(ct/deftest test-long-file-names
+  (let [long-a (str (apply str (repeat 300 "a")) "-one")
+        long-b (str (apply str (repeat 300 "a")) "-two")]
+    (ct/testing "Names that fit are unchanged"
+      (ct/is (= (apply str (repeat 240 "a")) (mf/safe-name (apply str (repeat 240 "a"))))))
+
+    (ct/testing "Long names are shortened to at most 200 UTF-8 bytes and stay distinct"
+      (ct/is (>= 200 (count (.getBytes ^String (mf/safe-name long-a) "UTF-8"))))
+      (ct/is (re-matches #"a+-[0-9a-f]{8}" (mf/safe-name long-a)))
+      (ct/is (not= (mf/safe-name long-a) (mf/safe-name long-b)))
+      (ct/is (= (mf/safe-name long-a) (mf/safe-name long-a))))
+
+    (ct/testing "Multi-byte characters are never split"
+      (let [shortened (mf/safe-name (apply str (repeat 150 "é")))]
+        (ct/is (>= 200 (count (.getBytes ^String shortened "UTF-8"))))
+        (ct/is (re-matches #"é+-[0-9a-f]{8}" shortened))))))
 
 (ct/deftest test-correct-apis-for-conf
   (ct/testing "Apis function returns the correct apis depending on app-conf"
