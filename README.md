@@ -97,8 +97,10 @@ Names without these characters are unchanged.
 
 1. Push any local changes with your current version.
 2. Have everyone who works on the same target directory upgrade together.
-3. Run `pull -f --delete-orphaned` once, review the result, and commit it.
+3. Run `pull -f --delete-orphaned` once, without `-r` or `--skip-disabled`, review the result, and commit it.
    A plain `pull -f` writes the new files but leaves the old ones in place.
+   Without `-f`, existing XML files are kept, so a renamed item gets a second XML file and the next push uploads both.
+   With `-r` or `--skip-disabled`, the orphan cleanup still deletes the old files of the items the pull skipped, but does not write their new ones.
 4. Update any `-r`/`--restrict-to-path` values in scripts and CI jobs to the new names.
    In a `.bat` or `.cmd` file, cmd treats `%` specially: write each `%` as `%%`, for example `-r "Channels/G/AU%%58"`, or as `%%%%` when the command is run with `call`, as the npm `mirthsync` command must be from a batch file.
    Otherwise cmd reads `%5` as the fifth argument to the batch file.
