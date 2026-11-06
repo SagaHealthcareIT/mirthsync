@@ -77,10 +77,14 @@
   it is meant as a way to keep the code backwards compatible in terms of the
   filesystem layout while allowing for a few exceptional cases. Slashes will be
   replaced with their URLEncoder/encode equivalent - forward slash becomes %2F
-  and backslash becomes %5C."
+  and backslash becomes %5C.
+
+  A percent sign becomes %25, first, so a name that already contains an encoded
+  form such as 'a%2Fb' or 'AU%58' never maps to the same file as 'a/b' or 'AUX'."
   [^String name]
   (if name
     (-> name
+        (cs/replace "%" "%25")
         (cs/replace "/" "%2F")
         (cs/replace "\\" "%5C"))
     name))
@@ -93,8 +97,7 @@
   "Windows rejects control characters and \" * : < > ? | anywhere in a file name,
   and silently strips trailing dots and spaces. Mirth generates rule and step
   names such as 'Accept message if \"msg['MSH']\" equals \"X\"', so these are
-  percent encoded the same way as slashes. The result never contains these
-  characters, so encoding an already encoded name changes nothing."
+  percent encoded the same way as slashes."
   [^String name]
   (when name
     (let [encoded (cs/replace name #"[\x00-\x1F\"*:<>?|]" #(percent-encode-char (first %)))]
@@ -107,16 +110,18 @@
 
 (defn- encode-windows-reserved-names
   "Percent encodes the last character of a Windows reserved device name, so a
-  channel named 'AUX' or 'nul.backup' maps to 'AU%58' or 'nu%6C.backup'. The
-  result is no longer reserved, so encoding it again changes nothing."
+  channel named 'AUX' or 'nul.backup' maps to 'AU%58' or 'nu%6C.backup'.
+  Windows ignores spaces between the device name and the extension, so
+  'NUL .txt' is reserved too and maps to 'NU%4C .txt'."
   [^String name]
   (when name
     (let [dot (cs/index-of name ".")
-          stem (if dot (subs name 0 dot) name)]
-      (if (re-matches windows-reserved-stem stem)
-        (str (subs stem 0 (dec (count stem)))
-             (percent-encode-char (last stem))
-             (when dot (subs name dot)))
+          stem (if dot (subs name 0 dot) name)
+          device (cs/replace stem #" +$" "")]
+      (if (re-matches windows-reserved-stem device)
+        (str (subs device 0 (dec (count device)))
+             (percent-encode-char (last device))
+             (subs name (count device)))
         name))))
 
 (def ^:private max-name-bytes

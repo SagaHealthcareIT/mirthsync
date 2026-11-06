@@ -199,7 +199,7 @@
     (ct/are [x y] (= x y)
       "foo.xml" (mf/safe-name "foo.xml")
       "%2Fpath chars in%2F%5C%5C%2F%5C%2F name.ext%2F" (mf/safe-name "/path chars in/\\\\/\\/ name.ext/")
-      "!@#$%^&%2A()_+-=[]{}%7C%7C;%3A'%22,%3C.%3E%2F%3F.xml" (mf/safe-name "!@#$%^&*()_+-=[]{}||;:'\",<.>/?.xml"))))
+      "!@#$%25^&%2A()_+-=[]{}%7C%7C;%3A'%22,%3C.%3E%2F%3F.xml" (mf/safe-name "!@#$%^&*()_+-=[]{}||;:'\",<.>/?.xml"))))
 
 (ct/deftest test-windows-safe-file-names
   (ct/testing "Characters Windows rejects are percent encoded"
@@ -214,9 +214,18 @@
       "trailing space%20" (mf/safe-name "trailing space ")
       "inner. dots .stay" (mf/safe-name "inner. dots .stay")))
 
-  (ct/testing "Encoding an encoded name changes nothing"
-    (doseq [n ["Set NTE.2.1 to \"TX\"" "a:b*c?d|e>f" "trailing.. " "AUX" "nul.backup" (apply str (repeat 300 "x"))]]
-      (ct/is (= (mf/safe-name n) (mf/safe-name (mf/safe-name n)))))))
+  (ct/testing "Percent signs are encoded, so a name never shares a file with its encoded form"
+    (ct/are [x y] (= x y)
+      "50%25 off" (mf/safe-name "50% off")
+      "a%253Ab" (mf/safe-name "a%3Ab")
+      "AU%2558" (mf/safe-name "AU%58"))
+    (doseq [n ["Set NTE.2.1 to \"TX\"" "a:b*c?d|e>f" "a/b" "trailing.. " "AUX" "nul.backup" "NUL .txt"]]
+      (ct/is (not= (mf/safe-name n) (mf/safe-name (mf/safe-name n))) n)))
+
+  (ct/testing "Names with slashes keep the file names earlier versions wrote"
+    (ct/are [x y] (= x y)
+      "a%2Fb" (mf/safe-name "a/b")
+      "a%5Cb" (mf/safe-name "a\\b"))))
 
 (ct/deftest test-windows-reserved-file-names
   (ct/testing "Reserved device names are encoded, with or without an extension, in any case"
@@ -232,10 +241,18 @@
       "NU%4C.txt" (mf/safe-name "NUL.txt")
       "Au%78.tar.gz" (mf/safe-name "Aux.tar.gz")))
 
+  (ct/testing "Spaces between a reserved name and its extension still count as reserved"
+    (ct/are [x y] (= x y)
+      "NU%4C .txt" (mf/safe-name "NUL .txt")
+      "au%78  .tar.gz" (mf/safe-name "aux  .tar.gz")
+      "COM%31 .log" (mf/safe-name "COM1 .log")
+      "CON%20" (mf/safe-name "CON ")))
+
   (ct/testing "Names that only contain a reserved name are unchanged"
     (ct/are [x] (= x (mf/safe-name x))
       "CONSOLE"
       "AUX Results"
+      "AUX Results .txt"
       "COM10"
       "LPT"
       "MyNUL.txt"
