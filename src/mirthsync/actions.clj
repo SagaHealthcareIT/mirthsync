@@ -71,16 +71,21 @@
   "Lazy sequence of local el-locs for the current api."
   [{:keys [api restrict-to-path target] :as app-conf}]
 
-  (let [^String required-prefix (str target File/separator restrict-to-path)]
-    (log/debugf "required-prefix: %s" required-prefix)
+  (let [files (vec (mi/api-files api (mi/local-path api (:target app-conf))))
+        ;; A push decides from the disk, so every api agrees.
+        matches? (mf/restrict-matcher
+                  target restrict-to-path
+                  (mf/restrict-names-item? target restrict-to-path
+                                           (map #(.toString ^File %) files)))]
+    (log/debugf "restrict-to-path: %s" restrict-to-path)
 
     (sequence
-     (comp (filter #(let [matches (.startsWith (.toString ^File %) required-prefix)]
+     (comp (filter #(let [matches (matches? (.toString ^File %))]
                     (if matches
                       (do (when (seq restrict-to-path)
                             (log/debugf "Found a match: %s" %))
                           true)
-                      (do (log/debugf "filtering push of '%s' since it does not start with our required prefix: %s" % required-prefix)
+                      (do (log/debugf "filtering push of '%s' since it is outside the restrict-to-path %s" % restrict-to-path)
                           false))))
           (map #(expand-filerefs %
                                 (mxml/to-zip
@@ -88,7 +93,7 @@
                                    (log/debugf "\tFile: %s" (.toString ^File %))
                                    (slurp %)))))
           (filter #(not (mi/should-skip? api % app-conf))))
-     (mi/api-files api (mi/local-path api (:target app-conf))))))
+     files)))
 
 (defn- remote-locs
   "Lazy seq of remote el-locs for the current api, each detached from
@@ -117,16 +122,37 @@
        (rest el-locs))
       app-conf)))
 
+(defn- expected-file-paths
+  "The file paths the given remote el-locs would be written to."
+  [{:keys [api] :as app-conf} el-locs]
+  (set (mapcat (fn [el-loc]
+                 (let [app-conf-with-el (assoc app-conf :el-loc el-loc)]
+                   (map first (mi/deconstruct-node app-conf-with-el (mi/file-path api app-conf-with-el) el-loc))))
+               el-locs)))
+
 (defn download
   "Serializes all xml found at the api rest-path to the filesystem using the
   supplied config. Returns a (potentially) updated app-conf with
   details about the fetched apis."
-  [{:keys [api] :as app-conf}]
-  (process-nodes
-   app-conf
-   (str "Downloading from " (mhttp/api-url app-conf) " to " (mi/local-path api (:target app-conf)))
-   (remote-locs app-conf)
-   mxml/serialize-node))
+  [{:keys [api target restrict-to-path] :as app-conf}]
+  (let [el-locs (vec (remote-locs app-conf))
+        ;; Whether -r names an item exactly is judged against what the server
+        ;; has (each item's main path; no file is read) and the disk, so a
+        ;; pull of a channel not yet on disk is still exact. The disk keeps
+        ;; the apis in step: channel-groups and code-template-libraries run
+        ;; first and write the group's or library's index.xml, so channels and
+        ;; code-templates see `Channels/Lab` as the exact group too.
+        exact? (mf/restrict-names-item?
+                target restrict-to-path
+                (when (seq restrict-to-path)
+                  (map #(mi/file-path api (assoc app-conf :el-loc %)) el-locs)))
+        matches? (mf/restrict-matcher target restrict-to-path exact?)]
+    (-> (process-nodes
+         (assoc app-conf :restrict-match? matches?)
+         (str "Downloading from " (mhttp/api-url app-conf) " to " (mi/local-path api (:target app-conf)))
+         el-locs
+         mxml/serialize-node)
+        (dissoc :restrict-match?))))
 
 (defn upload
   "Takes the current app-conf with the current api and finds associated
@@ -142,12 +168,8 @@
 
 (defn get-remote-expected-file-paths
   "Get a set of file paths that would be generated from remote elements."
-  [{:keys [api] :as app-conf}]
-  (let [remote-elements (remote-locs app-conf)]
-    (set (mapcat (fn [el-loc]
-                   (let [app-conf-with-el (assoc app-conf :el-loc el-loc)]
-                     (map first (mi/deconstruct-node app-conf-with-el (mi/file-path api app-conf-with-el) el-loc))))
-                 remote-elements))))
+  [app-conf]
+  (expected-file-paths app-conf (remote-locs app-conf)))
 
 (defn- find-orphaned-files-in-list
   "Find files in the provided list that don't have corresponding expected paths.
