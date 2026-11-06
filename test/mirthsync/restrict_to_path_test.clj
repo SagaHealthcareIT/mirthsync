@@ -15,8 +15,9 @@
             [mirthsync.fixture-tools :refer [build-path]]
             [mirthsync.http-client :as mhttp]
             [mirthsync.interfaces :as mi]
+            [mirthsync.logging :as log]
             [mirthsync.xml :as mx])
-  (:import java.io.File))
+  (:import [java.io File StringWriter]))
 
 ;; ---------------------------------------------------------------- matcher
 
@@ -74,8 +75,9 @@
        (apply str (map #(str "<channel><id>" % "</id></channel>") chans))
        "</channels></channelGroup>"))
 
-(defn- chan [id nm]
+(defn- chan [id nm & [disabled?]]
   (str "<channel><id>" id "</id><name>" nm "</name>"
+       (when disabled? "<exportData><metadata><enabled>false</enabled></metadata></exportData>")
        "<preprocessingScript>// " nm "</preprocessingScript></channel>"))
 
 (defn- server-groups [groups]
@@ -84,7 +86,7 @@
 (defn- pull!
   "Runs channel-groups then channels, as a pull does, against a stubbed
   server. Returns the files written, and the app-conf after both apis."
-  [dir mode restrict groups chans]
+  [dir mode restrict groups chans & {:as opts}]
   (with-redefs [mhttp/api-url (fn [_] "https://example.invalid/api")
                 mhttp/fetch-all (fn [{:keys [api]} find-elements]
                                   (find-elements
@@ -92,14 +94,16 @@
                                     (case api
                                       :channel-groups (str "<list>" (apply str (map #(apply grp %) groups)) "</list>")
                                       :channels (str "<list>" (apply str (map #(apply chan %) chans)) "</list>")))))]
-    (let [conf {:target dir :restrict-to-path restrict :disk-mode mode :force true
-                :server-groups (server-groups groups)}
+    (let [conf (merge {:target dir :restrict-to-path restrict :disk-mode mode :force true
+                       :server-groups (server-groups groups)}
+                      opts)
           conf (ma/download (assoc conf :api :channel-groups))
           conf (ma/download (assoc conf :api :channels))]
       [(files-under dir) conf])))
 
 (defn- push-names [dir api restrict]
-  (mapv #(mi/find-name api %) (#'ma/local-locs {:api api :target dir :restrict-to-path restrict})))
+  (let [conf {:api api :target dir :restrict-to-path restrict}]
+    (mapv #(mi/find-name api %) (#'ma/file-locs conf (#'ma/restricted-files conf)))))
 
 ;; ---------------------------------------------------------------- push
 
@@ -166,3 +170,72 @@
     (ct/is (= ["Channels/Lab/index.xml"] files))
     (ct/is (str/includes? (slurp (io/file dir "Channels" "Lab" "index.xml")) "<name>A</name>"))
     (cpu/delete-recursive dir :allowed-dir "target")))
+
+;; ---------------------------------------------------------------- matched nothing
+
+(defn- push!
+  "Runs the channels push against a stubbed upload. Returns the names
+  uploaded and the app-conf after the api."
+  [dir restrict & {:as opts}]
+  (let [uploaded (atom [])
+        conf (with-redefs-fn {#'ma/upload-node (fn [conf]
+                                                 (swap! uploaded conj (mi/find-name :channels (:el-loc conf)))
+                                                 conf)}
+               #(ma/upload (merge {:api :channels :target dir :restrict-to-path restrict} opts)))]
+    [@uploaded conf]))
+
+(ct/deftest push-records-whether-the-restrict-matched
+  (let [dir (fresh-dir "push-matched")]
+    (try
+      (put! dir {"Channels/G/ADT.xml" (chan "a" "ADT")
+                 "Channels/G/OFF.xml" (chan "b" "OFF" :disabled)})
+      (let [[uploaded conf] (push! dir (build-path "Channels" "G" "ADT"))]
+        (ct/is (= ["ADT"] uploaded))
+        (ct/is (:restrict-found-items? conf)))
+      (let [[uploaded conf] (push! dir (build-path "Channels" "G" "AUX"))]
+        (ct/is (= [] uploaded))
+        (ct/is (not (:restrict-found-items? conf))))
+      (ct/testing "a disabled item --skip-disabled leaves out still counts as matched"
+        (let [[uploaded conf] (push! dir (build-path "Channels" "G" "OFF") :skip-disabled true)]
+          (ct/is (= [] uploaded))
+          (ct/is (:restrict-found-items? conf))))
+      (finally (cpu/delete-recursive dir :allowed-dir "target")))))
+
+(ct/deftest pull-records-whether-the-restrict-matched
+  (let [dir (fresh-dir "pull-matched")]
+    (try
+      (let [[files conf] (pull! dir "code" (build-path "Channels" "G" "ADT") one-group adt-pair)]
+        (ct/is (seq files))
+        (ct/is (:restrict-found-items? conf)))
+      (cpu/delete-recursive dir :allowed-dir "target")
+      (let [[files conf] (pull! dir "code" (build-path "Channels" "G" "AUX") one-group adt-pair)]
+        (ct/is (= [] files))
+        (ct/is (not (:restrict-found-items? conf))))
+      (cpu/delete-recursive dir :allowed-dir "target")
+      (ct/testing "a match by an earlier api is kept when a later one matches nothing"
+        (let [[files conf] (pull! dir "code" (build-path "Channels" "G" "index.xml") one-group adt-pair)]
+          (ct/is (= ["Channels/G/index.xml"] files))
+          (ct/is (:restrict-found-items? conf))))
+      (cpu/delete-recursive dir :allowed-dir "target")
+      (ct/testing "a disabled item --skip-disabled leaves out still counts as matched"
+        (let [[files conf] (pull! dir "code" (build-path "Channels" "G" "OFF")
+                                  [["g" "G" ["c"]]] [["c" "OFF" :disabled]] :skip-disabled true)]
+          (ct/is (= [] files))
+          (ct/is (:restrict-found-items? conf))))
+      (finally (cpu/delete-recursive dir :allowed-dir "target")))))
+
+(defn- warning-for [conf]
+  (let [err (StringWriter.)]
+    (log/with-log-writers (StringWriter.) err
+      (ct/is (= conf (ma/warn-if-restrict-matched-nothing conf))))
+    (str err)))
+
+(ct/deftest warns-when-the-restrict-matched-nothing
+  (let [restrict (build-path "Channels" "G" "AUX")]
+    (ct/is (str/includes? (warning-for {:action "push" :restrict-to-path restrict})
+                          (str "--restrict-to-path '" restrict "' matched no items, so nothing was pushed.")))
+    (ct/is (str/includes? (warning-for {:action "pull" :restrict-to-path restrict})
+                          "so nothing was pulled."))
+    (ct/testing "no warning when the restrict matched, or when there is none"
+      (ct/is (= "" (warning-for {:action "pull" :restrict-to-path restrict :restrict-found-items? true})))
+      (ct/is (= "" (warning-for {:action "push" :restrict-to-path ""}))))))

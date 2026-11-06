@@ -67,33 +67,35 @@
 
         (recur next-el-loc)))))
 
-(defn- local-locs
-  "Lazy sequence of local el-locs for the current api."
-  [{:keys [api restrict-to-path target] :as app-conf}]
-
-  (let [files (vec (mi/api-files api (mi/local-path api (:target app-conf))))
+(defn- restricted-files
+  "The current api's files on disk that --restrict-to-path takes."
+  [{:keys [api restrict-to-path target]}]
+  (let [files (vec (mi/api-files api (mi/local-path api target)))
         ;; A push decides from the disk, so every api agrees.
         matches? (mf/restrict-matcher
                   target restrict-to-path
                   (mf/restrict-names-item? target restrict-to-path
                                            (map #(.toString ^File %) files)))]
     (log/debugf "restrict-to-path: %s" restrict-to-path)
+    (filterv #(if (matches? (.toString ^File %))
+                (do (when (seq restrict-to-path)
+                      (log/debugf "Found a match: %s" %))
+                    true)
+                (do (log/debugf "filtering push of '%s' since it is outside the restrict-to-path %s" % restrict-to-path)
+                    false))
+             files)))
 
-    (sequence
-     (comp (filter #(let [matches (matches? (.toString ^File %))]
-                    (if matches
-                      (do (when (seq restrict-to-path)
-                            (log/debugf "Found a match: %s" %))
-                          true)
-                      (do (log/debugf "filtering push of '%s' since it is outside the restrict-to-path %s" % restrict-to-path)
-                          false))))
-          (map #(expand-filerefs %
+(defn- file-locs
+  "Lazy sequence of el-locs read from files for the current api."
+  [{:keys [api] :as app-conf} files]
+  (sequence
+   (comp (map #(expand-filerefs %
                                 (mxml/to-zip
                                  (do
                                    (log/debugf "\tFile: %s" (.toString ^File %))
                                    (slurp %)))))
-          (filter #(not (mi/should-skip? api % app-conf))))
-     files)))
+         (filter #(not (mi/should-skip? api % app-conf))))
+   files))
 
 (defn- remote-locs
   "Lazy seq of remote el-locs for the current api, each detached from
@@ -108,7 +110,7 @@
 
 (defn-  process-nodes
   "Prints the message and processes the el-locs via the action. Each
-  el-loc must be rooted at its own node, as remote-locs and local-locs
+  el-loc must be rooted at its own node, as remote-locs and file-locs
   return them."
   [{:keys [api] :as app-conf} msg el-locs action]
   (log/info msg)
@@ -159,12 +161,27 @@
   files within the target directory. The files in the specified path
   directory are each read and handed to upload-node to push to Mirth."
   [{:keys [api] :as app-conf}]
+  (let [files (restricted-files app-conf)]
+    (cond-> (process-nodes
+             app-conf
+             (str "Uploading from " (mi/local-path api (:target app-conf)) " to " (mi/rest-path api))
+             (file-locs app-conf files)
+             upload-node)
+      (seq files) (assoc :restrict-found-items? true))))
 
-  (process-nodes
-       app-conf
-       (str "Uploading from " (mi/local-path api (:target app-conf)) " to " (mi/rest-path api))
-       (local-locs app-conf)
-       upload-node))
+(defn warn-if-restrict-matched-nothing
+  "Warns when a --restrict-to-path was given and no api's push or pull took
+  anything under it (see :restrict-found-items?). Such a run does nothing, which
+  is easy to miss, most often after item names were encoded differently.
+  Returns app-conf."
+  [{:keys [action restrict-to-path restrict-found-items?] :as app-conf}]
+  (when (and (seq restrict-to-path) (not restrict-found-items?))
+    (log/warn (str "--restrict-to-path '" restrict-to-path "' matched no items, so nothing was "
+                   (if (= "push" action) "pushed" "pulled") ". "
+                   "The path is relative to the target directory, is case sensitive, and uses "
+                   "the file and folder names mirthsync writes, where some characters are "
+                   "encoded, for example ':' as '%3A'.")))
+  app-conf)
 
 (defn get-remote-expected-file-paths
   "Get a set of file paths that would be generated from remote elements."
