@@ -7,9 +7,11 @@
             [mirthsync.git :as git]
             [mirthsync.http-client :as http]
             [mirthsync.interfaces :as mi]
+            [mirthsync.logging :as log]
             [mirthsync.xml :as xml]
             [slingshot.slingshot :refer [throw+]])
-  (:import [java.nio.file Files]
+  (:import [java.io StringWriter]
+           [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
 (def ^:private channel-xml
@@ -231,3 +233,16 @@
       (is (= 0 (:exit-code result)))
       (is (empty? (:requests result)))
       (is (= 1 (count (:commits result)))))))
+
+(deftest restrict-that-matches-nothing-warns
+  (doseq [[restrict warns?] [["Channels/Nope" true] ["Channels" false]]]
+    (testing restrict
+      (let [err (StringWriter.)
+            result (log/with-log-writers (StringWriter.) err
+                     (run-push {"Channels/Default Group/Channel.xml" channel-xml}
+                               ["--restrict-to-path" restrict] {}))]
+        (is (= 0 (:exit-code result)))
+        (is (= (if warns? 0 1)
+               (count (filter #(= {:method :put :api :channels} (select-keys % [:method :api]))
+                              (:requests result)))))
+        (is (= warns? (.contains (str err) "matched no items, so nothing was pushed")))))))

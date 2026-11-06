@@ -65,8 +65,9 @@
       (ma/download (assoc conf :api :channels)))))
 
 (defn- pushed [dir api]
-  (mapv #(cz/xml-zip (cz/root %))
-        (#'ma/local-locs {:api api :target dir :restrict-to-path ""})))
+  (let [conf {:api api :target dir :restrict-to-path ""}]
+    (mapv #(cz/xml-zip (cz/root %))
+          (#'ma/file-locs conf (#'ma/restricted-files conf)))))
 
 (ct/deftest encoded-names-round-trip
   (let [dir (build-path "target" "name-encoding-round-trip-test")]

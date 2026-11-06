@@ -91,6 +91,7 @@ Names without these characters are unchanged.
 - A `--restrict-to-path` value that names an affected item no longer names it, because its directory and file names changed.
   A value that names no item matches every item whose path starts with it, so an old value can match nothing or a different item.
   For example, `-r "Channels/G/AUX"` can take a channel named `AUX Results` instead of `AU%58`.
+  mirthsync warns when a value matches nothing, but not when it matches a different item.
 
 ### Suggested steps
 

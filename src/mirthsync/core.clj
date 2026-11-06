@@ -62,10 +62,12 @@
                                       (zero? (:exit-code processed-conf)))
                              (when (false? (api/deploy-changed-channels processed-conf))
                                (throw (ex-info "Failure(s) were encountered during deploy-changed" {}))))
-                           ;; After pull, always check for orphaned files
-                           (if (= "pull" action)
-                             (act/cleanup-orphaned-files-with-pre-pull processed-conf (api/apis processed-conf))
-                             processed-conf))))]
+                           ;; After pull, always check for orphaned files. The -r
+                           ;; warning comes last, so a long orphan report can't hide it.
+                           (act/warn-if-restrict-matched-nothing
+                            (if (= "pull" action)
+                              (act/cleanup-orphaned-files-with-pre-pull processed-conf (api/apis processed-conf))
+                              processed-conf)))))]
         (log/info "Finished!")
         ;; Perform auto-commit after successful operation
         (mgit/auto-commit-after-operation app-conf)

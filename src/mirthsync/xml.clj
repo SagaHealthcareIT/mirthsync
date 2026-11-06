@@ -137,50 +137,58 @@
   "Take an xml location and write to the filesystem with a meaningful
   name and path. If the file exists it is not overwritten unless the
   -f option is set. Unordered collections are sorted first unless
-  --no-sort-unordered is set. Returns app-conf."
+  --no-sort-unordered is set. Returns app-conf, with :restrict-found-items?
+  set when --restrict-to-path took any of the item's files."
   [{:keys [api el-loc restrict-to-path target disk-mode] :as app-conf}]
 
-  (when-not (or (mi/should-skip? api el-loc app-conf)
-                ;; groups disk mode writes a channel or code template into its
-                ;; group's or library's index.xml, which deconstruct-node reads
-                ;; first. When that index is outside the restrict it was never
-                ;; written, so skip the item before trying to read it.
-                (and (= "groups" disk-mode)
-                     (#{:channels :code-templates} api)
-                     (:restrict-match? app-conf)
-                     (not ((:restrict-match? app-conf) (mi/file-path api app-conf)))))
-    (loop [files-data (mi/deconstruct-node app-conf
-                                           (mi/file-path api app-conf)
-                                           (if (:sort-unordered app-conf)
-                                             (cz/xml-zip (sort-unordered (cz/node el-loc)))
-                                             el-loc))
-           file-data (first files-data)]
-      (when (seq files-data)
-        (let [xml-str (second file-data)
-              fpath (first file-data)
-              ;; download sets :restrict-match? (mirthsync.files/restrict-matcher);
-              ;; any other caller gets the plain prefix match.
-              matches? (or (:restrict-match? app-conf)
-                           (let [prefix (str target File/separator restrict-to-path)]
-                             (fn [^String p] (.startsWith p prefix))))]
-          (if (matches? fpath)
-            (do
-              (when (seq restrict-to-path)
-                (log/debugf "Found a match: %s" fpath))
+  (let [;; download sets :restrict-match? (mirthsync.files/restrict-matcher);
+        ;; any other caller gets the plain prefix match.
+        matches? (or (:restrict-match? app-conf)
+                     (let [prefix (str target File/separator restrict-to-path)]
+                       (fn [^String p] (.startsWith p prefix))))]
+    (cond
+      ;; A disabled item --skip-disabled leaves out still counts as matched,
+      ;; as it does on push.
+      (mi/should-skip? api el-loc app-conf)
+      (cond-> app-conf
+        (matches? (mi/file-path api app-conf)) (assoc :restrict-found-items? true))
 
-              ;; never overwrite unless force is specified or we're updating
-              ;; index files in disk mode 1
-              (if (and (.exists (io/file fpath))
-                       (not (app-conf :force))
-                       (not (and (= "groups" disk-mode)
-                                 (.endsWith fpath (str File/separator "index.xml")))))
-                (log/warn (str "File at " fpath " already exists and the "
-                               "force (-f) option was not specified. Refusing "
-                               "to overwrite the file."))
-                (do (io/make-parents fpath)
-                    (log/debugf "\tFile: %s" fpath)
-                    (spit fpath xml-str))))
-            ;; else
-            (log/debugf "Filtering pull of '%s' since it is outside the restrict-to-path %s" fpath restrict-to-path)))
-        (recur (rest files-data) (second files-data)))))
-  app-conf)
+      ;; groups disk mode writes a channel or code template into its
+      ;; group's or library's index.xml, which deconstruct-node reads
+      ;; first. When that index is outside the restrict it was never
+      ;; written, so skip the item before trying to read it.
+      (and (= "groups" disk-mode)
+           (#{:channels :code-templates} api)
+           (:restrict-match? app-conf)
+           (not ((:restrict-match? app-conf) (mi/file-path api app-conf))))
+      app-conf
+
+      :else
+      (loop [files-data (mi/deconstruct-node app-conf
+                                             (mi/file-path api app-conf)
+                                             (if (:sort-unordered app-conf)
+                                               (cz/xml-zip (sort-unordered (cz/node el-loc)))
+                                               el-loc))
+             matched? false]
+        (if-let [[fpath xml-str] (first files-data)]
+          (let [match? (matches? fpath)]
+            (if match?
+              (do
+                (when (seq restrict-to-path)
+                  (log/debugf "Found a match: %s" fpath))
+
+                ;; never overwrite unless force is specified or we're updating
+                ;; index files in disk mode 1
+                (if (and (.exists (io/file fpath))
+                         (not (app-conf :force))
+                         (not (and (= "groups" disk-mode)
+                                   (.endsWith ^String fpath (str File/separator "index.xml")))))
+                  (log/warn (str "File at " fpath " already exists and the "
+                                 "force (-f) option was not specified. Refusing "
+                                 "to overwrite the file."))
+                  (do (io/make-parents fpath)
+                      (log/debugf "\tFile: %s" fpath)
+                      (spit fpath xml-str))))
+              (log/debugf "Filtering pull of '%s' since it is outside the restrict-to-path %s" fpath restrict-to-path))
+            (recur (rest files-data) (or matched? match?)))
+          (cond-> app-conf matched? (assoc :restrict-found-items? true)))))))
