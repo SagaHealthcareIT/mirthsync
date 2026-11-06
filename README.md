@@ -46,7 +46,7 @@ Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/item
 
 ## Current version
 
-The latest version of mirthSync is "3.8.1". Note the changes below. Version 3 of
+The latest version of mirthSync is "3.9.0". Note the changes below. Version 3 of
 mirthSync changed the layout of the target directory structure. Javascript is
 extracted into separate files and top level channels are now placed in a default
 group directory.
@@ -110,6 +110,18 @@ Names without these characters are unchanged.
   On Windows, Java handles long paths, but Git needs `git config core.longpaths true`.
 
 ## Changes
+
+### 3.9.0
+
+This release changes the names of some files in a target directory. Read [Upgrading to 3.9.0](#upgrading-to-390) before you upgrade.
+
+- **Windows-safe file names** (PR #101, thanks @dbelinsky-accureference): item names are now encoded so that a target directory works on Windows as well as on macOS and Linux. Names without the characters below are unchanged.
+  - Control characters, `%` and `" * : < > ? |` are percent encoded, as `/` and `\` already were. Trailing dots and spaces are encoded too.
+  - Windows reserved names such as `AUX`, `CON` and `NUL.txt` have their last character encoded, for example `AU%58`.
+  - Names longer than 240 bytes are shortened and end in a short hash. A pull no longer stops with "File name too long" on a long transformer or filter step name.
+  - Push reads each script from the file name stored in the item's XML, so a target directory pulled by an earlier version can still be pushed before you convert it.
+- **`--restrict-to-path` takes only the item it names** (PR #102): `-r "Channels/G/ADT"` no longer also takes `ADT Inbound`, and a group or library path no longer takes another group or library whose name starts the same way. A path that names no item keeps the prefix match, so a partial name still selects every item that starts with it.
+- **A warning when `--restrict-to-path` matches nothing** (PR #103): a push or pull whose `-r` matched no item finished without saying so. It now logs a warning. The exit code does not change.
 
 ### 3.8.1
 
