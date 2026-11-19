@@ -483,6 +483,30 @@
     (when (= tagname (:tag (cz/node loc)))
       loc)))
 
+(defn- database-script=
+  "Returns a query predicate that matches if the current exact node is a tag named
+  tagname directly under the properties of the connector tagged connector-tag
+  and those properties have useScript set to true. A Database Reader or Writer
+  only holds JavaScript in its select, update and query tags when useScript is
+  true. Otherwise they hold SQL, which stays in the XML."
+  [tagname connector-tag]
+  (fn [loc]
+    (when (= tagname (:tag (cz/node loc)))
+      (when-let [props (cz/up loc)]
+        (when (and (= :properties (:tag (cz/node props)))
+                   (some-> (cz/up props) cz/node :tag (= connector-tag))
+                   (= "true" (cdzx/xml1-> props :useScript cdzx/text)))
+          loc)))))
+
+(defn- connector-script-name
+  "Builds the script name prefix for the connector holding the script loc, the
+  same way as for the JavaScript Reader and Writer scripts. Source connectors
+  start with sourceConnector and destination connectors with destinationConnector."
+  [prefix loc]
+  (let [name (cdzx/xml1-> loc cz/up cz/up :name cdzx/text)]
+    (str prefix (when-not (cs/blank? name)
+                  (str "-" name)))))
+
 (def channel-deconstructors
   [[(fn [_] "PreprocessingScript")
     #(cdzx/xml1-> % (this-tag= :preprocessingScript))]
@@ -505,6 +529,15 @@
                 (str "sourceConnector" (when-not (cs/blank? name)
                                          (str "-" name)))))
     #(cdzx/xml1-> % (this-tag= :script) [cz/up :properties cz/up :sourceConnector])]
+
+   [(fn [loc] (str (connector-script-name "sourceConnector" loc) "-select"))
+    #(cdzx/xml1-> % (database-script= :select :sourceConnector))]
+
+   [(fn [loc] (str (connector-script-name "sourceConnector" loc) "-update"))
+    #(cdzx/xml1-> % (database-script= :update :sourceConnector))]
+
+   [(fn [loc] (connector-script-name "destinationConnector" loc))
+    #(cdzx/xml1-> % (database-script= :query :connector))]
 
    [(partial name-script-sequence "sourceConnector-filter-step-")
     #(cdzx/xml1-> %
