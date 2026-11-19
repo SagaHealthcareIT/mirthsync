@@ -81,6 +81,21 @@
     (log/info exit-msg))
   exit-code)
 
+(defn- error-message
+  "Returns a concise, human readable message for an exception. HTTP
+  failures from clj-http carry a :status in their ex-data; the full
+  response map is noise, so only the status and a hint are reported.
+  Use -v to also get the stack trace."
+  [^Exception e]
+  (let [status (:status (ex-data e))]
+    (case status
+      401 "Authentication failed (HTTP 401): check the username and password."
+      403 "Access denied (HTTP 403): the user lacks permission for this operation."
+      404 "Not found (HTTP 404): check the server URL, it normally ends in /api."
+      (if status
+        (str "The server returned HTTP " status ". Re-run with -v for details.")
+        (.getMessage e)))))
+
 (defn main-func
   [& args]
   (let [conf (cli/config args)
@@ -88,10 +103,11 @@
                (try
                  (run conf)
                  (catch Exception e
-                   (.printStackTrace e)
+                   (when (pos? (or (:verbosity conf) 0))
+                     (.printStackTrace e))
                    (-> conf
                        (assoc :exit-code 1)
-                       (assoc :exit-msg (.getMessage e)))))
+                       (assoc :exit-msg (error-message e)))))
                conf)]
     (exit-prep conf)))
 
