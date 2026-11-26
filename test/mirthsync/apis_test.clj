@@ -313,15 +313,25 @@
 (ct/deftest bulk-deployment-tests
   (ct/testing "Deploy all channels function creates correct XML"
     (let [app-conf {:bulk-deploy-channels (atom ["channel1" "channel2" "channel3"])}
-          expected-xml "<set><string>channel1</string><string>channel2</string><string>channel3</string></set>"]
-      ;; Test that the XML structure is created correctly
-      ;; We can't easily test the actual HTTP call without mocking, but we can test the data structure
-      (ct/is (= ["channel1" "channel2" "channel3"] @(:bulk-deploy-channels app-conf)))))
+          expected-xml "<set><string>channel1</string><string>channel2</string><string>channel3</string></set>"
+          calls (atom [])]
+      (with-redefs [mhttp/post-xml (fn [conf path body params multipart?]
+                                     (swap! calls conj [conf path body params multipart?])
+                                     {:status 200 :body "<map/>"})]
+        (ma/deploy-all-channels app-conf))
+      (ct/is (= 1 (count @calls)))
+      (let [[conf path body params multipart?] (first @calls)]
+        (ct/is (= [app-conf "/channels/_deploy" {:returnErrors "true" :debug "false"} false]
+                  [conf path params multipart?]))
+        (assert-deployment-xml expected-xml body))))
 
   (ct/testing "Deploy all channels handles empty channel list"
-    (let [app-conf {:bulk-deploy-channels (atom [])}]
-      ;; Should handle empty list gracefully
-      (ct/is (empty? @(:bulk-deploy-channels app-conf)))))
+    (let [app-conf {:bulk-deploy-channels (atom [])}
+          calls (atom [])]
+      (with-redefs [mhttp/post-xml (fn [& args] (swap! calls conj args))]
+        (ma/deploy-all-channels app-conf))
+      ;; An empty list makes no deploy request
+      (ct/is (empty? @calls))))
 
   (ct/testing "Deploy all channels with nil atom"
     (let [app-conf {:bulk-deploy-channels nil}]

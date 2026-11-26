@@ -249,6 +249,13 @@
 (defmethod mi/after-push :alerts [_ app-conf result] (null-204 result))
 (defmethod mi/after-push :server-configuration [_ app-conf result] (null-204 result))
 
+(defn- channel-set-xml
+  "The <set> of channel IDs that /channels/_deploy takes."
+  [channel-ids]
+  (cdx/emit-str
+   (apply cdx/element :set nil
+          (map #(cdx/element :string nil %) channel-ids))))
+
 (defn deploy-all-channels
   "Deploy all collected channels in one API call."
   [app-conf]
@@ -256,9 +263,7 @@
     (when (seq channel-ids)
       (log/infof "Deploying %d channels in bulk: %s" (count channel-ids) (pr-str channel-ids))
       (try+
-       (let [channel-set (apply str "<set>"
-                               (map #(str "<string>" % "</string>") channel-ids)
-                               "</set>")]
+       (let [channel-set (channel-set-xml channel-ids)]
          (mhttp/post-xml
           app-conf
           "/channels/_deploy"
@@ -316,9 +321,7 @@
          all-channels (distinct (concat changed-channels new-channels))]
      (if (seq all-channels)
        (do (log/infof "Deploying %d channel(s): %s" (count all-channels) (pr-str all-channels))
-           (let [channel-set (cdx/emit-str
-                              (apply cdx/element :set nil
-                                     (map #(cdx/element :string nil %) all-channels)))]
+           (let [channel-set (channel-set-xml all-channels)]
              (mhttp/post-xml app-conf "/channels/_deploy" channel-set
                              {:returnErrors "true" :debug "false"} false)
              (log/info "Deploy-changed completed successfully")))
